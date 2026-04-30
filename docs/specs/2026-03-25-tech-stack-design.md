@@ -23,6 +23,7 @@ Vocabu is a social app for capturing and sharing short audio moments — a baby'
 **Why:** Full-stack Vue framework with hybrid rendering — SSR for public/explore pages (fast first paint, SEO), SPA-mode for authenticated views. File-based routing, auto-imports, Nitro server engine for API routes.
 
 **Alternatives considered:**
+
 - Astro + Vue islands — rejected: Astro is content-site focused, islands architecture makes shared state (auth, audio player) awkward. Vocabu is 90% interactive.
 - SvelteKit — viable but different ecosystem; Vue has larger community and more ready-made modules for auth, S3, PWA.
 
@@ -37,6 +38,7 @@ Vocabu is a social app for capturing and sharing short audio moments — a baby'
 **Why:** Full Postgres power — JOINs for social feed queries, JSONB for flexible moment metadata, full-text search via `tsvector` for moment/caption search, CTEs for complex queries. Scales to zero on free tier (0.5GB storage, 190 compute hours/mo).
 
 **Alternatives considered:**
+
 - Turso (libSQL/SQLite) — strong local-first story (same engine client + server), but user already has an IndexedDB wrapper that provides PG-like API on the client, removing Turso's main advantage.
 - DynamoDB — powerful at scale but relational feed queries ("moments from people I follow") require complex denormalization patterns. Wrong tool for social data.
 - MongoDB Atlas — similar relational query limitations; no web offline sync solution.
@@ -47,6 +49,7 @@ Vocabu is a social app for capturing and sharing short audio moments — a baby'
 **Why:** User has a pre-built wrapper over IndexedDB that exposes a PG-like API. Handles local caching for offline-capable experience.
 
 **Sync pattern:**
+
 ```
 [User action] → [IndexedDB] → [background sync] → [Neon Postgres]
                      ↑ reads from local first
@@ -65,6 +68,7 @@ Conflict resolution: last-write-wins (sufficient for this data model).
 **Why:** Passwordless auth via magic links (email). Resend free tier: 3,000 emails/mo. JWT stored in HTTP-only cookies for session management.
 
 **Flow:**
+
 1. User enters email → API sends magic link via Resend
 2. User clicks link → server verifies token, issues JWT cookie
 3. Subsequent requests authenticated via JWT cookie
@@ -72,6 +76,7 @@ Conflict resolution: last-write-wins (sufficient for this data model).
 ### PWA: @vite-pwa/nuxt
 
 **Why:** Mature Vite PWA plugin with Nuxt integration. Provides:
+
 - Service worker generation (Workbox-based)
 - App shell precaching
 - Runtime caching strategies: cache-first for audio, network-first for feed
@@ -140,19 +145,19 @@ Conflict resolution: last-write-wins (sufficient for this data model).
 
 ## Stack Summary (Complete)
 
-| Layer | Technology | Free Tier |
-|---|---|---|
-| Framework | Nuxt 4 (Vue 3) | — |
-| Deployment | Vercel | 100GB BW, 100K invocations/mo |
-| Database | Neon (Postgres) | 0.5GB, 190 compute hrs/mo |
-| ORM | Drizzle ORM + drizzle-kit | — |
-| Client storage | IndexedDB (existing wrapper) | — |
-| Audio storage | Cloudflare R2 | 10GB storage, zero egress |
-| Auth emails | Resend | 3,000 emails/mo |
-| Rate limiting | Upstash Redis | 10K commands/day |
-| PWA | @vite-pwa/nuxt | — |
-| Styling | UnoCSS | — |
-| State | Pinia | — |
-| Monitoring | Sentry + Vercel Analytics | 5K errors/mo |
-| Testing | Vitest + Playwright | — |
-| CI/CD | GitHub Actions + Vercel | 2K mins/mo |
+| Layer          | Technology                   | Free Tier                     |
+| -------------- | ---------------------------- | ----------------------------- |
+| Framework      | Nuxt 4 (Vue 3)               | —                             |
+| Deployment     | Vercel                       | 100GB BW, 100K invocations/mo |
+| Database       | Neon (Postgres)              | 0.5GB, 190 compute hrs/mo     |
+| ORM            | Drizzle ORM + drizzle-kit    | —                             |
+| Client storage | IndexedDB (existing wrapper) | —                             |
+| Audio storage  | Cloudflare R2                | 10GB storage, zero egress     |
+| Auth emails    | Resend                       | 3,000 emails/mo               |
+| Rate limiting  | Upstash Redis                | 10K commands/day              |
+| PWA            | @vite-pwa/nuxt               | —                             |
+| Styling        | UnoCSS                       | —                             |
+| State          | Pinia                        | —                             |
+| Monitoring     | Sentry + Vercel Analytics    | 5K errors/mo                  |
+| Testing        | Vitest + Playwright          | —                             |
+| CI/CD          | GitHub Actions + Vercel      | 2K mins/mo                    |

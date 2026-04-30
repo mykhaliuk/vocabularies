@@ -4,11 +4,11 @@
 
 All modes run the Nuxt dev server locally. The difference is which backends they connect to.
 
-| Script | DB | Storage | Auth | Rate Limiting | Purpose |
-|---|---|---|---|---|---|
-| `start:local` | Docker Postgres | Docker MinIO | bypassed | disabled | API testing, offline |
-| `start:dev` | Neon dev | R2 dev | Resend dev | Upstash dev | Test against dev infra |
-| `start:preprod` | Neon preprod | R2 preprod | Resend preprod | Upstash preprod | Final validation |
+| Script          | DB              | Storage      | Auth           | Rate Limiting   | Purpose                |
+| --------------- | --------------- | ------------ | -------------- | --------------- | ---------------------- |
+| `start:local`   | Docker Postgres | Docker MinIO | bypassed       | disabled        | API testing, offline   |
+| `start:dev`     | Neon dev        | R2 dev       | Resend dev     | Upstash dev     | Test against dev infra |
+| `start:preprod` | Neon preprod    | R2 preprod   | Resend preprod | Upstash preprod | Final validation       |
 
 ### Local infrastructure (Docker)
 
@@ -32,10 +32,10 @@ Scripts use `nuxt dev --dotenv .env.<stage>`.
 
 ## Code Quality Tooling
 
-| Concern | Tool |
-|---|---|
-| Linting | **OxLint** |
-| Formatting | **Oxfmt** |
+| Concern       | Tool                            |
+| ------------- | ------------------------------- |
+| Linting       | **OxLint**                      |
+| Formatting    | **Oxfmt**                       |
 | Type checking | **TypeScript** (`tsc --noEmit`) |
 
 ### Scripts
@@ -51,9 +51,9 @@ Scripts use `nuxt dev --dotenv .env.<stage>`.
 
 ## Testing
 
-| Tool | Scope |
-|---|---|
-| **Vitest** | Unit / integration |
+| Tool           | Scope                             |
+| -------------- | --------------------------------- |
+| **Vitest**     | Unit / integration                |
 | **Playwright** | E2E (auth, upload, feed, offline) |
 
 ---

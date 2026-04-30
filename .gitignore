@@ -1,17 +1,21 @@
 # build output
 dist/
+.output/
 
-# generated types
-.astro/
+# nuxt
+.nuxt/
+.data/
 
 # dependencies
 node_modules/
 
 # logs
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+bun-debug.log*
 
 # environment variables
 .env

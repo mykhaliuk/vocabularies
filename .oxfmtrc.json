@@ -1,0 +1,19 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "semi": true,
+  "singleQuote": true,
+  "trailingComma": "all",
+  "printWidth": 80,
+  "tabWidth": 2,
+  "vueIndentScriptAndStyle": false,
+  "sortPackageJson": false,
+  "ignorePatterns": [
+    "node_modules",
+    ".nuxt",
+    ".output",
+    "dist",
+    "db/migrations",
+    "bun.lockb",
+    "package-lock.json"
+  ]
+}

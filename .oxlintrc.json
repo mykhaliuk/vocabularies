@@ -1,0 +1,14 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "categories": {
+    "correctness": "error",
+    "suspicious": "warn"
+  },
+  "ignorePatterns": [
+    "node_modules",
+    ".nuxt",
+    ".output",
+    "dist",
+    "db/migrations"
+  ]
+}
