@@ -74,6 +74,18 @@ async function uploadAvatar(event) {
   }
 }
 
+const triggerErrorState = ref('');
+
+async function triggerError() {
+  triggerErrorState.value = 'sending…';
+  try {
+    await $fetch('/api/dev/error');
+    triggerErrorState.value = 'unexpected: did not throw';
+  } catch (err) {
+    triggerErrorState.value = `triggered (HTTP ${err?.statusCode ?? '?'})`;
+  }
+}
+
 const loggingOut = ref(false);
 const logoutError = ref('');
 
@@ -118,6 +130,12 @@ async function logout() {
       />
       <p v-if="uploading">Uploading…</p>
       <p v-if="uploadError" role="alert">{{ uploadError }}</p>
+    </section>
+
+    <section>
+      <h2>Debug</h2>
+      <button type="button" @click="triggerError">Trigger test error</button>
+      <p v-if="triggerErrorState">{{ triggerErrorState }}</p>
     </section>
 
     <p v-if="logoutError" role="alert">{{ logoutError }}</p>

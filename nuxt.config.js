@@ -2,6 +2,10 @@
 export default defineNuxtConfig({
   compatibilityDate: '2026-04-30',
   devtools: { enabled: true },
+  modules: ['@sentry/nuxt/module'],
+  sentry: {
+    sourceMapsUploadOptions: { enabled: false },
+  },
   runtimeConfig: {
     appEnv: process.env.APP_ENV ?? 'local',
     appUrl: process.env.APP_URL ?? 'http://localhost:3000',
