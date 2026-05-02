@@ -40,8 +40,7 @@ export default defineEventHandler(async (event) => {
 
   const redisOk =
     redis.status === 'ok' || (env === 'local' && redis.status === 'skipped');
-  const healthy =
-    db.status === 'ok' && storage.status === 'ok' && redisOk;
+  const healthy = db.status === 'ok' && storage.status === 'ok' && redisOk;
 
   setResponseStatus(event, healthy ? 200 : 503);
   setResponseHeader(event, 'Cache-Control', 'no-store');
