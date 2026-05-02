@@ -14,8 +14,8 @@ All modes run the Nuxt dev server locally. The difference is which backends they
 
 `start:local` brings up Docker containers before starting Nuxt:
 
-- **Postgres 16** — port 5432
-- **MinIO** — port 9000 (S3 API), port 9001 (console UI)
+- **Postgres 18** — port 5433 (matches Neon's major version; remapped from 5432 to avoid host-port collisions)
+- **MinIO** — port 9100 S3 API / 9101 console UI (remapped from 9000/9001 to avoid host-port collisions)
 
 ### Environment files
 

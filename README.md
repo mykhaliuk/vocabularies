@@ -27,7 +27,7 @@ Implementation is plain JavaScript with co-located `.d.ts` for type contracts (s
 - Node 24+ (`.nvmrc` pinned)
 - Bun 1.3+
 - Docker Desktop (for local stage)
-- `pg_dump` 17 client (for `db:dump:dev`)
+- `pg_dump` 18 client (for `db:dump:dev`; matches Neon's major version)
 
 ## Environments
 
