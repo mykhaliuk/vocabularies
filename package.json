@@ -19,7 +19,7 @@
     "lint": "oxlint .",
     "fmt": "oxfmt .",
     "fmt:check": "oxfmt --check .",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "nuxt typecheck",
     "db:generate": "node scripts/with-env.js local drizzle-kit generate",
     "db:migrate": "node scripts/with-env.js local drizzle-kit migrate",
     "db:migrate:dev": "node scripts/with-env.js dev drizzle-kit migrate",
@@ -49,6 +49,7 @@
     "drizzle-kit": "^0.28.0",
     "oxfmt": "^0.47.0",
     "oxlint": "^0.13.0",
-    "typescript": "^5.6.0"
+    "typescript": "^5.6.0",
+    "vue-tsc": "^3.2.7"
   }
 }

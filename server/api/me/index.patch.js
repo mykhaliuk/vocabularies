@@ -1,0 +1,24 @@
+import { eq } from 'drizzle-orm';
+import { z } from 'zod';
+import { users } from '~/db/schema/users.js';
+import { requireUser, toPublicUser } from '~/server/utils/auth.js';
+import { useDb } from '~/server/utils/db.js';
+
+const Body = z.object({
+  displayName: z.string().min(1).max(64).optional(),
+});
+
+export default defineEventHandler(async (event) => {
+  const { user } = await requireUser(event);
+  const patch = await readValidatedBody(event, (data) => Body.parse(data));
+
+  const db = useDb();
+  const [updated] = await db
+    .update(users)
+    .set({ displayName: patch.displayName ?? user.displayName })
+    .where(eq(users.id, user.id))
+    .returning();
+
+  setResponseHeader(event, 'Cache-Control', 'no-store');
+  return toPublicUser(updated);
+});
