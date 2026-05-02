@@ -67,7 +67,7 @@ export const headBucket = async () => {
 
 export const headObject = async (key) => {
   const { client, bucket } = useStorage();
-  await client.send(new HeadObjectCommand({ Bucket: bucket, Key: key }));
+  return client.send(new HeadObjectCommand({ Bucket: bucket, Key: key }));
 };
 
 export const presignPut = async (key, contentType, ttlSec = 300) => {
@@ -77,7 +77,12 @@ export const presignPut = async (key, contentType, ttlSec = 300) => {
     Key: key,
     ContentType: contentType,
   });
-  return getSignedUrl(client, command, { expiresIn: ttlSec });
+  // Force the signature to cover Content-Type so a client cannot PUT with a
+  // different MIME than what was authorised.
+  return getSignedUrl(client, command, {
+    expiresIn: ttlSec,
+    signableHeaders: new Set(['content-type']),
+  });
 };
 
 export const presignGet = async (key, ttlSec = 3600) => {

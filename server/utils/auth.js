@@ -47,7 +47,7 @@ export const safeEqualHashes = (a, b) => {
 export const toPublicUser = (user) => ({
   email: user.email,
   displayName: user.displayName,
-  avatarKey: user.avatarKey,
+  hasAvatar: Boolean(user.avatarKey),
 });
 
 export const signSession = async (sessionId) => {

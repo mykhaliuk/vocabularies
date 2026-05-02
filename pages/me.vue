@@ -1,7 +1,9 @@
 <script setup>
-const { data: me, error } = await useFetch('/api/me', {
-  credentials: 'include',
-});
+const {
+  data: me,
+  error,
+  refresh,
+} = await useFetch('/api/me', { credentials: 'include' });
 
 if (error.value) {
   if (error.value.statusCode === 401) {
@@ -15,6 +17,63 @@ if (error.value) {
   }
 }
 
+const avatarUrl = ref(null);
+const avatarError = ref('');
+const uploading = ref(false);
+const uploadError = ref('');
+
+async function loadAvatarUrl() {
+  if (!me.value?.hasAvatar) {
+    avatarUrl.value = null;
+    return;
+  }
+  try {
+    const data = await $fetch('/api/me/avatar-url');
+    avatarUrl.value = data.url;
+    avatarError.value = '';
+  } catch (err) {
+    avatarError.value = err?.statusMessage ?? 'Failed to load avatar';
+  }
+}
+
+watchEffect(loadAvatarUrl);
+
+async function uploadAvatar(event) {
+  const file = event.target.files?.[0];
+  if (!file || uploading.value) return;
+  if (file.type !== 'image/png' && file.type !== 'image/jpeg') {
+    uploadError.value = 'Only PNG or JPEG.';
+    return;
+  }
+  uploading.value = true;
+  uploadError.value = '';
+  try {
+    const { uploadUrl, key } = await $fetch('/api/me/avatar', {
+      method: 'POST',
+      body: { contentType: file.type },
+    });
+    const putResponse = await fetch(uploadUrl, {
+      method: 'PUT',
+      body: file,
+      headers: { 'Content-Type': file.type },
+    });
+    if (!putResponse.ok) {
+      throw new Error(`upload failed: ${putResponse.status}`);
+    }
+    await $fetch('/api/me/avatar/confirm', {
+      method: 'POST',
+      body: { key },
+    });
+    await refresh();
+  } catch (err) {
+    console.error('[me] avatar upload failed', err);
+    uploadError.value = err?.statusMessage ?? err?.message ?? 'Upload failed.';
+  } finally {
+    uploading.value = false;
+    event.target.value = '';
+  }
+}
+
 const loggingOut = ref(false);
 const logoutError = ref('');
 
@@ -25,8 +84,6 @@ async function logout() {
   try {
     await $fetch('/api/auth/logout', { method: 'POST' });
   } catch (err) {
-    // best-effort: still navigate away. Cookie is HttpOnly; if logout failed
-    // server-side, the next protected request will surface the issue.
     console.error('[me] logout request failed', err);
     logoutError.value = 'Logout request failed; navigating anyway.';
   } finally {
@@ -40,6 +97,29 @@ async function logout() {
   <main v-if="me">
     <h1>Hello, {{ me.displayName ?? me.email }}</h1>
     <p>email: {{ me.email }}</p>
+
+    <section>
+      <h2>Avatar</h2>
+      <img
+        v-if="avatarUrl"
+        :src="avatarUrl"
+        alt="avatar"
+        width="128"
+        height="128"
+      />
+      <p v-else-if="avatarError" role="alert">{{ avatarError }}</p>
+      <p v-else-if="!me.hasAvatar">No avatar yet.</p>
+
+      <input
+        type="file"
+        accept="image/png,image/jpeg"
+        :disabled="uploading"
+        @change="uploadAvatar"
+      />
+      <p v-if="uploading">Uploading…</p>
+      <p v-if="uploadError" role="alert">{{ uploadError }}</p>
+    </section>
+
     <p v-if="logoutError" role="alert">{{ logoutError }}</p>
     <button type="button" :disabled="loggingOut" @click="logout">
       {{ loggingOut ? 'Signing out…' : 'Sign out' }}

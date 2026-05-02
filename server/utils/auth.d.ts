@@ -5,7 +5,7 @@ import type { User } from '~/db/schema/users.d.ts';
 export interface PublicUser {
   email: string;
   displayName: string | null;
-  avatarKey: string | null;
+  hasAvatar: boolean;
 }
 
 export declare const normalizeEmail: (raw: string) => string;
