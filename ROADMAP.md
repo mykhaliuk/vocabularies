@@ -30,3 +30,4 @@ Word/audio capture, feeds, follows, IndexedDB sync, friends-only visibility.
 - Migration runner on deploy.
 - Cron cleanup of expired `magic-link-tokens` rows.
 - IP-based rate limit on `/api/auth/callback`.
+- R2 admin-scoped API token to enable `r2:cors:*` scripts (currently CORS is configured via the Cloudflare dashboard).
