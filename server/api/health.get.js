@@ -1,21 +1,8 @@
 import { sql } from 'drizzle-orm';
-import { useDb } from '~/server/utils/db';
-import { headBucket } from '~/server/utils/storage';
-import { NULL_PONG_VALUE, useRedis } from '~/server/utils/redis';
-
-const runCheck = async (label, fn) => {
-  try {
-    return { status: await fn() };
-  } catch (error) {
-    console.error(`[health] ${label} failed:`, error);
-    return { status: 'error', message: error?.message ?? String(error) };
-  }
-};
-
-const sanitize = (result, includeMessage) => {
-  if (includeMessage) return result;
-  return { status: result.status };
-};
+import { useDb } from '~/server/utils/db.js';
+import { runCheck, sanitize } from '~/server/utils/health-check.js';
+import { NULL_PONG_VALUE, useRedis } from '~/server/utils/redis.js';
+import { headBucket } from '~/server/utils/storage.js';
 
 export default defineEventHandler(async (event) => {
   const env = process.env.APP_ENV ?? 'local';

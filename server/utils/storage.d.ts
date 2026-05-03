@@ -13,3 +13,5 @@ export declare const presignGet: (
   key: string,
   ttlSec?: number,
 ) => Promise<string>;
+
+export declare const isNotFoundError: (error: unknown) => boolean;

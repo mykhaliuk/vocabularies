@@ -1,6 +1,10 @@
+import type { InferSelectModel } from 'drizzle-orm';
 import type { H3Event } from 'h3';
-import type { Session } from '~/db/schema/sessions.d.ts';
-import type { User } from '~/db/schema/users.d.ts';
+import type { sessions } from '~/db/schema/sessions.js';
+import type { users } from '~/db/schema/users.js';
+
+type User = InferSelectModel<typeof users>;
+type Session = InferSelectModel<typeof sessions>;
 
 export interface PublicUser {
   email: string;

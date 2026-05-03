@@ -1,5 +1,4 @@
 import {
-  customType,
   index,
   pgTable,
   text,
@@ -7,12 +6,7 @@ import {
   uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
-
-const bytea = customType({
-  dataType() {
-    return 'bytea';
-  },
-});
+import { bytea } from './bytea.js';
 
 export const magicLinkTokens = pgTable(
   'magic_link_tokens',

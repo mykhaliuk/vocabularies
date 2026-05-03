@@ -19,6 +19,13 @@ export default defineEventHandler(async (event) => {
     .where(eq(users.id, user.id))
     .returning();
 
+  if (!updated) {
+    throw createError({
+      statusCode: 500,
+      statusMessage: 'failed to update user',
+    });
+  }
+
   setResponseHeader(event, 'Cache-Control', 'no-store');
   return toPublicUser(updated);
 });

@@ -1,11 +1,15 @@
-<script setup>
+<script setup lang="ts">
+import type { LocationQueryValue } from 'vue-router';
+
 const route = useRoute();
 const email = ref('');
 const submitting = ref(false);
 const sent = ref(false);
 const errorMessage = ref(getErrorMessage(route.query.error));
 
-function getErrorMessage(code) {
+function getErrorMessage(
+  code: LocationQueryValue | LocationQueryValue[] | undefined,
+): string {
   if (code === 'token-invalid')
     return 'That sign-in link is invalid or already used.';
   if (code === 'token-expired')
@@ -26,8 +30,18 @@ async function submit() {
     });
     sent.value = true;
   } catch (error) {
-    errorMessage.value =
-      error?.statusMessage ?? error?.message ?? 'Could not send the link.';
+    if (
+      error &&
+      typeof error === 'object' &&
+      'statusMessage' in error &&
+      typeof error.statusMessage === 'string'
+    ) {
+      errorMessage.value = error.statusMessage;
+    } else if (error instanceof Error) {
+      errorMessage.value = error.message;
+    } else {
+      errorMessage.value = 'Could not send the link.';
+    }
   } finally {
     submitting.value = false;
   }

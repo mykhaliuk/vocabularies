@@ -7,14 +7,11 @@ import {
   parseAvatarKey,
 } from '~/server/utils/avatar-key.js';
 import { useDb } from '~/server/utils/db.js';
-import { headObject } from '~/server/utils/storage.js';
+import { headObject, isNotFoundError } from '~/server/utils/storage.js';
 
 const Body = z.object({
   key: z.string(),
 });
-
-const isNotFoundError = (error) =>
-  error?.name === 'NotFound' || error?.$metadata?.httpStatusCode === 404;
 
 export default defineEventHandler(async (event) => {
   const { user } = await requireUser(event);
@@ -63,6 +60,13 @@ export default defineEventHandler(async (event) => {
     .set({ avatarKey: key })
     .where(eq(users.id, user.id))
     .returning();
+
+  if (!updated) {
+    throw createError({
+      statusCode: 500,
+      statusMessage: 'failed to update user',
+    });
+  }
 
   setResponseHeader(event, 'Cache-Control', 'no-store');
   return toPublicUser(updated);

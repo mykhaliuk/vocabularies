@@ -90,3 +90,11 @@ export const presignGet = async (key, ttlSec = 3600) => {
   const command = new GetObjectCommand({ Bucket: bucket, Key: key });
   return getSignedUrl(client, command, { expiresIn: ttlSec });
 };
+
+export const isNotFoundError = (error) => {
+  if (typeof error !== 'object' || error === null) return false;
+  const e = error;
+  if (e.name === 'NotFound') return true;
+  if (e.$metadata && e.$metadata.httpStatusCode === 404) return true;
+  return false;
+};

@@ -6,6 +6,16 @@ export default defineNuxtConfig({
   sentry: {
     sourceMapsUploadOptions: { enabled: false },
   },
+  typescript: {
+    strict: true,
+    tsConfig: {
+      compilerOptions: {
+        checkJs: true,
+        noImplicitAny: true,
+        noUncheckedIndexedAccess: true,
+      },
+    },
+  },
   runtimeConfig: {
     appEnv: process.env.APP_ENV ?? 'local',
     appUrl: process.env.APP_URL ?? 'http://localhost:3000',

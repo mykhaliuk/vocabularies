@@ -9,16 +9,12 @@ import {
   signSession,
 } from '~/server/utils/auth.js';
 import { useDb } from '~/server/utils/db.js';
-
-const redirect = async (event, location) => {
-  setResponseHeader(event, 'Cache-Control', 'no-store');
-  return sendRedirect(event, location, 302);
-};
+import { noStoreRedirect } from '~/server/utils/redirect.js';
 
 export default defineEventHandler(async (event) => {
   const query = getQuery(event);
   const token = typeof query.token === 'string' ? query.token : '';
-  if (!token) return redirect(event, '/login?error=token-invalid');
+  if (!token) return noStoreRedirect(event, '/login?error=token-invalid');
 
   const tokenHash = hashToken(token);
   const db = useDb();
@@ -31,9 +27,9 @@ export default defineEventHandler(async (event) => {
       expiresAt: magicLinkTokens.expiresAt,
     });
 
-  if (!consumed) return redirect(event, '/login?error=token-invalid');
+  if (!consumed) return noStoreRedirect(event, '/login?error=token-invalid');
   if (consumed.expiresAt.getTime() < Date.now()) {
-    return redirect(event, '/login?error=token-expired');
+    return noStoreRedirect(event, '/login?error=token-expired');
   }
 
   const userAgent = getRequestHeader(event, 'user-agent') ?? null;
@@ -56,6 +52,7 @@ export default defineEventHandler(async (event) => {
           .returning();
         user = created;
       }
+      if (!user) throw new Error('failed to upsert user');
 
       const [createdSession] = await tx
         .insert(sessions)
@@ -67,6 +64,7 @@ export default defineEventHandler(async (event) => {
         })
         .returning();
 
+      if (!createdSession) throw new Error('failed to create session');
       return createdSession;
     });
 
@@ -77,8 +75,8 @@ export default defineEventHandler(async (event) => {
       email: consumed.email,
       error,
     });
-    return redirect(event, '/login?error=signin-failed');
+    return noStoreRedirect(event, '/login?error=signin-failed');
   }
 
-  return redirect(event, '/me');
+  return noStoreRedirect(event, '/me');
 });

@@ -7,7 +7,7 @@ import { requireUser } from '~/server/utils/auth.js';
 import { presignPut } from '~/server/utils/storage.js';
 
 const Body = z.object({
-  contentType: z.enum(ALLOWED_CONTENT_TYPES),
+  contentType: z.enum([...ALLOWED_CONTENT_TYPES]),
 });
 
 const UPLOAD_TTL_SEC = 300;

@@ -1,9 +1,29 @@
-<script setup>
+<script setup lang="ts">
+import type { PublicUser } from '~/server/utils/auth.d.ts';
+
+interface FetchError {
+  statusCode?: number;
+  statusMessage?: string;
+  message?: string;
+}
+
+const isFetchError = (value: unknown): value is FetchError =>
+  typeof value === 'object' && value !== null;
+
+const messageOf = (error: unknown, fallback: string): string => {
+  if (isFetchError(error)) {
+    if (typeof error.statusMessage === 'string') return error.statusMessage;
+    if (typeof error.message === 'string') return error.message;
+  }
+  if (error instanceof Error) return error.message;
+  return fallback;
+};
+
 const {
   data: me,
   error,
   refresh,
-} = await useFetch('/api/me', { credentials: 'include' });
+} = await useFetch<PublicUser>('/api/me', { credentials: 'include' });
 
 if (error.value) {
   if (error.value.statusCode === 401) {
@@ -17,7 +37,7 @@ if (error.value) {
   }
 }
 
-const avatarUrl = ref(null);
+const avatarUrl = ref<string | null>(null);
 const avatarError = ref('');
 const uploading = ref(false);
 const uploadError = ref('');
@@ -28,18 +48,19 @@ async function loadAvatarUrl() {
     return;
   }
   try {
-    const data = await $fetch('/api/me/avatar-url');
+    const data = await $fetch<{ url: string }>('/api/me/avatar-url');
     avatarUrl.value = data.url;
     avatarError.value = '';
   } catch (err) {
-    avatarError.value = err?.statusMessage ?? 'Failed to load avatar';
+    avatarError.value = messageOf(err, 'Failed to load avatar');
   }
 }
 
 watchEffect(loadAvatarUrl);
 
-async function uploadAvatar(event) {
-  const file = event.target.files?.[0];
+async function uploadAvatar(domEvent: Event) {
+  const target = domEvent.target as HTMLInputElement;
+  const file = target.files?.[0];
   if (!file || uploading.value) return;
   if (file.type !== 'image/png' && file.type !== 'image/jpeg') {
     uploadError.value = 'Only PNG or JPEG.';
@@ -48,7 +69,10 @@ async function uploadAvatar(event) {
   uploading.value = true;
   uploadError.value = '';
   try {
-    const { uploadUrl, key } = await $fetch('/api/me/avatar', {
+    const { uploadUrl, key } = await $fetch<{
+      uploadUrl: string;
+      key: string;
+    }>('/api/me/avatar', {
       method: 'POST',
       body: { contentType: file.type },
     });
@@ -67,10 +91,10 @@ async function uploadAvatar(event) {
     await refresh();
   } catch (err) {
     console.error('[me] avatar upload failed', err);
-    uploadError.value = err?.statusMessage ?? err?.message ?? 'Upload failed.';
+    uploadError.value = messageOf(err, 'Upload failed.');
   } finally {
     uploading.value = false;
-    event.target.value = '';
+    target.value = '';
   }
 }
 
@@ -82,7 +106,8 @@ async function triggerError() {
     await $fetch('/api/dev/error');
     triggerErrorState.value = 'unexpected: did not throw';
   } catch (err) {
-    triggerErrorState.value = `triggered (HTTP ${err?.statusCode ?? '?'})`;
+    const code = isFetchError(err) ? err.statusCode : undefined;
+    triggerErrorState.value = `triggered (HTTP ${code ?? '?'})`;
   }
 }
 
