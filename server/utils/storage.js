@@ -47,6 +47,8 @@ const create = () => {
     region,
     credentials: { accessKeyId, secretAccessKey },
     forcePathStyle,
+    requestChecksumCalculation: 'WHEN_REQUIRED',
+    responseChecksumValidation: 'WHEN_REQUIRED',
   });
 
   console.log(
