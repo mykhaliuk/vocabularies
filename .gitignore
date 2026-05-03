@@ -30,3 +30,4 @@ bun-debug.log*
 # jetbrains setting folder
 .idea/
 */skills/metaskills
+.vercel
