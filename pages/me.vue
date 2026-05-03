@@ -128,13 +128,14 @@ async function logout() {
     loggingOut.value = false;
   }
   if (typeof caches !== 'undefined') {
-    try {
-      await Promise.all([
-        caches.delete(PWA_API_CACHE),
-        caches.delete(PWA_AVATARS_CACHE),
-      ]);
-    } catch (err) {
-      console.error('[me] cache purge failed', err);
+    const results = await Promise.allSettled([
+      caches.delete(PWA_API_CACHE),
+      caches.delete(PWA_AVATARS_CACHE),
+    ]);
+    for (const result of results) {
+      if (result.status === 'rejected') {
+        console.error('[me] cache purge failed', result.reason);
+      }
     }
   }
   await navigateTo('/');

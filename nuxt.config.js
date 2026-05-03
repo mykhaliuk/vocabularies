@@ -57,13 +57,14 @@ export default defineNuxtConfig({
         {
           urlPattern: ({ url }) =>
             url.hostname.endsWith('.r2.cloudflarestorage.com') ||
-            (url.hostname === 'localhost' && url.port === '9100'),
+            ((url.hostname === 'localhost' || url.hostname === '127.0.0.1') &&
+              url.port === '9100'),
           handler: 'StaleWhileRevalidate',
           method: 'GET',
           options: {
             cacheName: PWA_AVATARS_CACHE,
             expiration: { maxEntries: 50, maxAgeSeconds: 60 * 60 * 24 },
-            cacheableResponse: { statuses: [200, 206] },
+            cacheableResponse: { statuses: [200] },
           },
         },
       ],
