@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { PublicUser } from '~/server/utils/auth.d.ts';
+import { PWA_API_CACHE, PWA_AVATARS_CACHE } from '~/shared/pwa-caches.js';
 
 interface FetchError {
   statusCode?: number;
@@ -125,6 +126,16 @@ async function logout() {
     logoutError.value = 'Logout request failed; navigating anyway.';
   } finally {
     loggingOut.value = false;
+  }
+  if (typeof caches !== 'undefined') {
+    try {
+      await Promise.all([
+        caches.delete(PWA_API_CACHE),
+        caches.delete(PWA_AVATARS_CACHE),
+      ]);
+    } catch (err) {
+      console.error('[me] cache purge failed', err);
+    }
   }
   await navigateTo('/');
 }
