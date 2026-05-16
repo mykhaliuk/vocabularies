@@ -33,8 +33,6 @@ export default defineNuxtConfig({
     },
     workbox: {
       globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
-      navigateFallback: '/offline',
-      navigateFallbackDenylist: [/^\/api\//, /^\/me(\/|$|\?)/],
       runtimeCaching: [
         {
           urlPattern: ({ url, sameOrigin }) =>
