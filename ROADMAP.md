@@ -31,3 +31,4 @@ Word/audio capture, feeds, follows, IndexedDB sync, friends-only visibility.
 - Cron cleanup of expired `magic-link-tokens` rows.
 - IP-based rate limit on `/api/auth/callback`.
 - R2 admin-scoped API token to enable `r2:cors:*` scripts (currently CORS is configured via the Cloudflare dashboard).
+- Restore the friendly `/offline` page. Currently the browser's native offline UI (Chrome dino) shows when offline, because M8's `navigateFallback: '/offline'` was removed (it served the offline page even when online — SSR + workbox SPA-shell mismatch). Fix: switch PWA `strategies` from `'generateSW'` to `'injectManifest'`, add a custom `service-worker.js` source that uses Workbox `setCatchHandler` to serve `/offline` only when a navigation request fails. ~30 min plus a review pass.
