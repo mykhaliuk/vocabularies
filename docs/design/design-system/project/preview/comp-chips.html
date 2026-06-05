@@ -1,0 +1,27 @@
+<!-- @dsCard group="Components" -->
+<!DOCTYPE html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../colors_and_type.css">
+<script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+<style>
+  html,body{margin:0}
+  body{background:var(--paper);font-family:var(--font-sans);padding:22px;color:var(--ink)}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+  .row:last-child{margin-bottom:0}
+  .chip{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:600;padding:5px 10px;border-radius:var(--r-sm);background:var(--surface);border:1.5px solid var(--hairline-2);color:var(--ink-2);white-space:nowrap}
+  .chip.on{background:var(--rose-50);border-color:var(--rose-200);color:var(--rose-700)}
+  .chip.blue{background:var(--blue-50);border-color:var(--blue-200);color:var(--blue-700)}
+  .chip svg{width:13px;height:13px}
+  .tag{font-size:12px;font-weight:600;color:var(--blue-600)}
+</style></head>
+<body>
+  <div class="row">
+    <span class="chip on"><svg data-lucide="check"></svg>Spring</span>
+    <span class="chip">Family</span>
+    <span class="chip">Travel</span>
+    <span class="chip blue"><svg data-lucide="lock"></svg>Private</span>
+    <span class="chip"><svg data-lucide="plus"></svg>New collection</span>
+  </div>
+  <div class="row">
+    <span class="tag">#cardamom</span><span class="tag">#rainy</span><span class="tag">#alfama</span><span class="tag">#firstcoffee</span>
+  </div>
+  <script>lucide.createIcons()</script>
+</body></html>

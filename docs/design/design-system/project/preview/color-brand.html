@@ -1,0 +1,34 @@
+<!-- @dsCard group="Colors" -->
+<!DOCTYPE html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html,body{margin:0}
+  body{background:var(--paper);font-family:var(--font-sans);padding:22px;color:var(--ink)}
+  .row{display:flex;gap:16px}
+  .sw{flex:1;border-radius:var(--r-md);overflow:hidden;border:1px solid var(--hairline);box-shadow:var(--shadow-sm)}
+  .chip{height:96px;display:flex;align-items:flex-end;padding:10px}
+  .chip b{font-size:13px;font-weight:600}
+  .info{padding:10px 12px;background:var(--surface)}
+  .info .name{font-size:13px;font-weight:600}
+  .info .hex{font-size:12px;color:var(--ink-2);font-variant-numeric:tabular-nums}
+  .info .use{font-size:11px;color:var(--ink-3);margin-top:2px}
+</style></head>
+<body>
+  <div class="row">
+    <div class="sw">
+      <div class="chip" style="background:var(--rose-500);color:#fff"><b>Aa</b></div>
+      <div class="info"><div class="name">Rose</div><div class="hex">#ED5379</div><div class="use">Primary · actions · likes</div></div>
+    </div>
+    <div class="sw">
+      <div class="chip" style="background:var(--blue-500);color:#fff"><b>Aa</b></div>
+      <div class="info"><div class="name">Light Blue</div><div class="hex">#1F9EDB</div><div class="use">Secondary · links · calm</div></div>
+    </div>
+    <div class="sw">
+      <div class="chip" style="background:var(--paper);color:var(--ink)"><b>Aa</b></div>
+      <div class="info"><div class="name">Paper</div><div class="hex">#FBFEFF</div><div class="use">App canvas</div></div>
+    </div>
+    <div class="sw">
+      <div class="chip" style="background:var(--ink);color:#fff"><b>Aa</b></div>
+      <div class="info"><div class="name">Ink</div><div class="hex">#1B1D1E</div><div class="use">Primary text</div></div>
+    </div>
+  </div>
+</body></html>

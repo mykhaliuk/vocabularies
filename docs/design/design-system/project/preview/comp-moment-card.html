@@ -1,0 +1,55 @@
+<!-- @dsCard group="Components" -->
+<!DOCTYPE html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../colors_and_type.css">
+<script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+<style>
+  html,body{margin:0}
+  body{background:var(--paper);font-family:var(--font-sans);padding:20px;color:var(--ink)}
+  .card{background:var(--surface);border:1px solid var(--hairline);border-radius:var(--r-card);padding:14px 16px;box-shadow:var(--shadow-sm);max-width:520px}
+  .top{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+  .av{width:38px;height:38px;border-radius:50%;background:var(--rose-200);display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--rose-700);font-size:15px}
+  .who{display:flex;flex-direction:column;line-height:1.25}
+  .nm{font-size:14px;font-weight:600}
+  .rl{font-size:12.5px;color:var(--ink-2)}
+  .more{margin-left:auto;color:var(--ink-3)}
+  .more svg{width:18px;height:18px}
+  .word{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+  .word b{font-size:28px;font-weight:600;letter-spacing:-.02em;line-height:1.1}
+  .word span{font-size:15px;color:var(--ink-2)}
+  .audio{display:flex;align-items:center;gap:11px;margin-top:12px;background:var(--blue-50);border:1px solid var(--blue-100);border-radius:var(--r-sm);padding:8px 12px}
+  .play{width:34px;height:34px;border-radius:50%;background:var(--blue-500);color:#fff;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+  .play svg{width:15px;height:15px}
+  .wave{display:flex;align-items:center;gap:2px;height:24px;flex:1}
+  .wave i{flex:1;border-radius:2px;background:var(--blue-200)}
+  .wave i.on{background:var(--blue-500)}
+  .dur{font-size:12px;font-weight:600;color:var(--blue-600)}
+  .unfold{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:600;color:var(--blue-600)}
+  .unfold svg{width:15px;height:15px}
+  .row{margin-top:12px}
+  .tag{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:var(--ink-2);background:var(--surface-sunk);padding:4px 9px;border-radius:var(--r-sm)}
+  .tag svg{width:12px;height:12px}
+  .acts{display:flex;align-items:center;gap:26px;margin-top:14px;color:var(--ink-2)}
+  .act{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600}
+  .act svg{width:18px;height:18px}
+  .act.liked{color:var(--like)}
+  .save{margin-left:auto;color:var(--ink-3)}
+</style></head>
+<body>
+  <div class="card">
+    <div class="top">
+      <div class="av">M</div>
+      <div class="who"><span class="nm">Mira</span><span class="rl">my daughter · 22 mo · 2d</span></div>
+      <span class="more"><svg data-lucide="more-horizontal"></svg></span>
+    </div>
+    <div class="word"><b>Appo</b><span>apple</span></div>
+    <div class="row"><span class="unfold"><svg data-lucide="chevron-down"></svg>Meaning &amp; story</span></div>
+    <div class="row"><span class="tag"><svg data-lucide="bookmark"></svg>Mira's words</span></div>
+    <div class="acts">
+      <span class="act liked"><svg data-lucide="heart" fill="currentColor"></svg>14</span>
+      <span class="act"><svg data-lucide="message-circle"></svg>3</span>
+      <span class="save"><svg data-lucide="bookmark"></svg></span>
+    </div>
+  </div>
+  <script>
+    lucide.createIcons();
+  </script>
+</body></html>

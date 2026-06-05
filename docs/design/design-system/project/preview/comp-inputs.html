@@ -1,0 +1,26 @@
+<!-- @dsCard group="Components" -->
+<!DOCTYPE html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../colors_and_type.css">
+<script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+<style>
+  html,body{margin:0}
+  body{background:var(--paper);font-family:var(--font-sans);padding:14px;color:var(--ink);display:flex;flex-direction:column;gap:7px}
+  .field{display:flex;flex-direction:column;gap:3px}
+  label{font-size:10.5px;font-weight:600;color:var(--ink-2)}
+  .input{display:flex;align-items:center;gap:7px;background:var(--surface);border:1.5px solid var(--hairline-2);border-radius:var(--r-sm);padding:7px 10px}
+  .input.focus{border-color:var(--rose-400);box-shadow:0 0 0 3px var(--focus-ring)}
+  .input input{border:0;outline:0;background:transparent;font-family:var(--font-sans);font-size:14px;color:var(--ink);width:100%}
+  .input input::placeholder{color:var(--ink-3)}
+  .search{background:var(--surface)}
+  svg{width:16px;height:16px;color:var(--ink-3)}
+</style></head>
+<body>
+  <div class="field">
+    <label>Search</label>
+    <div class="input search"><svg data-lucide="search"></svg><input placeholder="Search words &amp; people" /></div>
+  </div>
+  <div class="field">
+    <label>Who said it <span style="color:var(--rose-500)">·focus</span></label>
+    <div class="input focus"><svg data-lucide="user" style="color:var(--rose-500)"></svg><input value="Dad" /></div>
+  </div>
+  <script>lucide.createIcons()</script>
+</body></html>

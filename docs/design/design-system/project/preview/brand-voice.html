@@ -1,0 +1,22 @@
+<!-- @dsCard group="Brand" -->
+<!DOCTYPE html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html,body{margin:0}
+  body{background:var(--paper);font-family:var(--font-sans);padding:22px;color:var(--ink)}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .v{padding:14px 16px;border-radius:var(--r-md);background:var(--surface);border:1px solid var(--hairline)}
+  .v .h{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;margin-bottom:7px}
+  .yes .h{color:var(--positive)}
+  .no .h{color:var(--danger)}
+  .v p{margin:0;font-size:14px;line-height:1.45}
+  .yes p{font-family:var(--font-sans);color:var(--ink);font-size:15px;font-weight:500}
+  .no p{color:var(--ink-3);text-decoration:line-through;text-decoration-color:var(--hairline-2)}
+</style></head>
+<body>
+  <div class="grid">
+    <div class="v yes"><div class="h">✓ We sound like</div><p>“The way she says it now, before she learns to say it right.”</p></div>
+    <div class="no"><div class="h">✕ Not like</div><p>Capture and archive vocabulary entries on our platform.</p></div>
+    <div class="v yes"><div class="h">✓ We sound like</div><p>“Kept. You'll be glad you wrote this one down.”</p></div>
+    <div class="no"><div class="h">✕ Not like</div><p>Entry successfully added to your word database!</p></div>
+  </div>
+</body></html>

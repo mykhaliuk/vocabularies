@@ -1,0 +1,28 @@
+<!-- @dsCard group="Components" -->
+<!DOCTYPE html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../colors_and_type.css">
+<script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+<style>
+  html,body{margin:0}
+  body{background:var(--surface-sunk);font-family:var(--font-sans);padding:20px;color:var(--ink)}
+  .wrap{position:relative;max-width:420px;margin:0 auto}
+  .nav{display:flex;align-items:center;justify-content:space-around;background:var(--surface);border:1px solid var(--hairline);border-radius:var(--r-xl);padding:8px 8px;box-shadow:var(--shadow-md)}
+  .tab{display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--ink-3);font-size:10px;font-weight:600;width:56px;height:46px;justify-content:center}
+  .tab.on{color:var(--rose-600)}
+  .tab svg{width:23px;height:23px}
+  .fab{width:54px;height:54px;border-radius:50%;background:var(--rose-500);color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow-float);margin-top:-6px}
+  .fab svg{width:24px;height:24px}
+  .note{text-align:center;font-size:11px;color:var(--ink-2);margin:0 0 14px}
+</style></head>
+<body>
+  <div class="wrap">
+    <p class="note">Bottom tab bar — primary nav lives in the thumb zone, compose on the right</p>
+    <div class="nav">
+      <div class="tab on"><svg data-lucide="home"></svg>Feed</div>
+      <div class="tab"><svg data-lucide="search"></svg>Discover</div>
+      <div class="fab"><svg data-lucide="feather"></svg></div>
+      <div class="tab"><svg data-lucide="bookmark"></svg>Saved</div>
+      <div class="tab"><svg data-lucide="user"></svg>You</div>
+    </div>
+  </div>
+  <script>lucide.createIcons()</script>
+</body></html>

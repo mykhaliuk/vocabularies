@@ -1,0 +1,51 @@
+<!-- @dsCard group="Components" -->
+<!DOCTYPE html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../colors_and_type.css">
+<script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+<style>
+  html,body{margin:0}
+  body{background:var(--paper);font-family:var(--font-sans);padding:20px;color:var(--ink)}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+  .row:last-child{margin-bottom:0}
+  button{font-family:var(--font-sans);font-size:14px;font-weight:600;border-radius:var(--r-btn);white-space:nowrap;
+    border:0;cursor:pointer;display:inline-flex;align-items:center;gap:7px;padding:8px 15px;min-height:38px;
+    transition:filter var(--dur-fast) var(--ease-out),background var(--dur-fast) var(--ease-out),border-color var(--dur-fast),transform var(--dur-fast)}
+  button:active{transform:scale(0.97)}
+  .primary{background:var(--rose-500);color:#fff;box-shadow:var(--shadow-float)}
+  .primary:hover{filter:brightness(0.94)}
+  .blue{background:var(--blue-500);color:#fff}
+  .blue:hover{filter:brightness(0.94)}
+  .secondary{background:var(--surface);color:var(--ink);border:1.5px solid var(--hairline-2)}
+  .secondary:hover{background:var(--surface-sunk);border-color:var(--ink-3)}
+  .ghost{background:transparent;color:var(--rose-600)}
+  .ghost:hover{background:var(--rose-50)}
+  .danger{background:transparent;color:var(--danger)}
+  .danger:hover{background:var(--danger-bg)}
+  .icon{padding:0;width:38px;height:38px;min-height:0;justify-content:center;background:var(--surface);border:1.5px solid var(--hairline);color:var(--ink-2);border-radius:var(--r-md)}
+  .icon:hover{background:var(--surface-sunk);color:var(--ink)}
+  /* frozen hover demo */
+  .demo-hover{background:var(--rose-500);color:#fff;box-shadow:var(--shadow-float);filter:brightness(0.94)}
+  svg{width:17px;height:17px}
+  .lbl{font-size:11px;color:var(--ink-3);width:60px}
+</style></head>
+<body>
+  <div class="row"><span class="lbl">primary</span>
+    <button class="primary"><svg data-lucide="feather"></svg>New moment</button>
+    <button class="blue">Save</button>
+  </div>
+  <div class="row"><span class="lbl">subtle</span>
+    <button class="secondary">Follow</button>
+    <button class="ghost">Skip</button>
+    <button class="danger">Delete</button>
+  </div>
+  <div class="row"><span class="lbl">icon</span>
+    <button class="icon"><svg data-lucide="heart"></svg></button>
+    <button class="icon"><svg data-lucide="bookmark"></svg></button>
+    <button class="icon"><svg data-lucide="share"></svg></button>
+    <button class="icon"><svg data-lucide="more-horizontal"></svg></button>
+  </div>
+  <div class="row"><span class="lbl">:hover</span>
+    <button class="demo-hover"><svg data-lucide="feather"></svg>New moment</button>
+    <span style="font-size:12px;color:var(--ink-3)">darken 6% · neutrals get a soft wash · press scales to 0.97</span>
+  </div>
+  <script>lucide.createIcons()</script>
+</body></html>

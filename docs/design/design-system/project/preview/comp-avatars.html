@@ -1,0 +1,30 @@
+<!-- @dsCard group="Components" -->
+<!DOCTYPE html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html,body{margin:0}
+  body{background:var(--paper);font-family:var(--font-sans);padding:22px;color:var(--ink)}
+  .row{display:flex;gap:22px;align-items:center;flex-wrap:wrap}
+  .grp{display:flex;flex-direction:column;align-items:center;gap:8px}
+  .lbl{font-size:11px;color:var(--ink-3)}
+  .av{border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff}
+  .stack{display:flex}
+  .stack .av{border:2px solid var(--paper);margin-left:-10px}
+  .stack .av:first-child{margin-left:0}
+  .ring{padding:2px;border-radius:50%;background:linear-gradient(135deg,var(--rose-400),var(--blue-400))}
+</style></head>
+<body>
+  <div class="row">
+    <div class="grp"><div class="av" style="width:56px;height:56px;background:var(--rose-400);font-size:20px">L</div><span class="lbl">lg</span></div>
+    <div class="grp"><div class="av" style="width:40px;height:40px;background:var(--blue-400);font-size:15px">M</div><span class="lbl">md</span></div>
+    <div class="grp"><div class="av" style="width:30px;height:30px;background:var(--positive);font-size:12px">J</div><span class="lbl">sm</span></div>
+    <div class="grp"><div class="ring"><div class="av" style="width:48px;height:48px;background:var(--ink-2);font-size:17px">★</div></div><span class="lbl">story ring</span></div>
+    <div class="grp">
+      <div class="stack">
+        <div class="av" style="width:34px;height:34px;background:var(--rose-400);font-size:13px">A</div>
+        <div class="av" style="width:34px;height:34px;background:var(--blue-400);font-size:13px">N</div>
+        <div class="av" style="width:34px;height:34px;background:var(--warn);font-size:13px">+5</div>
+      </div>
+      <span class="lbl">group</span>
+    </div>
+  </div>
+</body></html>

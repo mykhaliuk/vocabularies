@@ -1,0 +1,24 @@
+<!-- @dsCard group="Colors" -->
+<!DOCTYPE html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html,body{margin:0}
+  body{background:var(--paper);font-family:var(--font-sans);padding:22px;color:var(--ink)}
+  .row{display:flex;gap:14px}
+  .cell{flex:1;display:flex;flex-direction:column;gap:8px}
+  .pill{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:var(--r-md)}
+  .dot{width:18px;height:18px;border-radius:50%}
+  .pill .t{font-size:13px;font-weight:600}
+  .pill .h{margin-left:auto;font-size:11px;font-variant-numeric:tabular-nums;opacity:.7}
+</style></head>
+<body>
+  <div class="row">
+    <div class="cell">
+      <div class="pill" style="background:var(--positive-bg);color:#3f5a40"><span class="dot" style="background:var(--positive)"></span><span class="t">Positive</span><span class="h">#6E9070</span></div>
+      <div class="pill" style="background:var(--warn-bg);color:#7a5e22"><span class="dot" style="background:var(--warn)"></span><span class="t">Warn</span><span class="h">#C79A56</span></div>
+    </div>
+    <div class="cell">
+      <div class="pill" style="background:var(--danger-bg);color:#8f3f33"><span class="dot" style="background:var(--danger)"></span><span class="t">Danger</span><span class="h">#C2685C</span></div>
+      <div class="pill" style="background:var(--rose-50);color:var(--rose-700)"><span class="dot" style="background:var(--like)"></span><span class="t">Like / Loved</span><span class="h">#ED5379</span></div>
+    </div>
+  </div>
+</body></html>

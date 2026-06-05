@@ -1,0 +1,39 @@
+<!-- @dsCard group="Colors" -->
+<!DOCTYPE html><html data-theme="dark"><head><meta charset="utf-8"><link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html,body{margin:0}
+  body{background:var(--paper);font-family:var(--font-sans);padding:22px;color:var(--ink)}
+  .head{display:flex;align-items:center;gap:8px;margin:0 0 14px}
+  .head .moon{width:22px;height:22px;border-radius:50%;background:radial-gradient(circle at 70% 35%, var(--surface) 0 52%, var(--ink) 53%)}
+  .head .t{font-size:13px;font-weight:600;letter-spacing:-0.01em}
+  .head .s{font-size:11px;color:var(--ink-2);margin-left:auto}
+  .row{display:flex;gap:10px;margin-bottom:10px}
+  .sw{flex:1;border-radius:var(--r-sm);overflow:hidden;border:1px solid var(--hairline)}
+  .chip{height:50px}
+  .info{padding:6px 8px;background:var(--surface)}
+  .info .name{font-size:11.5px;font-weight:600}
+  .info .hex{font-size:10.5px;color:var(--ink-2);font-variant-numeric:tabular-nums}
+</style></head>
+<body>
+  <div class="head">
+    <span class="moon"></span>
+    <span class="t">Dark theme</span>
+    <span class="s">[data-theme="dark"]</span>
+  </div>
+  <div class="row">
+    <div class="sw"><div class="chip" style="background:var(--paper)"></div><div class="info"><div class="name">Paper</div><div class="hex">#0E1417</div></div></div>
+    <div class="sw"><div class="chip" style="background:var(--surface)"></div><div class="info"><div class="name">Surface</div><div class="hex">#161F22</div></div></div>
+    <div class="sw"><div class="chip" style="background:var(--surface-sunk)"></div><div class="info"><div class="name">Sunk</div><div class="hex">#0A1012</div></div></div>
+    <div class="sw"><div class="chip" style="background:var(--hairline-2)"></div><div class="info"><div class="name">Hairline</div><div class="hex">#313D41</div></div></div>
+    <div class="sw"><div class="chip" style="background:var(--ink-2)"></div><div class="info"><div class="name">Ink-2</div><div class="hex">#9AA7AB</div></div></div>
+    <div class="sw"><div class="chip" style="background:var(--ink)"></div><div class="info"><div class="name">Ink</div><div class="hex">#EAF1F2</div></div></div>
+  </div>
+  <div class="row">
+    <div class="sw"><div class="chip" style="background:var(--rose-500)"></div><div class="info"><div class="name">Rose 500</div><div class="hex">#F2658A</div></div></div>
+    <div class="sw"><div class="chip" style="background:var(--rose-50)"></div><div class="info"><div class="name">Rose wash</div><div class="hex">#2A1822</div></div></div>
+    <div class="sw"><div class="chip" style="background:var(--blue-500)"></div><div class="info"><div class="name">Blue 500</div><div class="hex">#34B1E6</div></div></div>
+    <div class="sw"><div class="chip" style="background:var(--blue-50)"></div><div class="info"><div class="name">Blue wash</div><div class="hex">#0F2531</div></div></div>
+    <div class="sw"><div class="chip" style="background:var(--on-secondary-soft)"></div><div class="info"><div class="name">On-soft</div><div class="hex">#82CBEF</div></div></div>
+    <div class="sw"><div class="chip" style="background:var(--positive)"></div><div class="info"><div class="name">Positive</div><div class="hex">#8FB191</div></div></div>
+  </div>
+</body></html>
