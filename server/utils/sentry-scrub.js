@@ -71,3 +71,19 @@ export const safeScrub = (event) => {
     return null;
   }
 };
+
+// Expected client errors (404 and other 4xx) are normal traffic, not faults —
+// a missing page or a rejected request is the app working as designed, not a
+// bug to alert on. statusCode rides on the original Nuxt/H3 exception, so we
+// inspect the hint rather than the serialized event.
+const isExpectedClientError = (hint) => {
+  const error = hint && hint.originalException;
+  if (!error || typeof error !== 'object') return false;
+  const status = Number(error.statusCode);
+  return Number.isFinite(status) && status >= 400 && status < 500;
+};
+
+export const beforeSend = (event, hint) => {
+  if (isExpectedClientError(hint)) return null;
+  return safeScrub(event);
+};

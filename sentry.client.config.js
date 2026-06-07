@@ -1,5 +1,5 @@
 import * as Sentry from '@sentry/nuxt';
-import { safeScrub } from '~/server/utils/sentry-scrub.js';
+import { beforeSend } from '~/server/utils/sentry-scrub.js';
 
 const config = useRuntimeConfig();
 const dsn = config.public.sentryDsn || '';
@@ -10,7 +10,7 @@ if (dsn) {
     dsn,
     environment,
     sendDefaultPii: false,
-    beforeSend: safeScrub,
+    beforeSend,
   });
 } else if (environment !== 'local') {
   console.error(
