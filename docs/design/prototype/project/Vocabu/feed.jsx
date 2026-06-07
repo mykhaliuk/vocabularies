@@ -209,7 +209,7 @@ function EmptyFeed() {
         position: "absolute", left: 0, right: 0, bottom: 100,
         display: "flex", flexDirection: "column", alignItems: "center", gap: 4, pointerEvents: "none",
       }}>
-        <span style={{ fontFamily: "'Caveat', var(--font-sans)", fontSize: 23, fontWeight: 600, color: "var(--primary)", transform: "rotate(-4deg)" }}>
+        <span style={{ fontFamily: "var(--font-hand)", fontSize: 23, fontWeight: 600, color: "var(--primary)", transform: "rotate(-4deg)" }}>
           tap to keep your first one
         </span>
         <svg width="46" height="68" viewBox="0 0 46 70" fill="none" stroke="var(--primary)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"

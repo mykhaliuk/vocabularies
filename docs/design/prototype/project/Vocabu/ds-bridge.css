@@ -1,21 +1,26 @@
 /* ============================================================
-   ⚠ BRIDGE — remove once the design system ships these tokens.
-   See: docs/design/proposals/primary-action-contrast.md
+   ⚠ BRIDGE — tokens the DS *documents* (README) but has not yet
+   shipped in colors_and_type.css. Delete each line once the DS
+   defines it, so there's a single source of truth.
 
-   White text on --primary (rose-500 #ED5379) is only 3.43:1 and
-   fails WCAG 2.1 AA (1.4.3 needs 4.5:1); it's worse in dark mode.
-   These are dedicated AA-safe *action surfaces* for white-on-accent
-   buttons ONLY — they are theme-independent on purpose.
+   1) Accessible action surfaces (white-text buttons)
+      See: docs/design/proposals/primary-action-contrast.md
+      White text on --primary (rose-500 #ED5379) is only 3.43:1 and
+      fails WCAG 2.1 AA (1.4.3 needs 4.5:1); worse in dark. These are
+      dedicated AA-safe action surfaces for white-on-accent buttons
+      ONLY — theme-independent on purpose (the surface IS the colour,
+      so it must clear AA in both themes). --primary / --secondary
+      stay as-is for non-text use (washes, focus rings, --like, the
+      eyebrow dot, the FAB glyph).
 
-   --primary  / --secondary stay as-is for every non-text use
-   (washes, eyebrow dot, focus rings, --like, soft fills, the
-   icon-only compose FAB — non-text, clears the 3:1 bar).
-
-   Single source of truth: linked by index.html (app) and
-   landing.html. Delete this file + its <link>s when the DS lands
-   --primary-action / --secondary-action.
+   2) Handwriting face for the captured word/phrase (--font-hand)
+      The DS README blesses Caveat as --font-hand, used ONLY for the
+      quoted word on a card (never chrome or body). The shipped CSS
+      still @imports Hanken only, so we name the token here and load
+      Caveat ourselves (see each page's <link>).
    ============================================================ */
 :root {
   --primary-action:   #CF3A60; /* white text → 4.74:1  (AA, light + dark) */
   --secondary-action: #1378A6; /* white text → 4.93:1  (AA, light + dark) */
+  --font-hand: 'Caveat', var(--font-sans);
 }
