@@ -34,3 +34,9 @@ bun-debug.log*
 .idea/
 */skills/metaskills
 .vercel
+
+# claude code project config — track skills + shared settings (overrides a
+# global ignore of .claude/), but never commit worktrees or local settings
+!.claude/
+.claude/worktrees/
+.claude/settings.local.json
