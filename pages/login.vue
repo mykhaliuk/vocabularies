@@ -31,6 +31,8 @@ function getErrorMessage(
     return "That link expired. Ask for a new one and you're in.";
   if (code === 'signin-failed')
     return 'Something got tangled signing you in. Try again.';
+  if (code === 'too-many')
+    return 'Too many attempts from your network. Wait a moment and try again.';
   return '';
 }
 

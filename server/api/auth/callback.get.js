@@ -9,12 +9,33 @@ import {
   signSession,
 } from '~/server/utils/auth.js';
 import { useDb } from '~/server/utils/db.js';
+import { useCallbackIpRatelimit } from '~/server/utils/ratelimit.js';
 import { noStoreRedirect } from '~/server/utils/redirect.js';
 
 export default defineEventHandler(async (event) => {
   const query = getQuery(event);
   const token = typeof query.token === 'string' ? query.token : '';
   if (!token) return noStoreRedirect(event, '/login?error=token-invalid');
+
+  // Per-IP rate limit (defense-in-depth against token enumeration / DoS),
+  // applied before any DB work. Fail-open on a limiter outage — a Redis hiccup
+  // must not lock everyone out of sign-in. Unresolved ip → can't bucket, skip.
+  const ip = getRequestIP(event, { xForwardedFor: true }) ?? null;
+  if (ip) {
+    try {
+      const { success, reset } = await useCallbackIpRatelimit().limit(ip);
+      if (!success) {
+        const retryAfterSec = Math.max(
+          1,
+          Math.ceil((reset - Date.now()) / 1000),
+        );
+        setResponseHeader(event, 'Retry-After', retryAfterSec);
+        return noStoreRedirect(event, '/login?error=too-many');
+      }
+    } catch (error) {
+      console.error('[auth.callback] ratelimit failure (failing open)', error);
+    }
+  }
 
   const tokenHash = hashToken(token);
   const db = useDb();
@@ -33,7 +54,6 @@ export default defineEventHandler(async (event) => {
   }
 
   const userAgent = getRequestHeader(event, 'user-agent') ?? null;
-  const ip = getRequestIP(event, { xForwardedFor: true }) ?? null;
   const sessionExpiresAt = new Date(Date.now() + getSessionTtlMs());
 
   try {

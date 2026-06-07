@@ -10,3 +10,4 @@ export interface RatelimitLike {
 
 export declare const useEmailRatelimit: () => RatelimitLike;
 export declare const useIpRatelimit: () => RatelimitLike;
+export declare const useCallbackIpRatelimit: () => RatelimitLike;
