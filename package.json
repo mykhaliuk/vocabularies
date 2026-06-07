@@ -22,6 +22,8 @@
     "typecheck": "nuxt typecheck",
     "ds:check": "node scripts/ds-check.js",
     "proto:check": "node scripts/proto-check.js",
+    "proto:pull": "node scripts/proto-pull.js",
+    "proto:update": "node scripts/proto-pull.js && node scripts/proto-check.js",
     "ds:verify": "node scripts/ds-check.js && node scripts/proto-check.js",
     "ds:pull": "node scripts/ds-pull.js",
     "ds:sync": "node scripts/ds-sync.js",

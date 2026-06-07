@@ -30,6 +30,9 @@ bun-debug.log*
 # macOS-specific files
 .DS_Store
 
+# downloaded Claude Design bundles (ingested via ds:pull / proto:pull)
+*.zip
+
 # jetbrains setting folder
 .idea/
 */skills/metaskills
