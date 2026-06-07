@@ -130,7 +130,13 @@ export default defineNuxtConfig({
       // Node CLI tooling (DS sync pipeline, env runner, deploy migrate) is
       // covered by oxlint; keep it out of the strict app typecheck so its
       // quick-script style doesn't gate the build. App code stays strict.
-      exclude: ['../docs', '../scripts', '../service-worker'],
+      exclude: [
+        '../docs',
+        '../scripts',
+        '../service-worker',
+        '../e2e',
+        '../playwright.config.ts',
+      ],
     },
   },
   runtimeConfig: {

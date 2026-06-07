@@ -21,6 +21,7 @@
     "fmt": "oxfmt .",
     "fmt:check": "oxfmt --check .",
     "typecheck": "nuxt typecheck",
+    "test:e2e": "playwright test",
     "ds:check": "node scripts/ds-check.js",
     "proto:check": "node scripts/proto-check.js",
     "proto:pull": "node scripts/proto-pull.js",
@@ -57,6 +58,7 @@
   },
   "devDependencies": {
     "@nuxt/fonts": "^0.14.0",
+    "@playwright/test": "^1.60.0",
     "@types/node": "^24.0.0",
     "@types/pg": "^8.11.0",
     "drizzle-kit": "^0.28.0",

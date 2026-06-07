@@ -5,6 +5,11 @@ dist/
 # scratch / local artifacts
 tmp/
 
+# playwright
+/test-results/
+/playwright-report/
+/playwright/.cache/
+
 # nuxt
 .nuxt/
 .data/
