@@ -135,7 +135,7 @@ const anchorRel = computed(() =>
 
   /* variants */
   &.v-btn--primary {
-    background: var(--rose-500);
+    background: var(--primary-action);
     color: var(--text-on-accent);
     box-shadow: var(--shadow-float);
 
@@ -145,7 +145,7 @@ const anchorRel = computed(() =>
   }
 
   &.v-btn--blue {
-    background: var(--blue-500);
+    background: var(--secondary-action);
     color: var(--text-on-accent);
 
     &:not(:disabled):not([aria-disabled='true']):hover {

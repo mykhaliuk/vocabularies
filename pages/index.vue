@@ -32,19 +32,6 @@ useSeoMeta({
   ogType: 'website',
 });
 
-// Caveat powers only the quoted words, so it loads with the landing rather
-// than globally. Mirrors the scoped load on the error page.
-useHead({
-  link: [
-    { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
-    { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' },
-    {
-      rel: 'stylesheet',
-      href: 'https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&display=swap',
-    },
-  ],
-});
-
 // Reveal-on-scroll: progressive enhancement only. Without IntersectionObserver
 // (or under reduced-motion) everything is shown up front.
 onMounted(() => {
@@ -95,188 +82,190 @@ onMounted(() => {
       </div>
     </header>
 
-    <!-- HERO -->
-    <section id="start" class="hero">
-      <div class="wrap hero__grid">
-        <div class="hero__copy">
-          <span class="eyebrow">
-            <span class="eyebrow__dot"></span>a dictionary of the people you
-            love
-          </span>
-          <h1 class="hero__h">
-            Keep the way<br />they <span class="accent">actually</span> talk.
-          </h1>
-          <p class="hero__sub">
-            Your daughter's first mispronounced words. Your dad's worn-out
-            advice. A friend's ridiculous phrase. Vocabu keeps them — in their
-            voice — before they quietly slip away.
-          </p>
+    <main>
+      <!-- HERO -->
+      <section id="start" class="hero">
+        <div class="wrap hero__grid">
+          <div class="hero__copy">
+            <span class="eyebrow">
+              <span class="eyebrow__dot"></span>a dictionary of the people you
+              love
+            </span>
+            <h1 class="hero__h">
+              Keep the way<br />they <span class="accent">actually</span> talk.
+            </h1>
+            <p class="hero__sub">
+              Your daughter's first mispronounced words. Your dad's worn-out
+              advice. A friend's ridiculous phrase. Vocabu keeps them — in their
+              voice — before they quietly slip away.
+            </p>
 
-          <form
-            v-if="!sent"
-            class="capture"
-            novalidate
-            @submit.prevent="submit"
-          >
-            <div class="field-row">
-              <input
-                v-model="email"
-                class="field-row__input"
-                type="email"
-                inputmode="email"
-                autocomplete="email"
-                placeholder="you@email.com"
-                aria-label="your email"
-                :readonly="submitting"
-              />
-              <VButton
-                class="capture__submit"
-                type="submit"
-                variant="primary"
-                size="lg"
-                :loading="submitting"
-                :disabled="!validEmail"
-              >
-                get my login link
-                <template #right>
-                  <ArrowRight :size="18" />
-                </template>
+            <form
+              v-if="!sent"
+              class="capture"
+              novalidate
+              @submit.prevent="submit"
+            >
+              <div class="field-row">
+                <input
+                  v-model="email"
+                  class="field-row__input"
+                  type="email"
+                  inputmode="email"
+                  autocomplete="email"
+                  placeholder="you@email.com"
+                  aria-label="your email"
+                  :readonly="submitting"
+                />
+                <VButton
+                  class="capture__submit"
+                  type="submit"
+                  variant="primary"
+                  size="lg"
+                  :loading="submitting"
+                  :disabled="!validEmail"
+                >
+                  get my login link
+                  <template #right>
+                    <ArrowRight :size="18" />
+                  </template>
+                </VButton>
+              </div>
+              <p class="capture__note">
+                <Mail :size="15" />
+                no password — we'll email you a link. free to start.
+              </p>
+              <p v-if="errorMessage" role="alert" class="capture__error">
+                {{ errorMessage }}
+              </p>
+            </form>
+
+            <div v-else class="sent" role="status" aria-live="polite">
+              <span class="sent__check">
+                <Check :size="16" :stroke-width="3" />
+              </span>
+              <div>
+                <h4 class="sent__h">Check your inbox</h4>
+                <p class="sent__p">
+                  We sent a sign-in link to <b>{{ trimmedEmail }}</b
+                  >.
+                  <button class="sent__again" type="button" @click="reset">
+                    Use a different email
+                  </button>
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div class="hero__phone">
+            <LandingPhoneMock />
+          </div>
+        </div>
+      </section>
+
+      <!-- REASONS -->
+      <section id="why" class="reasons">
+        <div class="wrap">
+          <div class="band-head reveal">
+            <div class="overline overline--rose">why vocabu</div>
+            <h2 class="band-h">A keepsake, not a feed.</h2>
+            <p>
+              Photos catch how a moment looked. Vocabu catches how it
+              <em>sounded</em> — the exact words, the wrong pronunciations, the
+              sayings you'll want back one day.
+            </p>
+          </div>
+          <div class="reason-grid">
+            <article class="card card--blue reveal">
+              <div class="card__badge"><Mic :size="24" /></div>
+              <h3>In their real voice</h3>
+              <p>
+                Attach a clip and hear them say it. The waveform plays right
+                inside the entry — the moment stays exactly as it sounded.
+              </p>
+            </article>
+            <article class="card card--rose reveal">
+              <div class="card__badge"><BadgeCheck :size="24" /></div>
+              <h3>Built for keeping</h3>
+              <p>
+                No followers to chase, no streaks, no numbers shouting at you.
+                Quiet by design — yours, and the few you choose to share with.
+              </p>
+            </article>
+            <article class="card card--blue reveal">
+              <div class="card__badge"><History :size="24" /></div>
+              <h3>On this day</h3>
+              <p>
+                A year later, a phrase you'd half-forgotten resurfaces — gently,
+                right when it lands hardest.
+              </p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- HOW -->
+      <section class="how">
+        <div class="wrap">
+          <div class="band-head reveal">
+            <div class="overline overline--rose">how it works</div>
+            <h2 class="band-h">Two taps to keep a word.</h2>
+          </div>
+          <ol class="steps">
+            <li class="step reveal">
+              <div class="step__n">1</div>
+              <h3>Catch it</h3>
+              <p>
+                Heard something you don't want to lose? Type the word and who
+                said it. That's a keep.
+              </p>
+            </li>
+            <li class="step reveal">
+              <div class="step__n">2</div>
+              <h3>Add their voice</h3>
+              <p>
+                Upload a clip, a meaning, the little story behind it — whenever
+                you have a moment.
+              </p>
+            </li>
+            <li class="step reveal">
+              <div class="step__n">3</div>
+              <h3>Keep it forever</h3>
+              <p>
+                It's filed in your dictionary, ready to resurface and make you
+                smile years from now.
+              </p>
+            </li>
+          </ol>
+        </div>
+      </section>
+
+      <!-- CLOSER -->
+      <section class="closer">
+        <div class="wrap">
+          <div class="closer__card reveal">
+            <div class="overline overline--blue">
+              never lose your sweet moments
+            </div>
+            <h2 class="closer__h">
+              Start before you <span class="word-script">forget</span>.
+            </h2>
+            <p class="closer__p">
+              The sweetest things they say are the easiest to lose. Keep the
+              first one today — it takes about thirty seconds.
+            </p>
+            <div class="closer__actions">
+              <VButton href="#start" variant="primary" size="lg">
+                start your dictionary
+              </VButton>
+              <VButton href="/login" variant="secondary" size="lg">
+                sign in
               </VButton>
             </div>
-            <p class="capture__note">
-              <Mail :size="15" />
-              no password — we'll email you a link. free to start.
-            </p>
-            <p v-if="errorMessage" role="alert" class="capture__error">
-              {{ errorMessage }}
-            </p>
-          </form>
-
-          <div v-else class="sent" role="status" aria-live="polite">
-            <span class="sent__check">
-              <Check :size="16" :stroke-width="3" />
-            </span>
-            <div>
-              <h4 class="sent__h">Check your inbox</h4>
-              <p class="sent__p">
-                We sent a sign-in link to <b>{{ trimmedEmail }}</b
-                >.
-                <button class="sent__again" type="button" @click="reset">
-                  Use a different email
-                </button>
-              </p>
-            </div>
           </div>
         </div>
-
-        <div class="hero__phone">
-          <LandingPhoneMock />
-        </div>
-      </div>
-    </section>
-
-    <!-- REASONS -->
-    <section id="why" class="reasons">
-      <div class="wrap">
-        <div class="band-head reveal">
-          <div class="overline overline--rose">why vocabu</div>
-          <h2 class="band-h">A keepsake, not a feed.</h2>
-          <p>
-            Photos catch how a moment looked. Vocabu catches how it
-            <em>sounded</em> — the exact words, the wrong pronunciations, the
-            sayings you'll want back one day.
-          </p>
-        </div>
-        <div class="reason-grid">
-          <article class="card card--blue reveal">
-            <div class="card__badge"><Mic :size="24" /></div>
-            <h3>In their real voice</h3>
-            <p>
-              Attach a clip and hear them say it. The waveform plays right
-              inside the entry — the moment stays exactly as it sounded.
-            </p>
-          </article>
-          <article class="card card--rose reveal">
-            <div class="card__badge"><BadgeCheck :size="24" /></div>
-            <h3>Built for keeping</h3>
-            <p>
-              No followers to chase, no streaks, no numbers shouting at you.
-              Quiet by design — yours, and the few you choose to share with.
-            </p>
-          </article>
-          <article class="card card--blue reveal">
-            <div class="card__badge"><History :size="24" /></div>
-            <h3>On this day</h3>
-            <p>
-              A year later, a phrase you'd half-forgotten resurfaces — gently,
-              right when it lands hardest.
-            </p>
-          </article>
-        </div>
-      </div>
-    </section>
-
-    <!-- HOW -->
-    <section class="how">
-      <div class="wrap">
-        <div class="band-head reveal">
-          <div class="overline overline--rose">how it works</div>
-          <h2 class="band-h">Two taps to keep a word.</h2>
-        </div>
-        <ol class="steps">
-          <li class="step reveal">
-            <div class="step__n">1</div>
-            <h4>Catch it</h4>
-            <p>
-              Heard something you don't want to lose? Type the word and who said
-              it. That's a keep.
-            </p>
-          </li>
-          <li class="step reveal">
-            <div class="step__n">2</div>
-            <h4>Add their voice</h4>
-            <p>
-              Upload a clip, a meaning, the little story behind it — whenever
-              you have a moment.
-            </p>
-          </li>
-          <li class="step reveal">
-            <div class="step__n">3</div>
-            <h4>Keep it forever</h4>
-            <p>
-              It's filed in your dictionary, ready to resurface and make you
-              smile years from now.
-            </p>
-          </li>
-        </ol>
-      </div>
-    </section>
-
-    <!-- CLOSER -->
-    <section class="closer">
-      <div class="wrap">
-        <div class="closer__card reveal">
-          <div class="overline overline--blue">
-            never lose your sweet moments
-          </div>
-          <h2 class="closer__h">
-            Start before you <span class="word-script">forget</span>.
-          </h2>
-          <p class="closer__p">
-            The sweetest things they say are the easiest to lose. Keep the first
-            one today — it takes about thirty seconds.
-          </p>
-          <div class="closer__actions">
-            <VButton href="#start" variant="primary" size="lg">
-              start your dictionary
-            </VButton>
-            <VButton href="/login" variant="secondary" size="lg">
-              sign in
-            </VButton>
-          </div>
-        </div>
-      </div>
-    </section>
+      </section>
+    </main>
 
     <!-- FOOTER -->
     <footer class="foot">
@@ -552,7 +541,7 @@ onMounted(() => {
 .capture__note {
   margin: 12px 2px 0;
   font-size: 13.5px;
-  color: var(--text-faint);
+  color: var(--text-muted);
   display: flex;
   align-items: center;
   gap: 7px;
@@ -633,7 +622,9 @@ onMounted(() => {
 }
 
 .overline--rose {
-  color: var(--primary);
+  /* Darker rose so the small uppercase label clears AA on the page bg in both
+     themes (--primary / rose-500 only hits 3.4:1 on light). */
+  color: var(--on-primary-soft);
 }
 
 .overline--blue {
@@ -754,7 +745,7 @@ onMounted(() => {
   margin-bottom: 16px;
 }
 
-.step h4 {
+.step h3 {
   margin: 0;
   font-size: 1.12rem;
   font-weight: var(--w-bold);
@@ -830,7 +821,7 @@ onMounted(() => {
 
 .foot__tag {
   font-size: 14px;
-  color: var(--text-faint);
+  color: var(--text-muted);
   white-space: nowrap;
 }
 

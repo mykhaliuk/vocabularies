@@ -4,7 +4,33 @@ import { PWA_API_CACHE, PWA_AVATARS_CACHE } from './shared/pwa-caches.js';
 export default defineNuxtConfig({
   compatibilityDate: '2026-04-30',
   devtools: { enabled: true },
-  modules: ['@sentry/nuxt/module', '@vite-pwa/nuxt'],
+  modules: ['@sentry/nuxt/module', '@vite-pwa/nuxt', '@nuxt/fonts'],
+  fonts: {
+    // Self-host the Google fonts at build: no render-blocking cross-origin
+    // request, woff2 served same-origin + preloaded, fallback metrics injected
+    // to keep CLS at zero. Replaces the old <link> to fonts.googleapis.com.
+    // latin-only: the English copy (incl. em-dashes + curly quotes, which live
+    // in the latin range) needs nothing more, and it slashes the @font-face
+    // count + woff2 weight that were bloating the render-blocking CSS.
+    defaults: { subsets: ['latin'] },
+    families: [
+      // Only the weights/styles actually used — italics are body-weight only
+      // (em / gloss), Caveat carries the quote marks (500) + words (600).
+      {
+        name: 'Hanken Grotesk',
+        provider: 'google',
+        weights: [400, 500, 600, 700, 800],
+        styles: ['normal'],
+      },
+      {
+        name: 'Hanken Grotesk',
+        provider: 'google',
+        weights: [400, 500],
+        styles: ['italic'],
+      },
+      { name: 'Caveat', provider: 'google', weights: [500, 600] },
+    ],
+  },
   css: [
     '~/assets/css/tokens.css',
     '~/assets/css/theme-light.css',
@@ -15,6 +41,7 @@ export default defineNuxtConfig({
   ],
   app: {
     head: {
+      htmlAttrs: { lang: 'en' },
       meta: [
         // Per-mode browser-chrome colour (Android Chrome address bar,
         // iOS Safari status bar). Separate from the PWA manifest
@@ -28,18 +55,6 @@ export default defineNuxtConfig({
           name: 'theme-color',
           content: '#0E1417',
           media: '(prefers-color-scheme: dark)',
-        },
-      ],
-      link: [
-        { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
-        {
-          rel: 'preconnect',
-          href: 'https://fonts.gstatic.com',
-          crossorigin: '',
-        },
-        {
-          rel: 'stylesheet',
-          href: 'https://fonts.googleapis.com/css2?family=Hanken+Grotesk:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500&display=swap',
         },
       ],
       script: [
@@ -56,6 +71,10 @@ export default defineNuxtConfig({
   },
   nitro: {
     prerender: { routes: ['/offline'] },
+    // Pre-generate gzip + brotli for static assets so the JS/CSS go over the
+    // wire compressed (Vercel does this in prod; this makes preview/self-host
+    // match and keeps transfer weight — the main mobile-perf lever — low).
+    compressPublicAssets: { gzip: true, brotli: true },
   },
   routeRules: {
     // Marketing landing is fully static: prerendered to HTML at build for

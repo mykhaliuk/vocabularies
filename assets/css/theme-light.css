@@ -74,6 +74,15 @@
   --secondary-hover: var(--blue-600);
   --secondary-soft: var(--blue-50);
 
+  /* ACTION SURFACES (text-on-accent, AA-safe). White-label buttons sit on
+     these, NOT on --primary / --secondary: the bright brand accents only reach
+     ~3.4:1 / ~2.9:1 with white (fail WCAG AA), and the dark accent steps fail
+     worse. These dedicated steps clear AA with white and are THEME-INDEPENDENT
+     on purpose (the button surface IS the colour) — hence no [data-theme=dark]
+     override. --primary / --secondary stay for non-text accent use. */
+  --primary-action: #cf3a60; /* white text → 4.74:1 */
+  --secondary-action: #1378a6; /* white text → 4.93:1 */
+
   --link: var(--blue-600);
   --like: var(--rose-500); /* heart / love a moment */
   --focus-ring: color-mix(in oklch, var(--rose-500) 55%, transparent);
