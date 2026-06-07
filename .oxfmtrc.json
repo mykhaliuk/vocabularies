@@ -14,6 +14,7 @@
     "dist",
     "db/migrations",
     "bun.lockb",
-    "package-lock.json"
+    "package-lock.json",
+    "docs/design"
   ]
 }

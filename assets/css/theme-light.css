@@ -1,0 +1,90 @@
+/* Vocabu — light theme.
+   Defines the raw color palette + semantic color roles for the default
+   light appearance. Loaded unconditionally so semantic roles are always
+   resolvable; theme-dark.css overrides the raw + semantic values when
+   the user (or the OS) prefers dark. */
+
+:root {
+  /* ========================================================
+     COLOR — RAW PALETTE
+     ======================================================== */
+
+  /* Neutrals (cool clean white → almost-black) */
+  --paper: #fbfeff; /* app background, cool near-white */
+  --surface: #ffffff; /* cards, sheets */
+  --surface-sunk: #f1f4f6; /* inset wells, search field */
+  --ink: #1b1d1e; /* primary text, "almost-black" */
+  --ink-2: #61676c; /* secondary text, meta */
+  --ink-3: #969ba1; /* tertiary text, placeholders */
+  --hairline: #eaedef; /* borders, dividers */
+  --hairline-2: #dadee1; /* stronger borders */
+
+  /* Rose — PRIMARY accent (bright, vivid rose) */
+  --rose-50: #feecf1;
+  --rose-100: #fcd5e0;
+  --rose-200: #f9aec2;
+  --rose-300: #f687a3;
+  --rose-400: #f26b8c;
+  --rose-500: #ed5379; /* primary */
+  --rose-600: #d93c64;
+  --rose-700: #b22f52;
+
+  /* Light blue — SECONDARY accent (bright sky blue) */
+  --blue-50: #e7f5fd;
+  --blue-100: #c6e9fb;
+  --blue-200: #90d5f4;
+  --blue-300: #54beec;
+  --blue-400: #2eace3;
+  --blue-500: #1f9edb; /* secondary */
+  --blue-600: #1681bc;
+  --blue-700: #126591;
+
+  /* Semantic (kept dusty + warm to match) */
+  --positive: #6e9070; /* dusty sage */
+  --positive-bg: #e7eee5;
+  --warn: #c79a56; /* dusty amber */
+  --warn-bg: #f6ecd8;
+  --danger: #c2685c; /* dusty terracotta */
+  --danger-bg: #f6e2dd;
+
+  /* ========================================================
+     COLOR — SEMANTIC ROLES (var() refs into the palette above)
+     Defined once, here, so theme-dark.css only needs to override
+     the RAW palette values to re-resolve every role.
+     ======================================================== */
+  --bg: var(--paper);
+  --bg-elevated: var(--surface);
+  --bg-sunk: var(--surface-sunk);
+
+  --text: var(--ink);
+  --text-muted: var(--ink-2);
+  --text-faint: var(--ink-3);
+  --text-on-accent: #ffffff;
+
+  --border: var(--hairline);
+  --border-strong: var(--hairline-2);
+
+  --primary: var(--rose-500);
+  --primary-hover: var(--rose-600);
+  --primary-press: var(--rose-700);
+  --primary-soft: var(--rose-50);
+  --primary-soft-border: var(--rose-100);
+
+  --secondary: var(--blue-500);
+  --secondary-hover: var(--blue-600);
+  --secondary-soft: var(--blue-50);
+
+  --link: var(--blue-600);
+  --like: var(--rose-500); /* heart / love a moment */
+  --focus-ring: color-mix(in oklch, var(--rose-500) 55%, transparent);
+
+  /* Text/icon sitting on a soft accent wash. Split from the raw
+     -700 steps so dark mode can flip these without affecting avatars. */
+  --on-primary-soft: var(--rose-700);
+  --on-secondary-soft: var(--blue-700);
+
+  /* Translucent chrome (top/tab bar), modal scrim, phone-frame backdrop. */
+  --bar-bg: rgba(251, 254, 255, 0.82);
+  --scrim: rgba(27, 29, 30, 0.34);
+  --frame-bg: #e5eaed;
+}

@@ -5,6 +5,55 @@ export default defineNuxtConfig({
   compatibilityDate: '2026-04-30',
   devtools: { enabled: true },
   modules: ['@sentry/nuxt/module', '@vite-pwa/nuxt'],
+  css: [
+    '~/assets/css/tokens.css',
+    '~/assets/css/theme-light.css',
+    '~/assets/css/theme-dark.css',
+    '~/assets/css/typography.css',
+    '~/assets/css/animations.css',
+    '~/assets/css/base.css',
+  ],
+  app: {
+    head: {
+      meta: [
+        // Per-mode browser-chrome colour (Android Chrome address bar,
+        // iOS Safari status bar). Separate from the PWA manifest
+        // theme_color (which is used in standalone/install contexts).
+        {
+          name: 'theme-color',
+          content: '#FBFEFF',
+          media: '(prefers-color-scheme: light)',
+        },
+        {
+          name: 'theme-color',
+          content: '#0E1417',
+          media: '(prefers-color-scheme: dark)',
+        },
+      ],
+      link: [
+        { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
+        {
+          rel: 'preconnect',
+          href: 'https://fonts.gstatic.com',
+          crossorigin: '',
+        },
+        {
+          rel: 'stylesheet',
+          href: 'https://fonts.googleapis.com/css2?family=Hanken+Grotesk:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500&display=swap',
+        },
+      ],
+      script: [
+        // Synchronously honour an explicit theme override stored in
+        // localStorage so users with a manual choice see it on first paint
+        // (no FOUC). OS preference applies automatically via the
+        // @media (prefers-color-scheme: dark) block in theme-dark.css.
+        {
+          tagPriority: 'critical',
+          innerHTML: `(function(){try{var t=localStorage.getItem('vocabu-theme');if(t==='dark'||t==='light')document.documentElement.dataset.theme=t;}catch(e){}})();`,
+        },
+      ],
+    },
+  },
   nitro: {
     prerender: { routes: ['/offline'] },
   },
@@ -16,9 +65,9 @@ export default defineNuxtConfig({
     manifest: {
       name: 'Vocabu',
       short_name: 'Vocabu',
-      description: 'Vocabu',
-      theme_color: '#4f46e5',
-      background_color: '#ffffff',
+      description: 'Never lose your sweet moments.',
+      theme_color: '#ED5379',
+      background_color: '#FBFEFF',
       display: 'standalone',
       start_url: '/',
       scope: '/',
@@ -79,6 +128,7 @@ export default defineNuxtConfig({
         noImplicitAny: true,
         noUncheckedIndexedAccess: true,
       },
+      exclude: ['../docs'],
     },
   },
   runtimeConfig: {

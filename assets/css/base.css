@@ -1,0 +1,51 @@
+/* Vocabu — base page styles.
+   Tokens, theme palettes, and typography classes are imported separately
+   (see nuxt.config.js css[]). This file just applies them globally and
+   adds modern niceties (text-wrap, accent-color, color-scheme). */
+
+:root {
+  color-scheme: light dark;
+  accent-color: var(--primary);
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-sans);
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  min-height: 100dvh;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
+}
+
+a {
+  color: var(--link);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+input,
+button,
+textarea {
+  font-family: inherit;
+}

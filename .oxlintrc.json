@@ -9,6 +9,7 @@
     ".nuxt",
     ".output",
     "dist",
-    "db/migrations"
+    "db/migrations",
+    "**/docs/**"
   ]
 }

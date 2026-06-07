@@ -1,0 +1,146 @@
+/* Vocabu — dark theme.
+   Strategy: override the RAW neutral + accent steps; the semantic roles
+   (--bg, --text, --primary, …) defined in theme-light.css are var()
+   references, so they re-resolve automatically.
+
+   Dark mode applies in two cases:
+   - @media (prefers-color-scheme: dark)  →  OS preference, no JS needed.
+   - [data-theme="dark"]                  →  explicit user override
+                                             (set by the inline init script
+                                             in nuxt.config.js from
+                                             localStorage 'vocabu-theme').
+
+   To avoid two near-identical override blocks drifting, the dark values
+   live ONCE in private --_dk-* custom properties on :root, and the two
+   conditional selectors only re-assign the public tokens to those refs. */
+
+:root {
+  /* Private dark values. Read by the rules below; never used directly
+     by app components — components reference --paper / --surface / etc. */
+  --_dk-paper: #0e1417;
+  --_dk-surface: #161f22;
+  --_dk-surface-sunk: #0a1012;
+  --_dk-ink: #eaf1f2;
+  --_dk-ink-2: #9aa7ab;
+  --_dk-ink-3: #6a757a;
+  --_dk-hairline: #232e31;
+  --_dk-hairline-2: #313d41;
+
+  --_dk-rose-50: #2a1822;
+  --_dk-rose-100: #3e2231;
+  --_dk-rose-500: #f2658a;
+  --_dk-rose-600: #f0577e;
+
+  --_dk-blue-50: #0f2531;
+  --_dk-blue-100: #18394c;
+  --_dk-blue-500: #34b1e6;
+  --_dk-blue-600: #46acdd;
+
+  --_dk-positive: #8fb191;
+  --_dk-positive-bg: #16241a;
+  --_dk-warn: #d9b473;
+  --_dk-warn-bg: #2a2212;
+  --_dk-danger: #d98a7c;
+  --_dk-danger-bg: #2e1a16;
+
+  --_dk-on-primary-soft: #f687a3;
+  --_dk-on-secondary-soft: #82cbef;
+
+  --_dk-bar-bg: rgba(12, 18, 20, 0.8);
+  --_dk-scrim: rgba(0, 0, 0, 0.54);
+  --_dk-frame-bg: #05080a;
+
+  --_dk-shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --_dk-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.46), 0 1px 2px rgba(0, 0, 0, 0.3);
+  --_dk-shadow-md: 0 6px 18px rgba(0, 0, 0, 0.5);
+  --_dk-shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.6);
+  --_dk-shadow-float: 0 6px 20px rgba(242, 101, 138, 0.42);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+
+    --paper: var(--_dk-paper);
+    --surface: var(--_dk-surface);
+    --surface-sunk: var(--_dk-surface-sunk);
+    --ink: var(--_dk-ink);
+    --ink-2: var(--_dk-ink-2);
+    --ink-3: var(--_dk-ink-3);
+    --hairline: var(--_dk-hairline);
+    --hairline-2: var(--_dk-hairline-2);
+
+    --rose-50: var(--_dk-rose-50);
+    --rose-100: var(--_dk-rose-100);
+    --rose-500: var(--_dk-rose-500);
+    --rose-600: var(--_dk-rose-600);
+
+    --blue-50: var(--_dk-blue-50);
+    --blue-100: var(--_dk-blue-100);
+    --blue-500: var(--_dk-blue-500);
+    --blue-600: var(--_dk-blue-600);
+
+    --positive: var(--_dk-positive);
+    --positive-bg: var(--_dk-positive-bg);
+    --warn: var(--_dk-warn);
+    --warn-bg: var(--_dk-warn-bg);
+    --danger: var(--_dk-danger);
+    --danger-bg: var(--_dk-danger-bg);
+
+    --on-primary-soft: var(--_dk-on-primary-soft);
+    --on-secondary-soft: var(--_dk-on-secondary-soft);
+
+    --bar-bg: var(--_dk-bar-bg);
+    --scrim: var(--_dk-scrim);
+    --frame-bg: var(--_dk-frame-bg);
+
+    --shadow-xs: var(--_dk-shadow-xs);
+    --shadow-sm: var(--_dk-shadow-sm);
+    --shadow-md: var(--_dk-shadow-md);
+    --shadow-lg: var(--_dk-shadow-lg);
+    --shadow-float: var(--_dk-shadow-float);
+  }
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --paper: var(--_dk-paper);
+  --surface: var(--_dk-surface);
+  --surface-sunk: var(--_dk-surface-sunk);
+  --ink: var(--_dk-ink);
+  --ink-2: var(--_dk-ink-2);
+  --ink-3: var(--_dk-ink-3);
+  --hairline: var(--_dk-hairline);
+  --hairline-2: var(--_dk-hairline-2);
+
+  --rose-50: var(--_dk-rose-50);
+  --rose-100: var(--_dk-rose-100);
+  --rose-500: var(--_dk-rose-500);
+  --rose-600: var(--_dk-rose-600);
+
+  --blue-50: var(--_dk-blue-50);
+  --blue-100: var(--_dk-blue-100);
+  --blue-500: var(--_dk-blue-500);
+  --blue-600: var(--_dk-blue-600);
+
+  --positive: var(--_dk-positive);
+  --positive-bg: var(--_dk-positive-bg);
+  --warn: var(--_dk-warn);
+  --warn-bg: var(--_dk-warn-bg);
+  --danger: var(--_dk-danger);
+  --danger-bg: var(--_dk-danger-bg);
+
+  --on-primary-soft: var(--_dk-on-primary-soft);
+  --on-secondary-soft: var(--_dk-on-secondary-soft);
+
+  --bar-bg: var(--_dk-bar-bg);
+  --scrim: var(--_dk-scrim);
+  --frame-bg: var(--_dk-frame-bg);
+
+  --shadow-xs: var(--_dk-shadow-xs);
+  --shadow-sm: var(--_dk-shadow-sm);
+  --shadow-md: var(--_dk-shadow-md);
+  --shadow-lg: var(--_dk-shadow-lg);
+  --shadow-float: var(--_dk-shadow-float);
+}
