@@ -48,10 +48,15 @@ against it so none drifts:
 
 - **Production CSS** — `bun run ds:check` (CI gate; strict).
 - **Prototype** — `bun run proto:check`. The prototype (`docs/design/prototype`)
-  embeds its OWN DS copy under `_ds/<id>/`, which lags when the DS changes. This
-  flags STALE tokens (re-sync the prototype's DS in Claude Design and re-export),
-  value CONTRADICTIONS (real drift → fails), and an obsolete `ds-bridge.css`
-  (a shim for tokens the DS has since shipped — delete it on next export).
+  embeds its OWN DS copy under `_ds/<id>/`, which lags when the DS changes, and
+  patches gaps with `ds-bridge.css`; the prototype's effective tokens are
+  (embedded DS) + (bridge). Compared to canon it reports: DRIFT — embedded DS
+  defines a token with a different value (real disagreement → fails); COVERED —
+  a canon token the embedded DS lacks but the bridge supplies at the canon value
+  (re-bind the prototype's DS in Claude Design, then delete the bridge);
+  BRIDGE≠ — the bridge supplies a token at a different value; GAP — absent from
+  both; REDUNDANT/ORPHAN — dead or unknown bridge lines. Only DRIFT fails,
+  because the embedded DS is re-bound in Claude Design, not in the repo.
 - `bun run ds:verify` runs both legs at once.
 
 Drift can't be prevented at authoring time (DS and prototype are edited
