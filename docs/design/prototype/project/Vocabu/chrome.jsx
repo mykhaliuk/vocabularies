@@ -17,7 +17,7 @@ function TopBar({ title, onBack, leftIcon, onLeft, rightIcon, onRight, brand }) 
   return (
     <header style={{
       position: "sticky", top: 0, zIndex: 20, height: 54, display: "flex", alignItems: "center", padding: "0 8px",
-      background: "var(--glass-bar)", backdropFilter: "blur(16px) saturate(1.4)",
+      background: "var(--bar-bg)", backdropFilter: "blur(16px) saturate(1.4)",
       WebkitBackdropFilter: "blur(16px) saturate(1.4)", borderBottom: "1px solid var(--hairline)",
     }}>
       {side(leftIcon, onBack || onLeft, !!onBack)}
@@ -71,9 +71,9 @@ function BottomNav({ active, onNav, onCompose }) {
         position: "relative", pointerEvents: "auto",
         display: "flex", alignItems: "center", gap: 8,
         padding: "8px 14px", borderRadius: "var(--r-pill)",
-        background: "var(--glass-nav)", backdropFilter: "blur(20px) saturate(1.6)",
+        background: "color-mix(in oklch, var(--surface) 80%, transparent)", backdropFilter: "blur(20px) saturate(1.6)",
         WebkitBackdropFilter: "blur(20px) saturate(1.6)",
-        border: "1px solid var(--glass-border)", boxShadow: "var(--shadow-lg)",
+        border: "1px solid var(--hairline)", boxShadow: "var(--shadow-lg)",
       }}>
         {tab(TABS[0])}
         {tab(TABS[1])}

@@ -60,7 +60,7 @@ function Compose({ open, onClose, onPost }) {
     <div aria-hidden={!open} style={{ position: "absolute", inset: 0, zIndex: 60, pointerEvents: open ? "auto" : "none" }}>
       {/* blurred scrim over the feed */}
       <div onClick={onClose} style={{
-        position: "absolute", inset: 0, background: "rgba(27,29,30,0.28)",
+        position: "absolute", inset: 0, background: "var(--scrim)",
         backdropFilter: open ? "blur(5px)" : "blur(0px)", WebkitBackdropFilter: open ? "blur(5px)" : "blur(0px)",
         opacity: open ? 1 : 0, transition: "opacity var(--dur-base) var(--ease-out), backdrop-filter var(--dur-base)",
       }} />

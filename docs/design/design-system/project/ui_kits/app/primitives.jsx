@@ -67,8 +67,8 @@ function Button({ children, variant = "primary", size = "md", icon, onClick, sty
   };
   const dark = pressed ? "brightness(0.9)" : hover ? "brightness(0.94)" : "none";
   const variants = {
-    primary: { background: "var(--rose-500)", color: "#fff", boxShadow: "var(--shadow-float)", filter: dark },
-    blue: { background: "var(--blue-500)", color: "#fff", filter: dark },
+    primary: { background: "var(--primary-action)", color: "var(--text-on-accent)", boxShadow: "var(--shadow-float)", filter: dark },
+    blue: { background: "var(--secondary-action)", color: "var(--text-on-accent)", filter: dark },
     secondary: { background: hover ? "var(--surface-sunk)" : "var(--surface)", color: "var(--ink)", border: `1.5px solid ${hover ? "var(--ink-3)" : "var(--hairline-2)"}` },
     ghost: { background: hover ? "var(--rose-50)" : "transparent", color: "var(--rose-600)" },
     danger: { background: hover ? "var(--danger-bg)" : "transparent", color: "var(--danger)" },

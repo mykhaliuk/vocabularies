@@ -8,37 +8,9 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
   "wordStyle": "handwritten",
   "backdrop": true,
   "density": "airy",
-  "previewOffline": false
+  "previewOffline": false,
+  "emptyFeed": false
 }/*EDITMODE-END*/;
-
-// Dark theme — derived in the DS spirit: near-black surfaces (never pure black),
-// near-white text (never pure white), rose + blue accents preserved.
-const DARK = {
-  "--paper": "#15171A",
-  "--surface": "#1E2125",
-  "--surface-sunk": "#282C31",
-  "--ink": "#ECEEF0",
-  "--ink-2": "#9AA0A6",
-  "--ink-3": "#6B7177",
-  "--hairline": "#2B2F34",
-  "--hairline-2": "#3A4046",
-  "--rose-50": "rgba(237,83,121,0.16)",
-  "--rose-100": "rgba(237,83,121,0.22)",
-  "--rose-200": "rgba(237,83,121,0.38)",
-  "--rose-700": "#F687A3",
-  "--blue-50": "rgba(31,158,219,0.15)",
-  "--blue-100": "rgba(31,158,219,0.22)",
-  "--blue-200": "rgba(31,158,219,0.34)",
-  "--blue-700": "#7CCBEF",
-  "--primary-soft": "rgba(237,83,121,0.18)",
-  "--primary-soft-border": "rgba(237,83,121,0.36)",
-  "--secondary-soft": "rgba(31,158,219,0.15)",
-  "--glass-bar": "rgba(20,22,25,0.72)",
-  "--glass-nav": "rgba(30,33,37,0.74)",
-  "--glass-border": "rgba(255,255,255,0.08)",
-  "--shadow-sm": "0 1px 3px rgba(0,0,0,0.4)",
-  "--shadow-lg": "0 12px 32px rgba(0,0,0,0.55)",
-};
 
 const ACCENTS = {
   soft:     { p: "var(--rose-400)", ph: "var(--rose-500)", pp: "var(--rose-600)", s: "var(--blue-400)", sh: "var(--blue-500)", link: "var(--blue-500)", a: 0.035 },
@@ -81,6 +53,7 @@ function App() {
   const open = (m) => m && setDetail(m);
 
   const post = ({ word, speaker, rel, gloss, story, collection, audio }) => {
+    setTweak("emptyFeed", false);
     const m = {
       id: "n" + Date.now(), speaker, tone: "rose", rel: rel || "just now",
       word, gloss, desc: story || "you kept this just now.",
@@ -98,6 +71,13 @@ function App() {
   const ac = ACCENTS[t.accent] || ACCENTS.standard;
   const hand = t.wordStyle === "handwritten";
   const dark = t.theme === "dark" || (t.theme === "system" && prefersDark);
+
+  // Drive the official DS dark theme by toggling [data-theme] on <html>.
+  // useLayoutEffect runs before paint, so there's no flash on toggle.
+  React.useLayoutEffect(() => {
+    document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
+  }, [dark]);
+
   const rootVars = {
     "--primary": ac.p, "--primary-hover": ac.ph, "--primary-press": ac.pp,
     "--secondary": ac.s, "--secondary-hover": ac.sh, "--like": ac.p, "--link": ac.link,
@@ -108,11 +88,6 @@ function App() {
     "--word-leading": hand ? "1.2" : "1.16",
     "--word-pad-b": hand ? "0.14em" : "0px",
     "--entry-pad-y": t.density === "compact" ? "16px" : "28px",
-    // glass (light defaults; DARK overrides below)
-    "--glass-bar": "rgba(251,254,255,0.72)",
-    "--glass-nav": "rgba(255,255,255,0.66)",
-    "--glass-border": "rgba(255,255,255,0.7)",
-    ...(dark ? DARK : {}),
   };
   const gA = dark ? ac.a + 0.06 : ac.a;
   const backdrop = t.backdrop
@@ -128,8 +103,8 @@ function App() {
         {tab === "feed" && (
           <>
             <TopBar brand />
-            <FeedScreen entries={entries} onOpen={open} />
-            <div style={{ height: "calc(var(--bottom-nav-h) + 40px)" }} />
+            <FeedScreen entries={t.emptyFeed ? [] : entries} onOpen={open} />
+            {!t.emptyFeed && <div style={{ height: "calc(var(--bottom-nav-h) + 40px)" }} />}
           </>
         )}
         {tab === "discover" && <DiscoverScreen />}
@@ -156,6 +131,7 @@ function App() {
         <TweakToggle label="Backdrop gradient" value={t.backdrop} onChange={(v) => setTweak("backdrop", v)} />
         <TweakRadio label="Density" value={t.density} options={["airy", "compact"]} onChange={(v) => setTweak("density", v)} />
         <TweakSection label="States" />
+        <TweakToggle label="Empty feed" value={t.emptyFeed} onChange={(v) => setTweak("emptyFeed", v)} />
         <TweakToggle label="Preview offline" value={t.previewOffline} onChange={(v) => setTweak("previewOffline", v)} />
       </TweaksPanel>
     </div>

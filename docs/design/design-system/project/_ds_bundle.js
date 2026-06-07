@@ -1,4 +1,4 @@
-/* @ds-bundle: {"format":3,"namespace":"VocabuDesignSystem_fc456a","components":[],"sourceHashes":{"ui_kits/app/Compose.jsx":"6a2ff5723934","ui_kits/app/Detail.jsx":"127d5d825040","ui_kits/app/WordCard.jsx":"db5015559529","ui_kits/app/app.jsx":"7d8919458aca","ui_kits/app/chrome.jsx":"a3ac2fa42788","ui_kits/app/data.jsx":"fd520cffd876","ui_kits/app/primitives.jsx":"31b935bf796f","ui_kits/app/screens.jsx":"48daa4dd1295"},"inlinedExternals":[],"unexposedExports":[]} */
+/* @ds-bundle: {"format":3,"namespace":"VocabuDesignSystem_fc456a","components":[],"sourceHashes":{"ui_kits/app/Compose.jsx":"6a2ff5723934","ui_kits/app/Detail.jsx":"127d5d825040","ui_kits/app/WordCard.jsx":"db5015559529","ui_kits/app/app.jsx":"7d8919458aca","ui_kits/app/chrome.jsx":"a3ac2fa42788","ui_kits/app/data.jsx":"fd520cffd876","ui_kits/app/primitives.jsx":"c92a8f48c6ac","ui_kits/app/screens.jsx":"48daa4dd1295"},"inlinedExternals":[],"unexposedExports":[]} */
 
 (() => {
 
@@ -1299,14 +1299,14 @@ function Button({
   const dark = pressed ? "brightness(0.9)" : hover ? "brightness(0.94)" : "none";
   const variants = {
     primary: {
-      background: "var(--rose-500)",
-      color: "#fff",
+      background: "var(--primary-action)",
+      color: "var(--text-on-accent)",
       boxShadow: "var(--shadow-float)",
       filter: dark
     },
     blue: {
-      background: "var(--blue-500)",
-      color: "#fff",
+      background: "var(--secondary-action)",
+      color: "var(--text-on-accent)",
       filter: dark
     },
     secondary: {

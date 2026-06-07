@@ -83,6 +83,22 @@
   --secondary-hover: var(--blue-600);
   --secondary-soft:  var(--blue-50);
 
+  /* --------------------------------------------------------
+     ACTION SURFACES (text-on-accent, AA-safe)
+     --------------------------------------------------------
+     White-label buttons sit on these, NOT on --primary /
+     --secondary. The bright brand accents (rose-500 #ED5379,
+     blue-500 #1F9EDB) only reach ~3.4:1 / ~2.9:1 with white,
+     which fails WCAG 2.1 AA (1.4.3, needs 4.5:1) — and the
+     dark-theme accent steps fail worse. These dedicated steps
+     clear AA with white and are THEME-INDEPENDENT on purpose:
+     the button surface IS the colour, so it must pass in both
+     light and dark (hence no override in [data-theme="dark"]).
+     Keep --primary / --secondary for every non-text accent use
+     (washes, focus rings, --like, the eyebrow dot, the FAB glyph). */
+  --primary-action:   #CF3A60;  /* white text → 4.74:1  (AA ✓ both themes) */
+  --secondary-action: #1378A6;  /* white text → 4.93:1  (AA ✓ both themes) */
+
   --link:          var(--blue-600);
   --like:          var(--rose-500);   /* heart / love a moment */
   --focus-ring:    color-mix(in oklch, var(--rose-500) 55%, transparent);
@@ -107,11 +123,11 @@
   --font-serif: var(--font-sans);
 
   /* Weights */
-  --w-regular: 400;
-  --w-medium:  500;
-  --w-semibold:600;
-  --w-bold:    700;
-  --w-extra:   800;
+  --w-regular: 400;  /* @kind font */
+  --w-medium:  500;  /* @kind font */
+  --w-semibold:600;  /* @kind font */
+  --w-bold:    700;  /* @kind font */
+  --w-extra:   800;  /* @kind font */
 
   /* ========================================================
      TYPE SCALE  (mobile-first; rem @ 16px base)
@@ -180,11 +196,11 @@
   /* ========================================================
      MOTION  (gentle, never bouncy/aggressive)
      ======================================================== */
-  --ease-out:   cubic-bezier(0.22, 0.61, 0.36, 1);
-  --ease-in-out:cubic-bezier(0.45, 0, 0.4, 1);
-  --dur-fast:   120ms;
-  --dur-base:   200ms;
-  --dur-slow:   320ms;
+  --ease-out:   cubic-bezier(0.22, 0.61, 0.36, 1);  /* @kind other */
+  --ease-in-out:cubic-bezier(0.45, 0, 0.4, 1);  /* @kind other */
+  --dur-fast:   120ms;  /* @kind other */
+  --dur-base:   200ms;  /* @kind other */
+  --dur-slow:   320ms;  /* @kind other */
 }
 
 /* ============================================================

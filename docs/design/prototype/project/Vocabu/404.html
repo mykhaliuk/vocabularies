@@ -4,34 +4,30 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>not in the dictionary · Vocabu</title>
-  <link rel="stylesheet" href="colors_and_type.css" />
+  <link rel="stylesheet" href="../_ds/vocabu-design-system-fc456a27-02a5-4423-9181-3fc0311e1354/colors_and_type.css" />
+  <link rel="stylesheet" href="ds-bridge.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&display=swap" rel="stylesheet" />
+  <script>
+    /* follow the device theme via the official DS [data-theme] hook (dependency-light, no JS framework) */
+    (function () {
+      try {
+        if (matchMedia("(prefers-color-scheme: dark)").matches)
+          document.documentElement.setAttribute("data-theme", "dark");
+      } catch (e) {}
+    })();
+  </script>
   <style>
-    /* Dark theme — derived in the DS spirit (near-black surfaces, near-white ink,
-       rose + blue preserved); follows the device setting. Mirrors the app. */
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --paper: #15171A; --surface: #1E2125; --surface-sunk: #282C31;
-        --ink: #ECEEF0; --ink-2: #9AA0A6; --ink-3: #6B7177;
-        --hairline: #2B2F34; --hairline-2: #3A4046;
-        --rose-700: #F687A3; --blue-700: #7CCBEF;
-        --primary-soft: rgba(237,83,121,0.18);
-        --secondary-soft: rgba(31,158,219,0.15);
-      }
-    }
-
     * { box-sizing: border-box; }
     html, body { margin: 0; height: 100%; }
     body {
-      background: #DFE5E9;
+      background: var(--frame-bg);
       font-family: var(--font-sans);
       display: flex; align-items: center; justify-content: center;
       min-height: 100vh; padding: 24px;
       -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
     }
-    @media (prefers-color-scheme: dark) { body { background: #0A0B0D; } }
 
     .device {
       position: relative; width: 390px; height: 844px;
@@ -155,7 +151,7 @@
     }
     .btn:active { transform: scale(0.97); }
     .btn-primary {
-      background: var(--primary); color: var(--text-on-accent);
+      background: var(--primary-action); color: var(--text-on-accent);
       box-shadow: var(--shadow-float);
     }
     .btn-primary:hover { filter: brightness(0.96); }

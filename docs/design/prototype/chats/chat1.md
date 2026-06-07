@@ -871,3 +871,746 @@ Verifier agent check completed
 
 The verifier passed clean — no issues. Everything's working and ready for you to explore: login → feed → compose with upload, plus the offline state via the Tweaks toggle. Let me know if you'd like the official dark-theme tokens swapped in or anything else refined.
 
+## User
+
+next we need the 404 page please. make it original
+
+## Assistant
+
+_[tool: read_file]_
+
+_[tool: list_files]_
+
+A 404 for a *dictionary* app practically writes itself: the page you're looking for is **a word we don't have**. I'll build it as an undefined dictionary entry — same visual language as a feed entry (handwritten word, gloss, gentle story line) — and make it a dependency-light static page so it renders even when the app bundle doesn't. Let me confirm the dark tokens and logo first.
+
+_[tool: write_file]_
+
+My local `colors_and_type.css` is the pre-dark version, so I'll mirror my app's derived dark palette via a `prefers-color-scheme` block to keep the 404 self-contained and dependency-light (the right call — a 404 should render even if the app bundle fails).
+
+Concept: render the 404 in Vocabu's **own entry anatomy** — overline, a handwritten word, a gloss, even a *silent* waveform — because the most on-brand 404 for a dictionary is "a word we don't have." The page you wanted is **four‑oh‑four**: *a page that isn't here.*
+
+_[tool: show_html]_
+
+_[tool: show_html]_
+
+_[tool: str_replace_edit]_
+
+The handwritten word is overflowing the frame at 74px (Caveat runs wide). Let me size it to fit and keep the overline on one line.
+
+_[tool: show_html]_
+
+_[tool: str_replace_edit]_
+
+Still clipping — that's the same Caveat wide-metric rendering in the screenshot tool we hit before, but I'll size to the pessimistic case so it's guaranteed to fit real browsers too.
+
+_[tool: show_html]_
+
+_[tool: done]_
+
+That reads exactly right — the 404 rendered as an undefined dictionary entry: **NOT IN THE DICTIONARY** → the handwritten *"four-oh-four"* → *a page that isn't here* → a deliberately **silent waveform** (`—:—`, "nothing to play — this one was never kept.") → back to your words. Dark mode is picking up here and looks clean. Let me hand off.
+
+_[tool: fork_verifier_agent]_
+
+Those are soft style-lint nudges, not errors — and the main one is by design: a 404 should be **dependency-light static HTML** that renders even when the app bundle fails, so I deliberately didn't load the React bundle into it. The "raw hex" warnings trace to my hand-rolled dark palette (pre-existing, from when the DS shipped no dark tokens). I'll leave the 404 as-is since it's correct, and fork a visual check.Done — the **404 page** is built and live at `Vocabu/404.html`.
+
+The concept: a 404 for a *dictionary* app should be **a word we don't have**. So it's rendered in Vocabu's own entry anatomy —
+
+- overline: *not in the dictionary*
+- the handwritten word: *"four‑oh‑four"* (sounded out, toddler-style)
+- gloss: *a page that isn't here*
+- a deliberately **silent waveform** (`—:—`, "nothing to play — this one was never kept.") — the app's audio vocabulary, emptied
+- a rose **back to your words** button + a quiet **search your dictionary** link
+
+It's faithful to the system: Hanken + Caveat, the faint rose/blue backdrop, the same device frame, light **and** dark (follows the device), reduced-motion safe, and it collapses to full-screen on a real phone. I kept it as standalone static HTML on purpose so it renders even if the app bundle ever fails — that's why the linter flagged "load the bundle"; for an error page, dependency-light is the right call.
+
+One open offer still stands: the design system now ships official dark-theme tokens (`[data-theme="dark"]`). Both the app and this 404 currently use my hand-tuned dark values (near-identical visually). If you'd like, I can migrate everything to the official tokens in one pass — just say the word.
+
+## User
+
+Verifier agent check completed
+
+## Assistant
+
+The verifier confirmed it — the word fits cleanly, the silent waveform and actions render, nothing overflows. The 404 page is done and ready. Let me know if you'd like the official dark-token migration or anything else.
+
+## User
+
+we need to have the landing page with the login link. This landnig should be buisenes focused: blazing fast, nice beatuful, breafly explaning why you should absolutely start to use this service
+
+## Assistant
+
+
+
+## User
+
+We need to have the landing page with the login link. This landing page should be business-focused: blazing fast, beautiful, and briefly explaining why you should absolutely start using this service
+
+## Assistant
+
+_[tool: list_files]_
+
+A landing page is the one surface that *should* break from the phone frame — full-bleed marketing, desktop-first but responsive. Let me grab the newly-bound design system (it now ships official tokens + a dark theme) so I build on the real palette this time.
+
+_[tool: read_file]_
+
+_[tool: read_file]_
+
+_[tool: read_file]_
+
+The bound bundle ships **tokens only** (no exported components) — which is perfect here: a landing page should be pure static HTML/CSS for "blazing fast," and I'll build it directly on the official `colors_and_type.css` tokens (including the real `[data-theme="dark"]` this time). No React, no Babel, no bundle — just the stylesheet + fonts.
+
+My concept: a conversion-focused page that still *shows the product*. Left-column promise + magic-link capture (the login link you asked for), right-column a live phone showing the real feed. Then three crisp reasons, a brief "how it works," and a closing CTA. Voice stays warm; structure stays business-sharp.
+
+_[tool: write_file]_
+
+Now I'll build the landing page.
+
+_[tool: show_html]_
+
+I'll inspect this myself first since it's a brand-new layout with a phone mock that needs visual tuning before handoff.
+
+_[tool: show_html]_
+
+_[tool: str_replace_edit]_
+
+Strong overall, but the phone's handwritten words are wrapping and colliding with the quote marks (the Caveat wide-metric issue again, made worse by the narrower 310px mock). The "their real voice" chip also wraps. Let me lock those to one line.
+
+_[tool: read_file]_
+
+_[tool: grep]_
+
+The chip rule spans two lines. Let me apply all three fixes:
+
+_[tool: str_replace_edit]_
+
+_[tool: show_html]_
+
+_[tool: str_replace_edit]_
+
+The words fit cleanly now. Only the bottom peek entry ("emotionally damp") is wide enough to clip — let me shrink that peeking entry's word so it sits cleanly.Now let me check the lower sections — reasons, how-it-works, closer, footer — and dark mode.
+
+_[tool: save_screenshot]_
+
+_[tool: save_screenshot]_
+
+_[tool: eval_js]_
+
+Reasons and closer look great. Two things to check: the footer links are wrapping ("why vocabu" → two lines), and I want to confirm "forget" is actually rendering in Caveat (it looks like sans). Let me verify the font and fix the footer.
+
+_[tool: str_replace_edit]_
+
+Caveat is correctly applied (it just reads less script-like at bold display size in the screenshot tool — it'll look handwritten in the real browser, like the phone). Let me fix the footer link wrapping.
+
+_[tool: save_screenshot]_
+
+_[tool: save_screenshot]_
+
+Now let me verify dark mode, the magic-link form confirmation, and mobile responsiveness.
+
+_[tool: eval_js]_
+
+Dark mode is gorgeous — the official tokens carry it beautifully. Let me confirm the peek-entry word size took effect and capture the sent-confirmation state.
+
+_[tool: eval_js]_
+
+_[tool: grep]_
+
+_[tool: show_html]_
+
+_[tool: save_screenshot]_
+
+The file is correct (line 410) — the eval was reading a stale page load. Let me reload fresh and confirm the phone bottom and the sent state render correctly.
+
+_[tool: str_replace_edit]_
+
+_[tool: delete_file]_
+
+Everything works — the magic-link confirmation ("check your inbox… open the app →") renders cleanly, the phone shows the full feed with the floating nav + FAB, and dark mode is solid. The peek word's closing quote is a hair tight at the edge; let me nudge it down slightly, then clean up and hand off.
+
+_[tool: done]_
+
+_[tool: fork_verifier_agent]_
+
+Landing page is live and clean (no console errors). The adherence warnings are all pre-existing and intentional — my hand-rolled dark palette in `app.jsx` and the deliberately dependency-light `404.html`; the landing page itself uses tokens throughout and wasn't flagged. Let me fork a verifier.Landing page is done — `Vocabu/landing.html`, built straight on the official design-system tokens (no React/Babel/bundle, so it loads instantly).
+
+**What's there:**
+- **Conversion hero** — promise headline ("Keep the way they *actually* talk."), a tight value sentence, and the **magic-link capture** (your login link): email → "get my login link" → a gentle inline "check your inbox… open the app →". Beside it, a **live phone mock** of the real feed — handwritten words, an audio waveform, the on-this-day band, the floating nav + rose FAB — with "their real voice" / "kept forever" proof chips.
+- **Three reasons** — in their real voice · built for keeping · on this day.
+- **How it works** — two taps to keep a word (catch it · add their voice · keep it forever).
+- **Closing CTA band** + minimal footer. Nav and footer both link to **sign in** (the app).
+- **Light + dark** via the official `[data-theme="dark"]` tokens, with a nav toggle (persisted, matching the app) and OS-preference fallback. Scroll-reveal, reduced-motion safe, responsive down to mobile.
+
+Voice stays warm and quiet (no fake stats, no streaks, no emoji) while the structure does the selling.
+
+One standing offer, now more relevant: the design system shipped official dark tokens, but the **app** (`app.jsx`) still uses my earlier hand-rolled dark values — that's the source of those "raw hex" adherence warnings. I can migrate the app to the official `[data-theme="dark"]` tokens in one clean pass whenever you'd like — just say go.
+
+## User
+
+Verifier agent check completed
+
+## Assistant
+
+The verifier confirmed it — hero, phone mock, magic-link flow, theme toggle, all sections, and mobile stacking all check out. The landing page is ready.
+
+So you now have the full set: **landing** → magic-link **login** → the **app** (feed, compose with voice upload, detail, discover, saved, profile, settings), plus **offline** and **404**. Light and dark throughout.
+
+Whenever you want, I can still migrate the app's dark mode to the official `[data-theme="dark"]` tokens to clear those last adherence warnings — just say the word.
+
+## User
+
+No 'sign in' and start your dictionary needed since we have the login form, no? Moreover, the layout breaks on mobile view.
+
+## Assistant
+
+_[tool: read_file]_
+
+Good call — with the magic-link form right in the hero, the nav CTAs are redundant. I'll strip the nav down to just the brand, "why vocabu", and the theme toggle, then check what's breaking on mobile.
+
+_[tool: read_file]_
+
+_[tool: str_replace_edit]_
+
+_[tool: write_file]_
+
+Let me reproduce the mobile view properly — I'll load the page inside a 390px-wide frame so the mobile breakpoints actually trigger.
+
+_[tool: show_html]_
+
+_[tool: save_screenshot]_
+
+_[tool: delete_file]_
+
+_[tool: grep]_
+
+The nested iframe is sandbox-blocked. Let me delete it and inspect the CSS directly to find the break.
+
+_[tool: screenshot_user_view]_
+
+Let me look at exactly what the user is seeing in their preview.
+
+_[tool: eval_js_user_view]_
+
+That's the mobile width — let me scroll up to the hero form where the break is.
+
+_[tool: screenshot_user_view]_
+
+_[tool: show_to_user]_
+
+Now I can see it — the form itself stacks fine; the actual break is the **nav**: the old "start your dictionary" button was overflowing the right edge on mobile (cut off as "start your dicti…"), which is the visual break. My nav edit removes exactly that. Let me reload the user's view to confirm the fix landed.
+
+_[tool: eval_js_user_view]_
+
+The user is pointing at the "kept forever" chip's heart icon. Let me look at their current view to see exactly how it's clipped.
+
+_[tool: run_script]_
+
+Both complaints are the same root cause: the heart path I hand-drew is lopsided with a flat top, so it *looks* trimmed (the layout isn't actually clipping it — my eval confirmed the chip sits fully within the viewport). The fix is to swap my crude heart for the proper Lucide heart path everywhere it appears.
+
+_[tool: show_to_user]_
+
+_[tool: save_screenshot]_
+
+_[tool: delete_file]_
+
+Both hearts now render as clean, full Lucide hearts — the "14" like in the feed and the "kept forever" chip. The layout was never actually clipping them; my hand-drawn heart just had a flat, lopsided top that *looked* trimmed.
+
+That's the batch of landing fixes done:
+- **Nav** stripped to brand · "why vocabu" · theme toggle — the overflowing "start your dictionary" / "sign in" buttons (the real mobile break) are gone, since the hero form is the single login path.
+- **Hearts** swapped to the proper icon everywhere they appear.
+
+The hero form itself was already stacking correctly on mobile (input over full-width button). Let me clean up the temp capture.All set. The landing page nav is decluttered, the mobile overflow is fixed, and the heart icons are clean throughout. Let me know if you'd like anything else — or whenever you want, I can still migrate the app's dark mode to the official `[data-theme="dark"]` tokens to clear those last adherence warnings.
+
+## User
+
+why input is so thin? should it remain the height like on desktop view?
+
+## Assistant
+
+_[tool: str_replace_edit]_
+
+Good catch — yes, it should stay 54px like desktop. The thinness is a flexbox bug: when the row stacks to a column, the input's `flex: 1` makes its *height* (now the main axis) collapse toward zero instead of honoring the 54px. I'll pin it back in the mobile breakpoint.
+
+_[tool: show_to_user]_
+
+_[tool: eval_js_user_view]_
+
+_[tool: eval_js_user_view]_
+
+Fixed — the input is back to a full **54px** height (matching desktop) and full width on mobile. The flex collapse is resolved.
+
+## User
+
+Next task: we need the virgin feed view (when the user has no words): you don't have any for now, go add one (with an arrow pointing to the create button)
+
+## Assistant
+
+_[tool: read_file]_
+
+_[tool: read_file]_
+
+A virgin feed needs a warm empty state (DS even scripts the line for it) with an arrow guiding the eye to the compose FAB. Let me read the current feed and app wiring so I integrate it cleanly and make it previewable.
+
+_[tool: read_file]_
+
+_[tool: read_file]_
+
+_[tool: str_replace_edit]_
+
+Now I'll build the empty state. Plan: a warm `EmptyFeed` (using the DS's own scripted line) with a handwritten nudge and a curved arrow pointing down to the compose FAB, plus a "Empty feed" preview toggle in Tweaks so it's easy to see — and composing your first word reveals the feed.Now wire the tweak and feed-empty logic into app.jsx:
+
+_[tool: str_replace_edit]_
+
+_[tool: str_replace_edit]_
+
+_[tool: show_html]_
+
+_[tool: save_screenshot]_
+
+_[tool: save_screenshot]_
+
+The app is behind the login wall in this fresh iframe (no stored auth). Let me sign in, then flip the Empty feed toggle and view it.
+
+_[tool: str_replace_edit]_
+
+_[tool: show_html]_
+
+The empty state renders well, but two things: the "no words yet." heading is wrapping (flex-item shrink), and I need to see the bottom where the arrow meets the FAB (it's below the iframe crop). Let me fix the heading and view the whole phone scaled down.
+
+_[tool: save_screenshot]_
+
+_[tool: save_screenshot]_
+
+Auth persisted from the prior run, so it boots straight to the feed (no login input). Let me just toggle and scale.
+
+_[tool: save_screenshot]_
+
+The toggle guard misfired. Let me flip it directly and capture the full phone.
+
+_[tool: str_replace_edit]_
+
+The arrow and note ARE rendering — but they're sitting *behind* the frosted bottom-nav panel, which blurs them into that faint rose smudge. I need to lift the arrow above the nav so it points down at the FAB from clear space. Let me raise it.
+
+_[tool: read_file]_
+
+_[tool: read_file]_
+
+_[tool: str_replace_edit]_
+
+_[tool: show_html]_
+
+_[tool: save_screenshot]_
+
+_[tool: str_replace_edit]_
+
+_[tool: show_html]_
+
+The note is still grazing the nav's blur zone. Let me lift it higher so the text stays in clear space while the arrow reaches down toward the FAB.
+
+_[tool: save_screenshot]_
+
+_[tool: str_replace_edit]_
+
+_[tool: show_html]_
+
+Almost there — the note reads clearly now. To fully separate the text from the nav while keeping the arrow tip near the FAB, I'll lengthen the arrow and lower its tip so the text rides higher in clear space.
+
+_[tool: save_screenshot]_
+
+_[tool: get_webview_logs]_
+
+_[tool: save_screenshot]_
+
+The empty feed reads well now — "tap to keep your" sits in clear space and the arrow descends to the rose compose FAB. Let me confirm no console errors and that composing your first word reveals the feed, then clean up.
+
+_[tool: delete_file]_
+
+The whole flow works: empty feed → tap the FAB → compose over the blurred empty feed → "Keep it" → your first word ("wabbit · You · just now") lands at the top and the feed comes alive. The Empty-feed preview toggle auto-clears when you keep a word. Only log is the harmless Babel dev notice.
+
+Let me clean up the test captures and hand off.
+
+_[tool: done]_
+
+The virgin feed is in and clean (no console errors). The adherence warnings are all the same pre-existing items — my hand-rolled dark palette in `app.jsx` and the dependency-light `404.html`, both intentional.
+
+This is actually a good moment to clear those: now that the design system ships official `[data-theme="dark"]` tokens, I can delete that whole hand-rolled `DARK` object and let the app drive `data-theme` instead — which would resolve nearly all 21 warnings at once. Want me to do that pass next?
+
+For now, the empty state is done:
+
+- **Virgin feed** — when you have no words: the feather mark in a soft rose ring, **"no words yet."**, and the design system's own line *"keep the first thing someone says that makes you smile."*
+- A handwritten **"tap to keep your first one"** with a curved arrow pointing down to the rose compose **FAB** — guiding the eye straight to the create button.
+- **Previewable** via Tweaks → States → **Empty feed**, and keeping your first word (tap FAB → "Keep it") clears it and brings the feed to life.
+
+Let me fork a quick verifier.
+
+_[tool: fork_verifier_agent]_
+
+Verifier's running in the background. The virgin feed view is complete — empty state with the warm copy and a handwritten arrow guiding to the compose FAB, previewable via Tweaks → States → Empty feed, and composing your first word brings the feed to life. I'll let you know if the verifier surfaces anything; otherwise you're all set. Just say the word on the dark-token migration whenever you'd like it cleaned up.
+
+## User
+
+Verifier agent check completed
+
+## Assistant
+
+The verifier confirmed the virgin feed works end-to-end. You're all set.
+
+_[tool: snip]_
+
+_[tool: snip]_
+
+The empty feed state passed verification and is complete. The full Vocabu set now spans: landing → magic-link login → app (feed with virgin/empty state, compose with voice upload, word detail, discover, saved, profile, settings), plus offline and 404 — all in light and dark.
+
+Whenever you're ready, the one outstanding cleanup I'd recommend is migrating the app's dark mode to the official `[data-theme="dark"]` tokens (clears those adherence warnings). Just say go.
+
+## User
+
+<pasted_text name="Pasted text (87 lines)">
+Wrote 86 lines to /Users/vlad/Documents/Projects/_mine/vocabu/docs/design/proposals/primary-action-contrast.md
+# DS Proposal — AA-safe primary action colour
+
+- **Status:** Proposed (bridged in app, pending DS adoption)
+- **Date:** 2026-06-07
+- **Raised from:** Vocabu landing page Lighthouse pass (accessibility)
+- **Owner:** DS team
+
+## Problem
+
+Primary call-to-action buttons render **white text on `--primary` (rose-500,
+`#ed5379`)**. That pairing is only **3.43:1**, which fails WCAG 2.1 AA (SC
+1.4.3 requires **4.5:1** for normal-size text). It affects every primary CTA
+(landing hero, `/login`, error page, etc.), and is **worse in dark mode**.
+
+Measured WCAG contrast of white (`#ffffff`) on the rose ramp:
+
+| token / step            | hex       | white text | AA (≥4.5) |
+| ----------------------- | --------- | ---------- | --------- |
+| `--primary` (rose-500)  | `#ed5379` | 3.43:1     | ❌ fail   |
+| rose-600 (`--primary-hover`) | `#d93c64` | 4.39:1 | ❌ fail (just) |
+| rose-700 (`--primary-press`) | `#b22f52` | 6.14:1 | ✅ pass  |
+| dark rose-500 (`#f2658a`) | `#f2658a` | 3.00:1   | ❌ fail   |
+| dark rose-600 (`#f0577e`) | `#f0577e` | 3.30:1   | ❌ fail   |
+
+Note: even `rose-600` narrowly misses (4.39), and the dark-theme rose steps
+fail badly — so the ramp **has no existing step** that is AA-safe with white
+between "vivid" and "pressed".
+
+## Scope / non-goals
+
+`--primary` (rose-500) is **correct and should stay** for every non-text use:
+hero washes, the eyebrow dot, focus rings, `--like`, soft fills. The gap is
+specifically **text-on-accent** — a white label sitting on a rose surface.
+
+## Proposal
+
+Introduce a dedicated semantic role for the **actionable** primary surface,
+separate from the brand accent:
+
+```css
+/* light + dark: theme-independent on purpose — this is the button surface,
+   not a tinted role, so it must clear AA with white in both themes. */
+--primary-action: #cf3a60; /* white text → 4.74:1  (AA pass, both themes) */
+```
+
+Candidates if a different balance is preferred (all pass AA with white):
+
+| hex       | white text | feel                          |
+| --------- | ---------- | ----------------------------- |
+| `#d4385f` | 4.64:1     | closest to rose-600, vivid    |
+| `#cf3a60` | 4.74:1     | **recommended** — vivid + safe margin |
+| `#c9365d` | 5.04:1     | a touch deeper                |
+| `#b22f52` | 6.14:1     | = rose-700, deepest / safest  |
+
+Consumption (already wired in the app, will switch to the DS token verbatim):
+
+```css
+.v-btn--primary {
+  background: var(--primary-action);
+  color: var(--text-on-accent); /* #fff */
+}
+```
+
+Hover keeps the existing `filter: brightness(0.94)` (no separate token needed).
+
+## Related (same latent gap — please consider together)
+
+- **Secondary/blue action:** white on `--secondary` (blue-500 `#1f9edb`) is
+  ~2.9:1 — fails too. Recommend a parallel **`--secondary-action`** by the same
+  logic (used by `VButton variant="blue"`).
+- **Dark-mode accents generally:** the bright dark rose/blue steps are tuned
+  for fills, not for white text. A theme-independent `*-action` pair sidesteps
+  this cleanly.
+
+## Acceptance criteria
+
+1. White on `--primary-action` ≥ 4.5:1 in **light and dark**.
+2. `--primary` (rose-500) unchanged for non-text accent uses.
+3. Lighthouse accessibility `color-contrast` passes on the landing (it does
+   with the bridge value).
+
+## App bridge (remove once DS ships this)
+
+Until the DS defines `--primary-action`, it is bridged in
+`assets/css/theme-light.css` with a `⚠ BRIDGE` comment pointing here. When the
+DS lands the token, delete the bridge so there is a single source of truth.
+</pasted_text>
+
+## Assistant
+
+_[tool: grep]_
+
+_[tool: read_file]_
+
+Clear, well-reasoned proposal. I'll wire the bridge exactly as specified: a dedicated AA-safe `--primary-action` (and the parallel `--secondary-action`) used only for white-text-on-accent buttons, leaving `--primary`/`--secondary` untouched for washes, likes, focus rings, and the icon-only FAB. I'll put the bridge tokens in one shared file so there's a single source of truth to delete later.
+
+_[tool: write_file]_
+
+_[tool: str_replace_edit]_
+
+I'll create the single-source bridge file, link it in both HTML entries, and point the white-text buttons at the new tokens.Now link the bridge in both HTML files and update the landing's rose buttons:
+
+_[tool: read_file]_
+
+_[tool: str_replace_edit]_
+
+_[tool: str_replace_edit]_
+
+_[tool: str_replace_edit]_
+
+Now update the landing's rose CTA background to the action token:
+
+_[tool: show_html]_
+
+_[tool: save_screenshot]_
+
+Let me verify the buttons render with the new AA-safe color across landing and app.
+
+_[tool: save_screenshot]_
+
+_[tool: show_html]_
+
+_[tool: save_screenshot]_
+
+The "get my login link" button now uses the deeper AA-safe rose, while the icon-only FAB keeps the brighter brand rose (exactly the proposal's split). Let me confirm the app side picks up the token too (login + compose buttons).
+
+_[tool: save_screenshot]_
+
+The probe confirms `--primary-action = #CF3A60` resolves in the app (bridge loaded), and it's theme-independent so it holds in dark too. Let me confirm an enabled filled button of each color — the blue "follow" buttons and the rose "Keep it".
+
+_[tool: delete_file]_
+
+_[tool: get_webview_logs]_
+
+The "follow" buttons now use the AA-safe blue (white text clearly legible), the FAB keeps the brand rose, and active chips keep their soft-wash styling — all correct, and it holds in dark mode since the action tokens are theme-independent. Let me clean up and finalize.
+
+_[tool: done]_
+
+The contrast bridge is wired and clean (no console errors). The adherence warnings are the same pre-existing ones (hand-rolled dark palette + dependency-light 404), unrelated to this change.
+
+Done per the proposal:
+
+- **`Vocabu/ds-bridge.css`** — single source of truth defining `--primary-action: #CF3A60` (4.74:1) and `--secondary-action: #1378A6` (4.93:1), theme-independent, with a `⚠ BRIDGE` header pointing to `docs/design/proposals/primary-action-contrast.md` and a note to delete it once the DS ships the tokens. Linked from both `index.html` (app) and `landing.html`.
+- **White-text buttons switched** to the action tokens: app primitives `Button` primary → `--primary-action`, blue → `--secondary-action` (covers Keep it, send link, open link, follow, etc.); landing `.btn-rose` → `--primary-action`.
+- **`--primary` / `--secondary` untouched** for every non-text use — washes, eyebrow dot, focus rings, `--like`, soft fills, and the icon-only compose FAB (which stays the brighter brand rose). Verified the tokens resolve and render in both light and dark.
+
+When the DS adopts the tokens, deleting `ds-bridge.css` and its two `<link>`s is the only cleanup needed. Want me to fork a verifier on the contrast, or take on the dark-token migration next?
+
+## User
+
+wrong icon. poor centered
+
+## Assistant
+
+_[tool: grep]_
+
+Right — the app's compose FAB uses the **feather** icon (the brand glyph), but the landing mock has a pen/edit icon, and it's sitting off-center. Let me look and fix it to match.
+
+_[tool: read_file]_
+
+_[tool: str_replace_edit]_
+
+The pen icon is wrong — it should be the **feather** (the brand glyph the app uses). The feather is also visually balanced in its viewBox, which fixes the off-center look. Swapping it:
+
+_[tool: str_replace_edit]_
+
+_[tool: show_html]_
+
+_[tool: save_screenshot]_
+
+_[tool: show_html]_
+
+_[tool: save_screenshot]_
+
+The compose FAB now shows the **feather** icon (matching the app's brand glyph) and it's cleanly centered in the rose button. Let me clean up and confirm no errors.
+
+_[tool: delete_file]_
+
+_[tool: get_webview_logs]_
+
+Fixed. The compose FAB in the landing phone mock now uses the **feather** icon — the same brand glyph the actual app uses for compose — instead of the stray pen/edit icon, and it sits properly centered in the rose button. Clean, no errors.
+
+## User
+
+we updated DS. Make review of the proto to be aligne with the actual DS
+
+## Assistant
+
+_[tool: list_files]_
+
+The DS now ships real components and a full dark theme. Let me review what's actually in the bound bundle before deciding what to align.
+
+_[tool: read_file]_
+
+_[tool: read_file]_
+
+The bundle exports **no components** (`"components":[]`) — the DS is tokens-only plus preview specimens. So "align with the actual DS" means aligning to the real token set, especially the new dark theme and semantic roles. Let me read the full new CSS and compare it to what my prototype uses.
+
+_[tool: read_file]_
+
+This is a tokens-only DS (no components to adopt), but it now ships:
+- A full **`[data-theme="dark"]`** theme (my app currently hand-rolls a `DARK` object of inline vars).
+- New semantic tokens: **`--bar-bg`, `--scrim`, `--frame-bg`, `--on-primary-soft`, `--on-secondary-soft`** (I invented `--glass-bar/nav/border` instead).
+- Slightly different base values (`--paper #FBFEFF`, `--ink #1B1D1E`, etc.) — my app links an **old** local copy of the CSS.
+
+So alignment = point the app at the official CSS, drive dark via `data-theme` on `<html>`, and replace my invented glass tokens with the real ones. Let me read the current wiring.
+
+_[tool: grep]_
+
+Now let me find everywhere my invented glass tokens and the local CSS are used.
+
+_[tool: grep]_
+
+_[tool: grep]_
+
+Now I have the full picture. Let me check the compose scrim and the device frame before making edits.
+
+_[tool: grep]_
+
+Let me check how the tweaks panel persists, so the early-paint theme script reads the right key.
+
+_[tool: grep]_
+
+_[tool: update_todos]_
+
+Tweaks persist by rewriting the file (not localStorage), so the React effect is the source of truth — I'll set `data-theme` in a `useLayoutEffect` (runs before paint, no flash) and use OS preference as the pre-React default. Let me make the todo list and execute.Now executing. First, **index.html** — repoint CSS, early-paint theme, frame-bg backdrop:
+
+_[tool: str_replace_edit]_
+
+Now **app.jsx** — drop the `DARK` object and glass tokens, drive `data-theme` on `<html>`:
+
+_[tool: str_replace_edit]_
+
+_[tool: str_replace_edit]_
+
+_[tool: str_replace_edit]_
+
+Now replace the invented glass tokens in **chrome.jsx**, **screens.jsx**, **detail.jsx**, and the scrim in **compose.jsx**:
+
+_[tool: str_replace_edit]_
+
+_[tool: str_replace_edit]_
+
+_[tool: read_file]_
+
+Now the **404.html** — repoint to official CSS, swap the hand-rolled `prefers-color-scheme` dark block for the early-paint `data-theme` script, and use frame-bg.
+
+_[tool: str_replace_edit]_
+
+_[tool: grep]_
+
+Now delete the stale local CSS and mark todos. Let me confirm nothing else references it first.No app files reference the local copy anymore (only the DS manifest's own path). Deleting the stale copy and verifying.
+
+_[tool: delete_file]_
+
+_[tool: update_todos]_
+
+_[tool: show_html]_
+
+_[tool: get_webview_logs]_
+
+_[tool: save_screenshot]_
+
+_[tool: save_screenshot]_
+
+Light mode renders cleanly on the official tokens. Now dark mode:
+
+_[tool: multi_screenshot]_
+
+The official dark theme is live — deep cool near-black canvas, the on-this-day band as the dark blue-tinted fill, near-black device frame, rose FAB glow. Let me verify compose (scrim), a screen, and the 404.
+
+_[tool: read_file]_
+
+_[tool: grep]_
+
+All three render correctly — compose scrim darkens properly in dark, Saved tiles and Discover look right. One semantic refinement remains: the DS added `--on-primary-soft` / `--on-secondary-soft` specifically for text/icons on soft washes (they flip bright in dark, unlike raw `-700` steps). My chips and collection tiles still use raw `--blue-700`/`--rose-700` as foregrounds, which go too dark on the dark washes. Let me align those.Now align the soft-wash foregrounds to the official `--on-*-soft` tokens (identical in light, but properly bright in dark):
+
+_[tool: str_replace_edit]_
+
+_[tool: str_replace_edit]_
+
+_[tool: grep]_
+
+Let me align the on-this-day band overline too, then verify the 404 and dark legibility.
+
+_[tool: str_replace_edit]_
+
+_[tool: show_html]_
+
+Now verify the refinements in dark (chips, collection tiles, band overline) and the 404 in both themes.
+
+_[tool: multi_screenshot]_
+
+_[tool: show_html]_
+
+_[tool: multi_screenshot]_
+
+Dark mode is now properly aligned — collection icons and active chips read bright on the dark washes. Let me verify the 404 in both themes.
+
+_[tool: grep]_
+
+Both 404 themes look great via the official `[data-theme]` hook. One consistency gap: the 404's "back to your words" button uses raw `--primary` with white text (the 3.43:1 AA fail the contrast proposal flagged for the error page). Let me link the bridge and use `--primary-action` there too.
+
+_[tool: str_replace_edit]_
+
+The whole prototype is now aligned to the official DS. Let me do a final verification pass — detail screen in both themes plus the feed — then hand off.
+
+_[tool: show_html]_
+
+_[tool: get_webview_logs]_
+
+_[tool: multi_screenshot]_
+
+_[tool: delete_file]_
+
+_[tool: update_todos]_
+
+Detail screen is clean in both themes — frosted bars, blue audio, the meaning toggle, collection tag, reply composer all resolve through the official tokens. Everything's aligned. Cleaning up and finishing.
+
+_[tool: done]_
+
+_[tool: fork_verifier_agent]_
+
+Console is clean. The 21 remaining findings are soft nudges that aren't worth churning the codebase over:
+
+- **"Load the bundle" (404):** the bundle exports **no components** (`"components":[]`) — it's tokens-only — so there's nothing to mount. The 404 is intentionally dependency-light static HTML and *does* load the official token CSS. Not applicable.
+- **"raw px → use `var(--ds-space-*)`":** those `--ds-space-*` tokens don't exist in this DS (it ships `--space-1…16`), and pixel layout values in a prototype are fine. Converting every dimension app-wide is high-effort, low-value, and pre-dated this task.
+
+The substantive alignment — what "use the actual DS" means here — is done. Let me fork a verifier for the visual pass.Done — the prototype is now aligned to the **actual** design system rather than my earlier hand-rolled approximations.
+
+**What changed:**
+- **Official dark theme.** Deleted the hand-rolled `DARK` object (and the stale local `colors_and_type.css`). The app and 404 now load the bound `_ds/…/colors_and_type.css` and dark is driven the DS-intended way — `[data-theme="dark"]` on `<html>` (set in a `useLayoutEffect`, so no flash). All the official refinements come through: deep cool near-black canvas, cards lifting by lightness, brighter rose/blue, retuned shadows.
+- **Real chrome tokens.** Replaced my invented `--glass-bar/nav/border` with the official **`--bar-bg`** (frosted bars), a `surface` mix for the floating nav, and `--hairline` borders. The compose overlay now uses **`--scrim`**, and the device backdrop uses **`--frame-bg`** — so both retune in dark automatically.
+- **Soft-wash text fixed.** Chips, collection tiles, and the "on this day" overline now use the DS's **`--on-primary-soft` / `--on-secondary-soft`** tokens (identical in light, but correctly bright in dark — they were going muddy before).
+- **404 + bridge.** The 404 follows the same `[data-theme]` hook and uses the AA-safe `--primary-action` for its primary button.
+
+Verified clean across feed, compose, detail, saved, discover, and 404 in both themes. The remaining lint nudges (load-the-bundle on a component-less DS; `--ds-space-*` tokens that don't exist) aren't applicable — I left a note above rather than churn the codebase. Verifier's running in the background.
+
+## User
+
+Verifier agent check completed
+
+## Assistant
+
+The verifier passed — DS alignment confirmed clean in both themes. 
+
+The prototype now runs entirely on the official Vocabu design system: the real token CSS, the shipped `[data-theme="dark"]` theme, and the proper semantic tokens (`--bar-bg`, `--scrim`, `--frame-bg`, `--on-*-soft`) throughout — no hand-rolled palettes or invented tokens left. Everything's verified across feed, compose, detail, saved, discover, and the 404 in light and dark. You're all set.
+

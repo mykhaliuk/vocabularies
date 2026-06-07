@@ -160,7 +160,7 @@ function OnThisDayBand({ m, onOpen, onKeep }) {
       onClick={() => onOpen && onOpen(m)}>
       <div style={{
         fontFamily: "var(--font-sans)", fontSize: 11, fontWeight: 700, letterSpacing: "0.06em",
-        textTransform: "uppercase", color: "var(--secondary-hover)", whiteSpace: "nowrap",
+        textTransform: "uppercase", color: "var(--on-secondary-soft)", whiteSpace: "nowrap",
       }}>
         On this day · a year ago
       </div>
@@ -182,8 +182,49 @@ function OnThisDayBand({ m, onOpen, onKeep }) {
   );
 }
 
+/* ---------- virgin feed — no words yet ---------- */
+function EmptyFeed() {
+  return (
+    <div style={{
+      minHeight: "calc(100% - 54px)", position: "relative",
+      display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+      textAlign: "center", padding: "40px 40px 0",
+    }}>
+      <div style={{
+        width: 78, height: 78, borderRadius: "50%", background: "var(--primary-soft)",
+        border: "1px solid var(--primary-soft-border)", color: "var(--primary)",
+        display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 22, flex: "0 0 auto",
+      }}>
+        <Icon name="feather" size={32} />
+      </div>
+      <h2 style={{ margin: 0, fontFamily: "var(--font-sans)", fontSize: 22, fontWeight: 700, letterSpacing: "-0.02em", color: "var(--ink)", whiteSpace: "nowrap" }}>
+        no words yet.
+      </h2>
+      <p style={{ margin: "10px 0 0", maxWidth: 270, fontFamily: "var(--font-sans)", fontSize: 16, lineHeight: 1.5, color: "var(--ink-2)" }}>
+        keep the first thing someone says that makes you smile.
+      </p>
+
+      {/* arrow guiding the eye down to the compose button */}
+      <div style={{
+        position: "absolute", left: 0, right: 0, bottom: 100,
+        display: "flex", flexDirection: "column", alignItems: "center", gap: 4, pointerEvents: "none",
+      }}>
+        <span style={{ fontFamily: "'Caveat', var(--font-sans)", fontSize: 23, fontWeight: 600, color: "var(--primary)", transform: "rotate(-4deg)" }}>
+          tap to keep your first one
+        </span>
+        <svg width="46" height="68" viewBox="0 0 46 70" fill="none" stroke="var(--primary)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"
+          style={{ animation: "vbob 2.2s var(--ease-in-out) infinite" }}>
+          <path d="M28 5 C 36 24, 35 44, 23 62" />
+          <path d="M13 52 L 23 64 L 34 54" />
+        </svg>
+      </div>
+    </div>
+  );
+}
+
 /* ---------- the feed ---------- */
 function FeedScreen({ entries, onOpen, onKeep }) {
+  if (!entries.length) return <EmptyFeed />;
   return (
     <div style={{ display: "flex", flexDirection: "column" }}>
       {entries.map((m, i) => (
@@ -202,4 +243,4 @@ function FeedScreen({ entries, onOpen, onKeep }) {
   );
 }
 
-Object.assign(window, { FeedScreen, Entry, AudioSample, WordText, SocialRow });
+Object.assign(window, { FeedScreen, EmptyFeed, Entry, AudioSample, WordText, SocialRow });

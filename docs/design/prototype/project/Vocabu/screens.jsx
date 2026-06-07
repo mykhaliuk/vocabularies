@@ -4,7 +4,7 @@
 const { useState: useS } = React;
 
 const sBarBg = {
-  background: "var(--glass-bar)", backdropFilter: "blur(16px) saturate(1.4)",
+  background: "var(--bar-bg)", backdropFilter: "blur(16px) saturate(1.4)",
   WebkitBackdropFilter: "blur(16px) saturate(1.4)", borderBottom: "1px solid var(--hairline)",
 };
 const sEyebrow = {
@@ -89,8 +89,8 @@ function DiscoverScreen() {
 /* ---------------- SAVED ---------------- */
 function CollectionTile({ c, onOpen }) {
   const tint = {
-    rose: { bg: "var(--primary-soft)", fg: "var(--rose-700)", line: "var(--rose-200)" },
-    blue: { bg: "var(--secondary-soft)", fg: "var(--blue-700)", line: "var(--blue-200)" },
+    rose: { bg: "var(--primary-soft)", fg: "var(--on-primary-soft)", line: "var(--rose-200)" },
+    blue: { bg: "var(--secondary-soft)", fg: "var(--on-secondary-soft)", line: "var(--blue-200)" },
     ink:  { bg: "var(--surface-sunk)", fg: "var(--ink-2)", line: "var(--hairline-2)" },
   }[c.tone] || { bg: "var(--surface-sunk)", fg: "var(--ink-2)", line: "var(--hairline-2)" };
   return (

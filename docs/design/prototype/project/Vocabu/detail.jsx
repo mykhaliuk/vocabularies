@@ -102,7 +102,7 @@ function DetailScreen({ m, onBack }) {
       {/* reply composer */}
       <div style={{
         position: "absolute", left: 0, right: 0, bottom: 0, display: "flex", alignItems: "center", gap: 10,
-        padding: "10px 16px calc(12px + var(--safe-bottom))", background: "var(--glass-bar)",
+        padding: "10px 16px calc(12px + var(--safe-bottom))", background: "var(--bar-bg)",
         backdropFilter: "blur(14px)", WebkitBackdropFilter: "blur(14px)", borderTop: "1px solid var(--hairline)",
       }}>
         <Avatar name="Sam" tone="rose" size={34} />

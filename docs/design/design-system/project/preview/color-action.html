@@ -1,0 +1,46 @@
+<!-- @dsCard group="Colors" name="Action surfaces (AA-safe)" subtitle="White-label buttons — pass WCAG AA in both themes" -->
+<!DOCTYPE html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html,body{margin:0}
+  body{background:var(--paper);font-family:var(--font-sans);padding:22px;color:var(--ink)}
+  .lbl{font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-2);margin:0 0 12px}
+  .row{display:flex;gap:12px;margin-bottom:16px}
+  .card{flex:1;border-radius:var(--r-md);overflow:hidden;border:1px solid var(--hairline)}
+  .surface{height:96px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff}
+  .surface .btn{font-size:14px;font-weight:600;white-space:nowrap}
+  .surface .ratio{font-size:11px;font-weight:500;opacity:.92;font-variant-numeric:tabular-nums;margin-top:7px}
+  .meta{padding:7px 10px;background:var(--surface);display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .meta .name{font-size:11.5px;font-weight:600;white-space:nowrap}
+  .meta .hex{font-size:10.5px;color:var(--ink-2);font-variant-numeric:tabular-nums}
+  .note{display:flex;gap:8px;align-items:flex-start;font-size:11.5px;line-height:1.45;color:var(--ink-2);background:var(--surface-sunk);border-radius:var(--r-sm);padding:9px 11px}
+  .note b{color:var(--ink)}
+  .fail{display:inline-block;font-variant-numeric:tabular-nums;color:var(--danger);font-weight:600}
+</style></head>
+<body>
+  <p class="lbl">Action surfaces — text-on-accent</p>
+  <div class="row">
+    <div class="card">
+      <div class="surface" style="background:var(--primary-action)">
+        <span class="btn">Save the moment</span>
+        <span class="ratio">white · 4.74:1 ✓ AA</span>
+      </div>
+      <div class="meta"><span class="name">--primary-action</span><span class="hex">#CF3A60</span></div>
+    </div>
+    <div class="card">
+      <div class="surface" style="background:var(--secondary-action)">
+        <span class="btn">Follow</span>
+        <span class="ratio">white · 4.93:1 ✓ AA</span>
+      </div>
+      <div class="meta"><span class="name">--secondary-action</span><span class="hex">#1378A6</span></div>
+    </div>
+  </div>
+  <div class="note">
+    <span>
+      White labels sit on these, never on <b>--primary</b> / <b>--secondary</b>: the bright brand accents
+      reach only <span class="fail">3.43:1</span> (rose-500) and <span class="fail">2.9:1</span> (blue-500) with
+      white — failing WCAG&nbsp;AA. Action surfaces are <b>theme-independent</b> — the button surface <i>is</i>
+      the colour, so it must clear 4.5:1 in light <i>and</i> dark. Keep the brand accents for washes, focus
+      rings, <b>--like</b>, and the FAB glyph.
+    </span>
+  </div>
+</body></html>

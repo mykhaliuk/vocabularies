@@ -4,7 +4,17 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Vocabu</title>
-  <link rel="stylesheet" href="colors_and_type.css" />
+  <link rel="stylesheet" href="../_ds/vocabu-design-system-fc456a27-02a5-4423-9181-3fc0311e1354/colors_and_type.css" />
+  <link rel="stylesheet" href="ds-bridge.css" />
+  <script>
+    /* set theme before paint to avoid flash; React (useLayoutEffect) is the source of truth after mount */
+    (function () {
+      try {
+        if (matchMedia("(prefers-color-scheme: dark)").matches)
+          document.documentElement.setAttribute("data-theme", "dark");
+      } catch (e) {}
+    })();
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&display=swap" rel="stylesheet" />
@@ -15,7 +25,7 @@
   <style>
     html, body { margin: 0; height: 100%; }
     body {
-      background: #DFE5E9;
+      background: var(--frame-bg);
       font-family: var(--font-sans);
       display: flex; align-items: center; justify-content: center;
       min-height: 100vh; padding: 24px; box-sizing: border-box;
@@ -56,6 +66,7 @@
     @keyframes vbarin { from { transform: scaleY(0.25); opacity: 0.5; } to { transform: scaleY(1); opacity: 1; } }
     @keyframes vrecpulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
     @keyframes vfloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
+    @keyframes vbob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(5px); } }
     @media (prefers-reduced-motion: reduce) { * { animation: none !important; } }
     @media (max-width: 430px) {
       body { padding: 0; background: var(--paper); }

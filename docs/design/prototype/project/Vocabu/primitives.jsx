@@ -69,8 +69,8 @@ function Button({ children, variant = "primary", size = "md", icon, iconRight, o
   };
   const dark = pressed ? "brightness(0.9)" : hover ? "brightness(0.95)" : "none";
   const variants = {
-    primary: { background: "var(--primary)", color: "var(--text-on-accent)", boxShadow: disabled ? "none" : "var(--shadow-float)", filter: dark },
-    blue:    { background: "var(--secondary)", color: "var(--text-on-accent)", filter: dark },
+    primary: { background: "var(--primary-action)", color: "var(--text-on-accent)", boxShadow: disabled ? "none" : "var(--shadow-float)", filter: dark },
+    blue:    { background: "var(--secondary-action)", color: "var(--text-on-accent)", filter: dark },
     secondary: { background: hover ? "var(--surface-sunk)" : "var(--surface)", color: "var(--ink)", border: `1.5px solid ${hover ? "var(--ink-3)" : "var(--hairline-2)"}` },
     softblue: { background: "var(--secondary-soft)", color: "var(--blue-700)" },
     ghost:   { background: hover ? "var(--primary-soft)" : "transparent", color: "var(--primary-hover)" },
@@ -118,8 +118,8 @@ function IconButton({ name, onClick, active, size = 44, iconSize = 20, fill = "n
 function Chip({ children, active, tone = "rose", icon, onClick, style }) {
   const [pressed, setPressed] = useState(false);
   const tones = {
-    rose: { background: "var(--primary-soft)", border: "var(--primary-soft-border)", color: "var(--primary-hover)" },
-    blue: { background: "var(--secondary-soft)", border: "var(--blue-200)", color: "var(--blue-700)" },
+    rose: { background: "var(--primary-soft)", border: "var(--primary-soft-border)", color: "var(--on-primary-soft)" },
+    blue: { background: "var(--secondary-soft)", border: "var(--blue-200)", color: "var(--on-secondary-soft)" },
   };
   const on = active ? tones[tone] : { background: "var(--surface)", border: "var(--hairline-2)", color: "var(--ink-2)" };
   return (
