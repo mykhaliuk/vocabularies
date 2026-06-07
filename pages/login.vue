@@ -6,16 +6,21 @@ definePageMeta({ layout: false });
 useHead({ title: 'Sign in · Vocabu' });
 
 const route = useRoute();
-const email = ref('');
-const submitting = ref(false);
-const sent = ref(false);
-const errorMessage = ref(getErrorMessage(route.query.error));
+const {
+  email,
+  trimmedEmail,
+  validEmail,
+  submitting,
+  sent,
+  errorMessage,
+  submit,
+  reset,
+} = useMagicLink();
 const inputRef = ref<HTMLInputElement | null>(null);
 
-const trimmedEmail = computed(() => email.value.trim());
-const validEmail = computed(() =>
-  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail.value),
-);
+// Surface auth-callback failures (expired / invalid link) routed here as
+// ?error=... by server/api/auth/callback.get.js.
+errorMessage.value = getErrorMessage(route.query.error);
 
 function getErrorMessage(
   code: LocationQueryValue | LocationQueryValue[] | undefined,
@@ -29,64 +34,8 @@ function getErrorMessage(
   return '';
 }
 
-type FetchErrorLike = {
-  statusCode?: number;
-  statusMessage?: string;
-  message?: string;
-  response?: { headers?: { get?: (name: string) => string | null } };
-};
-
-function isFetchErrorLike(value: unknown): value is FetchErrorLike {
-  return typeof value === 'object' && value !== null;
-}
-
-function translateError(error: unknown): string {
-  if (isFetchErrorLike(error)) {
-    const status = error.statusCode;
-    if (status === 429) {
-      const retryAfter = error.response?.headers?.get?.('Retry-After');
-      const seconds = Number(retryAfter);
-      if (Number.isFinite(seconds) && seconds > 0) {
-        return `Too many tries. Wait ${seconds}s and try again.`;
-      }
-      return 'Too many tries. Wait a moment and try again.';
-    }
-    if (status === 400) return "That email doesn't look right. Try again.";
-    if (typeof status === 'number' && status >= 500) {
-      return 'Our side hiccuped. Try again in a moment.';
-    }
-    if (typeof error.statusMessage === 'string' && error.statusMessage) {
-      return error.statusMessage;
-    }
-  }
-  if (error instanceof Error && error.message) {
-    // Network / DNS / CORS errors land here with messages like
-    // "Failed to fetch" — translate to something friendlier.
-    return "We couldn't reach Vocabu. Check your connection and try again.";
-  }
-  return "We couldn't send the link. Try again in a moment.";
-}
-
-async function submit() {
-  if (!validEmail.value || submitting.value) return;
-  submitting.value = true;
-  errorMessage.value = '';
-  try {
-    await $fetch('/api/auth/magic-link', {
-      method: 'POST',
-      body: { email: trimmedEmail.value },
-    });
-    sent.value = true;
-  } catch (error) {
-    errorMessage.value = translateError(error);
-  } finally {
-    submitting.value = false;
-  }
-}
-
 function useDifferentEmail() {
-  sent.value = false;
-  errorMessage.value = '';
+  reset();
   nextTick(() => inputRef.value?.focus());
 }
 

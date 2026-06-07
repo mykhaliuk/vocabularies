@@ -57,6 +57,12 @@ export default defineNuxtConfig({
   nitro: {
     prerender: { routes: ['/offline'] },
   },
+  routeRules: {
+    // Marketing landing is fully static: prerendered to HTML at build for
+    // instant first paint and full SEO. The hero form / theme toggle hydrate
+    // as small islands on top of the static shell.
+    '/': { prerender: true },
+  },
   sentry: {
     sourceMapsUploadOptions: { enabled: false },
   },
