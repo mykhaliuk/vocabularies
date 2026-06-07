@@ -60,15 +60,15 @@
     .stage {
       position: absolute; inset: 0; top: 44px;
       background:
-        radial-gradient(118% 70% at 12% -2%, rgba(237,83,121,0.055), transparent 52%),
-        radial-gradient(120% 72% at 92% 104%, rgba(31,158,219,0.05), transparent 54%),
+        radial-gradient(118% 70% at 12% -2%, color-mix(in oklch, var(--rose-500) 5.5%, transparent), transparent 52%),
+        radial-gradient(120% 72% at 92% 104%, color-mix(in oklch, var(--blue-500) 5%, transparent), transparent 54%),
         var(--paper);
       display: flex; flex-direction: column;
     }
     @media (prefers-color-scheme: dark) {
       .stage { background:
-        radial-gradient(118% 70% at 12% -2%, rgba(237,83,121,0.11), transparent 52%),
-        radial-gradient(120% 72% at 92% 104%, rgba(31,158,219,0.10), transparent 54%),
+        radial-gradient(118% 70% at 12% -2%, color-mix(in oklch, var(--rose-500) 11%, transparent), transparent 52%),
+        radial-gradient(120% 72% at 92% 104%, color-mix(in oklch, var(--blue-500) 10%, transparent), transparent 54%),
         var(--paper); }
     }
 

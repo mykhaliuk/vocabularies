@@ -91,8 +91,8 @@ function App() {
   };
   const gA = dark ? ac.a + 0.06 : ac.a;
   const backdrop = t.backdrop
-    ? `radial-gradient(118% 70% at 12% -4%, rgba(237,83,121,${gA + 0.01}), transparent 52%),
-       radial-gradient(120% 72% at 92% 104%, rgba(31,158,219,${gA}), transparent 54%),
+    ? `radial-gradient(118% 70% at 12% -4%, color-mix(in oklch, var(--rose-500) ${((gA + 0.01) * 100).toFixed(1)}%, transparent), transparent 52%),
+       radial-gradient(120% 72% at 92% 104%, color-mix(in oklch, var(--blue-500) ${(gA * 100).toFixed(1)}%, transparent), transparent 54%),
        var(--paper)`
     : "var(--paper)";
 

@@ -90,7 +90,7 @@ function VoiceRecorder({ existing, onDone, onRemove }) {
           <span style={{
             width: 48, height: 48, borderRadius: "50%", background: "var(--secondary)", color: "var(--text-on-accent)",
             display: "flex", alignItems: "center", justifyContent: "center", flex: "0 0 auto",
-            boxShadow: "0 6px 18px rgba(31,158,219,0.34)",
+            boxShadow: "0 6px 18px color-mix(in oklch, var(--blue-500) 34%, transparent)",
           }}>
             <Icon name="upload" size={22} />
           </span>
