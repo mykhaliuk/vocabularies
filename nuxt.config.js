@@ -1,5 +1,3 @@
-import { PWA_API_CACHE, PWA_AVATARS_CACHE } from './shared/pwa-caches.js';
-
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   compatibilityDate: '2026-04-30',
@@ -91,6 +89,11 @@ export default defineNuxtConfig({
   },
   pwa: {
     registerType: 'autoUpdate',
+    // injectManifest: a custom service-worker/sw.js serves the friendly
+    // /offline page on failed navigations (runtime caching lives there now).
+    strategies: 'injectManifest',
+    srcDir: 'service-worker',
+    filename: 'sw.js',
     manifest: {
       name: 'Vocabu',
       short_name: 'Vocabu',
@@ -109,41 +112,8 @@ export default defineNuxtConfig({
         },
       ],
     },
-    workbox: {
+    injectManifest: {
       globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
-      runtimeCaching: [
-        {
-          urlPattern: ({ url, sameOrigin }) =>
-            sameOrigin && /^\/api\/me(\/|$|\?)/.test(url.pathname),
-          handler: 'NetworkOnly',
-          method: 'GET',
-        },
-        {
-          urlPattern: ({ url, sameOrigin }) =>
-            sameOrigin && url.pathname.startsWith('/api/'),
-          handler: 'NetworkFirst',
-          method: 'GET',
-          options: {
-            cacheName: PWA_API_CACHE,
-            networkTimeoutSeconds: 3,
-            expiration: { maxEntries: 50, maxAgeSeconds: 60 * 60 },
-            cacheableResponse: { statuses: [200] },
-          },
-        },
-        {
-          urlPattern: ({ url }) =>
-            url.hostname.endsWith('.r2.cloudflarestorage.com') ||
-            ((url.hostname === 'localhost' || url.hostname === '127.0.0.1') &&
-              url.port === '9100'),
-          handler: 'StaleWhileRevalidate',
-          method: 'GET',
-          options: {
-            cacheName: PWA_AVATARS_CACHE,
-            expiration: { maxEntries: 50, maxAgeSeconds: 60 * 60 * 24 },
-            cacheableResponse: { statuses: [200] },
-          },
-        },
-      ],
     },
     devOptions: {
       enabled: false,
@@ -160,7 +130,7 @@ export default defineNuxtConfig({
       // Node CLI tooling (DS sync pipeline, env runner, deploy migrate) is
       // covered by oxlint; keep it out of the strict app typecheck so its
       // quick-script style doesn't gate the build. App code stays strict.
-      exclude: ['../docs', '../scripts'],
+      exclude: ['../docs', '../scripts', '../service-worker'],
     },
   },
   runtimeConfig: {
