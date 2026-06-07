@@ -21,6 +21,8 @@
     "fmt:check": "oxfmt --check .",
     "typecheck": "nuxt typecheck",
     "ds:check": "node scripts/ds-check.js",
+    "proto:check": "node scripts/proto-check.js",
+    "ds:verify": "node scripts/ds-check.js && node scripts/proto-check.js",
     "ds:pull": "node scripts/ds-pull.js",
     "ds:sync": "node scripts/ds-sync.js",
     "ds:update": "node scripts/ds-pull.js && node scripts/ds-sync.js && node scripts/ds-check.js",

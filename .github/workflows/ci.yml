@@ -27,6 +27,9 @@ jobs:
       - name: Design system sync
         run: bun run ds:check
 
+      - name: Prototype ↔ design system drift
+        run: bun run proto:check
+
       - name: Lint
         run: bun run lint
 

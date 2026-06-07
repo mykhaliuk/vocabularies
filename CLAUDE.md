@@ -41,6 +41,23 @@ production UI:
 - When the browser DS changes: re-export `_ds_manifest.json` + `colors_and_type.css`
   into `docs/design/...`, then update `assets/css/*.css` until `ds:check` is green.
 
+### The triad — one contract, three consumers
+
+The design-system manifest is the single contract; three artifacts are checked
+against it so none drifts:
+
+- **Production CSS** — `bun run ds:check` (CI gate; strict).
+- **Prototype** — `bun run proto:check`. The prototype (`docs/design/prototype`)
+  embeds its OWN DS copy under `_ds/<id>/`, which lags when the DS changes. This
+  flags STALE tokens (re-sync the prototype's DS in Claude Design and re-export),
+  value CONTRADICTIONS (real drift → fails), and an obsolete `ds-bridge.css`
+  (a shim for tokens the DS has since shipped — delete it on next export).
+- `bun run ds:verify` runs both legs at once.
+
+Drift can't be prevented at authoring time (DS and prototype are edited
+independently in the browser) — it is caught at integration time by these
+checks. The coupling is the check, not a convention.
+
 ## Brand rules (enforced by review, not just the linter)
 
 - **Tokens only.** Reference design-system tokens via `var()`; never hard-code
