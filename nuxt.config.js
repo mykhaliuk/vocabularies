@@ -83,7 +83,11 @@ export default defineNuxtConfig({
     '/': { prerender: true },
   },
   sentry: {
-    sourceMapsUploadOptions: { enabled: false },
+    // Upload source maps during the deploy build only when the auth token is
+    // present (set SENTRY_AUTH_TOKEN + SENTRY_ORG + SENTRY_PROJECT in the
+    // Vercel env). Local / token-less builds skip upload, so dev stays fast and
+    // CI doesn't need Sentry credentials.
+    sourceMapsUploadOptions: { enabled: !!process.env.SENTRY_AUTH_TOKEN },
   },
   pwa: {
     registerType: 'autoUpdate',
@@ -153,7 +157,10 @@ export default defineNuxtConfig({
         noImplicitAny: true,
         noUncheckedIndexedAccess: true,
       },
-      exclude: ['../docs'],
+      // Node CLI tooling (DS sync pipeline, env runner, deploy migrate) is
+      // covered by oxlint; keep it out of the strict app typecheck so its
+      // quick-script style doesn't gate the build. App code stays strict.
+      exclude: ['../docs', '../scripts'],
     },
   },
   runtimeConfig: {

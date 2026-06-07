@@ -14,6 +14,7 @@
     "start:dev": "node scripts/with-env.js dev nuxt dev",
     "start:preprod": "node scripts/with-env.js preprod nuxt dev",
     "build": "nuxt build",
+    "vercel-build": "node scripts/migrate-deploy.js && nuxt build",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
     "lint": "oxlint app.vue error.vue assets components composables db layouts middleware pages plugins scripts server shared utils *.config.js",
