@@ -15,6 +15,26 @@ Detailed plan: `~/.claude/plans/1-could-be-bun-floofy-moon.md` (not committed).
 | M7  | Rate limit on magic-link      | ✅ done | `m7` | dev: 6 rapid POSTs → 6th = 429                               |
 | M8  | PWA                           | ✅ done | `m8` | offline page renders airplane-mode; `/me` not cached         |
 | M9  | Multi-env runner + DB dump    | ✅ done | `m9` | health passes for all 3 envs; `db:dump:dev` populates local  |
+| M10 | i18n core (En/Fr/Uk) + switcher | ⏳ planned | `m10` | device locale `fr` → app loads in French; switch to Uk in settings → persists across reload |
+| M11 | Localized landing (per-locale)  | ⏳ planned | `m11` | `/`, `/fr`, `/uk` prerender to static HTML; mobile Lighthouse still 95+/100/100/100 |
+
+## Internationalization (M10–M11)
+
+Stack: **`@nuxtjs/i18n`** (official module — per-locale prerender, `Accept-Language`
+auto-detect, lazy translation chunks, SEO tags out of the box). Locales: **En**
+(default), **Fr**, **Uk**.
+
+- **Detection**: device locale on first visit via `Accept-Language` (SSR), then a
+  cookie persists the explicit choice — mirrors the existing synchronous theme-override
+  pattern in `nuxt.config.js` (`app.head.script`).
+- **App**: in-app settings switcher writes the locale cookie; `/me`, `/login`, settings
+  re-render in the chosen language. Translation messages lazy-loaded per locale.
+- **Landing (perf-preserving)**: keep it fully static — prerender one HTML per locale
+  (`/`, `/fr`, `/uk`) so copy is baked in with **zero client-side translation JS**; each
+  page keeps its current Lighthouse. Entry locale routed by `Accept-Language` redirect.
+- **Fonts caveat**: self-hosted set is currently `subsets: ['latin']`; Ukrainian needs
+  Cyrillic — extend to `['latin', 'cyrillic-ext']`, scoped so it does not inflate the
+  render-blocking weight of the En/Fr landing variants.
 
 ## Out of scope for v0
 
