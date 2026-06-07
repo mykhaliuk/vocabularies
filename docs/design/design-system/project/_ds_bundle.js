@@ -1,4 +1,4 @@
-/* @ds-bundle: {"format":3,"namespace":"VocabuDesignSystem_fc456a","components":[],"sourceHashes":{"ui_kits/app/Compose.jsx":"6a2ff5723934","ui_kits/app/Detail.jsx":"127d5d825040","ui_kits/app/WordCard.jsx":"db5015559529","ui_kits/app/app.jsx":"7d8919458aca","ui_kits/app/chrome.jsx":"a3ac2fa42788","ui_kits/app/data.jsx":"fd520cffd876","ui_kits/app/primitives.jsx":"c92a8f48c6ac","ui_kits/app/screens.jsx":"48daa4dd1295"},"inlinedExternals":[],"unexposedExports":[]} */
+/* @ds-bundle: {"format":3,"namespace":"VocabuDesignSystem_fc456a","components":[],"sourceHashes":{"ui_kits/app/Compose.jsx":"6a2ff5723934","ui_kits/app/Detail.jsx":"127d5d825040","ui_kits/app/WordCard.jsx":"d8c57ed2e1f7","ui_kits/app/app.jsx":"7d8919458aca","ui_kits/app/chrome.jsx":"a3ac2fa42788","ui_kits/app/data.jsx":"fd520cffd876","ui_kits/app/primitives.jsx":"c92a8f48c6ac","ui_kits/app/screens.jsx":"48daa4dd1295"},"inlinedExternals":[],"unexposedExports":[]} */
 
 (() => {
 
@@ -644,17 +644,17 @@ function WordCard({
     style: {
       display: "flex",
       alignItems: "baseline",
-      gap: 10,
+      gap: 14,
       flexWrap: "wrap"
     }
   }, /*#__PURE__*/React.createElement("span", {
     style: {
-      fontFamily: "var(--font-sans)",
-      fontSize: m.word.length > 26 ? 19 : m.word.length > 13 ? 22 : 28,
-      fontWeight: 600,
-      letterSpacing: "-0.02em",
+      fontFamily: "var(--font-hand)",
+      fontSize: m.word.length > 26 ? 28 : m.word.length > 13 ? 33 : 40,
+      fontWeight: 700,
+      letterSpacing: "0",
       color: "var(--ink)",
-      lineHeight: 1.18
+      lineHeight: 1.05
     }
   }, m.word), m.gloss && /*#__PURE__*/React.createElement("span", {
     style: {

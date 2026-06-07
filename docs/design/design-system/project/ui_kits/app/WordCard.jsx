@@ -108,8 +108,8 @@ function WordCard({ m, onOpen, compact, expanded: forceExpanded }) {
       </header>
 
       {/* The word / phrase + its meaning */}
-      <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap" }}>
-        <span style={{ fontFamily: "var(--font-sans)", fontSize: m.word.length > 26 ? 19 : m.word.length > 13 ? 22 : 28, fontWeight: 600, letterSpacing: "-0.02em", color: "var(--ink)", lineHeight: 1.18 }}>{m.word}</span>
+      <div style={{ display: "flex", alignItems: "baseline", gap: 14, flexWrap: "wrap" }}>
+        <span style={{ fontFamily: "var(--font-hand)", fontSize: m.word.length > 26 ? 28 : m.word.length > 13 ? 33 : 40, fontWeight: 700, letterSpacing: "0", color: "var(--ink)", lineHeight: 1.05 }}>{m.word}</span>
         {m.gloss && <span style={{ fontFamily: "var(--font-sans)", fontSize: 15, fontWeight: 400, color: "var(--ink-2)" }}>{m.gloss}</span>}
       </div>
 

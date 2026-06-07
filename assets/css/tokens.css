@@ -10,9 +10,10 @@
     'Hanken Grotesk', ui-sans-serif, system-ui, -apple-system, 'Segoe UI',
     sans-serif;
   /* Handwriting accent for word entries (the "--word-font" option in the DS).
-     Falls back to sans wherever the Caveat stylesheet isn't loaded — only the
-     screens that render a headword (entry detail, 404) pull it in. */
-  --font-hand: 'Caveat', var(--font-sans);
+     Value mirrors the design system; falls back to Segoe Script then a generic
+     cursive wherever the Caveat stylesheet isn't loaded — only the screens that
+     render a headword (entry detail, 404) pull it in. */
+  --font-hand: 'Caveat', 'Segoe Script', cursive;
   /* Legacy alias — kept so older references still resolve to sans */
   --font-serif: var(--font-sans);
 

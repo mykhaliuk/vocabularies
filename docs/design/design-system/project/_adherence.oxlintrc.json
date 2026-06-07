@@ -34,8 +34,8 @@
         "message": "Raw px value — use a design-system spacing token via var()."
       },
       {
-        "selector": "Literal[value=/font-family\\s*:\\s*(?!['\\\"]?(?:Hanken Grotesk))/i]",
-        "message": "Font not provided by the design system. Available: Hanken Grotesk."
+        "selector": "Literal[value=/font-family\\s*:\\s*(?!['\\\"]?(?:Hanken Grotesk|Caveat))/i]",
+        "message": "Font not provided by the design system. Available: Hanken Grotesk, Caveat."
       }
     ]
   },
@@ -75,6 +75,7 @@
       "--ease-in-out",
       "--ease-out",
       "--focus-ring",
+      "--font-hand",
       "--font-sans",
       "--font-serif",
       "--frame-bg",
@@ -224,6 +225,7 @@
       "--scrim": "color",
       "--frame-bg": "color",
       "--font-sans": "font",
+      "--font-hand": "font",
       "--font-serif": "font",
       "--w-regular": "font",
       "--w-medium": "font",
@@ -280,6 +282,7 @@
       "--dur-slow": "other"
     },
     "fontFamilies": [
+      "Caveat",
       "Hanken Grotesk"
     ]
   }
