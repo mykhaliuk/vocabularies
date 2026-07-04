@@ -128,3 +128,9 @@ human's own commits keep their normal identity.
   so pushes and `gh pr create` act as the bot.
 - PRs opened by the bot request review from `mykhaliuk` — real review
   requests work because author ≠ reviewer.
+- In GitHub Actions (`@claude` mention flow, `.github/workflows/claude.yml`)
+  the Keychain identity is unavailable; there the agent acts as `claude[bot]`
+  via the Claude GitHub App — also a distinct identity. Local conventions
+  that CI agents must still follow: Conventional Commits, `vkbt-<n>` in the
+  branch name when the issue mirrors a Linear ticket, PRs ready (not draft),
+  the co-author trailer.
