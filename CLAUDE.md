@@ -86,3 +86,21 @@ checks. The coupling is the check, not a convention.
   them. Node >= 24.
 - Lint/format: `bun run lint`, `bun run fmt:check` (oxlint + oxfmt).
 - All in-source artifacts are English (identifiers, comments, log strings).
+
+## Project management — Linear
+
+Work is tracked in Linear: team **Vocabu team** (prefix `VKBT`), project
+**Vocabu**, milestones `M1…M11` mirroring ROADMAP.md. ROADMAP.md stays the
+narrative source of truth; Linear tracks execution state.
+
+- Every code task starts from a Linear issue (`VKBT-N`). Create or decompose
+  issues via the Linear MCP before starting work.
+- Branch naming: `<type>/vkbt-<n>-<short-desc>` (e.g. `feat/vkbt-15-i18n-setup`).
+  The `vkbt-<n>` segment lets Linear auto-link the branch and move the issue to
+  In Progress; `<type>/` follows the usual feat/fix/chore/refactor prefixes.
+- PRs target `dev` and include `Closes VKBT-<n>` in the description so the
+  merge closes the issue; an open PR moves it to In Review.
+- Labels mirror change types: Feature, Bug, Improvement, Chore, Refactor,
+  Docs, Test, plus Design (DS/tokens/prototype) and Ops (infra/deploy/env).
+- Flow: issue → agent implements in a worktree → draft PR → human review and
+  merge → Vercel deploy (`dev` = preview, `main` = production).
