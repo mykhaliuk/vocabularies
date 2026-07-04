@@ -33,6 +33,6 @@ jobs:
       - name: Run Claude Code
         uses: anthropics/claude-code-action@v1
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          # Subscription alternative (Claude Pro/Max, no API billing):
-          # claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # Claude Pro/Max subscription auth (no API billing).
+          # Rotate via `claude setup-token` + `gh secret set CLAUDE_CODE_OAUTH_TOKEN`.
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
