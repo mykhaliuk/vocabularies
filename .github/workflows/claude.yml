@@ -32,6 +32,10 @@ jobs:
 
       - name: Run Claude Code
         uses: anthropics/claude-code-action@v1
+        # Workaround for anthropics/claude-code-action#676: the execute phase
+        # loses the token unless it is ALSO present as a step env var.
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
         with:
           # Claude Pro/Max subscription auth (no API billing).
           # Rotate via `claude setup-token` + `gh secret set CLAUDE_CODE_OAUTH_TOKEN`.
