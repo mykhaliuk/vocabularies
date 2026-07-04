@@ -102,8 +102,11 @@ narrative source of truth; Linear tracks execution state.
   merge closes the issue; an open PR moves it to In Review.
 - Labels mirror change types: Feature, Bug, Improvement, Chore, Refactor,
   Docs, Test, plus Design (DS/tokens/prototype) and Ops (infra/deploy/env).
-- Flow: issue → agent implements in a worktree → draft PR → human review and
-  merge → Vercel deploy (`dev` = preview, `main` = production).
+- Flow: issue → agent implements in a worktree → PR ready for review → human
+  review and merge → Vercel deploy (`dev` = preview, `main` = production).
+  Agents open PRs as **ready**, not draft — a finished agent task IS the
+  review handoff (ready flips the Linear issue to In Review and triggers the
+  CODEOWNERS auto-request). Use draft only for explicitly unfinished WIP.
 
 ### Agent identity (claude-agent)
 
