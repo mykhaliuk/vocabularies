@@ -118,7 +118,10 @@ human's own commits keep their normal identity.
 - Token: macOS Keychain — `security find-generic-password -s vocabu-agent-pat -w`
   (classic PAT, `repo` scope, collaborator with Write). Never write the token
   to disk or into git config; read it from Keychain at use time.
-- Commit: `git -c user.name=claude-agent-myka -c user.email=<noreply> commit …`
+- Commit (signed): agent commits are SSH-signed with a key held in Keychain
+  (`vocabu-agent-signing-key`) via the `~/.config/vocabu/bin/agent-ssh-sign`
+  wrapper — no key file on disk. Full incantation:
+  `git -c gpg.format=ssh -c gpg.ssh.program=$HOME/.config/vocabu/bin/agent-ssh-sign -c user.signingkey="key::$(cat $HOME/.config/vocabu/claude-agent-signing.pub)" -c commit.gpgsign=true -c user.name=claude-agent-myka -c user.email=<noreply> commit …`
 - Push / gh: run with `GH_TOKEN=$(security find-generic-password -s vocabu-agent-pat -w)`
   so pushes and `gh pr create` act as the bot.
 - PRs opened by the bot request review from `mykhaliuk` — real review
