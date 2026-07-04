@@ -104,3 +104,19 @@ narrative source of truth; Linear tracks execution state.
   Docs, Test, plus Design (DS/tokens/prototype) and Ops (infra/deploy/env).
 - Flow: issue → agent implements in a worktree → draft PR → human review and
   merge → Vercel deploy (`dev` = preview, `main` = production).
+
+### Agent identity (claude-agent)
+
+Agent-authored work is committed and pushed as the **claude-agent-myka**
+GitHub machine account, so authorship is visible in history and PRs. The
+human's own commits keep their normal identity.
+
+- Git author: `claude-agent-myka <299917915+claude-agent-myka@users.noreply.github.com>`
+- Token: macOS Keychain — `security find-generic-password -s vocabu-agent-pat -w`
+  (classic PAT, `repo` scope, collaborator with Write). Never write the token
+  to disk or into git config; read it from Keychain at use time.
+- Commit: `git -c user.name=claude-agent-myka -c user.email=<noreply> commit …`
+- Push / gh: run with `GH_TOKEN=$(security find-generic-password -s vocabu-agent-pat -w)`
+  so pushes and `gh pr create` act as the bot.
+- PRs opened by the bot request review from `mykhaliuk` — real review
+  requests work because author ≠ reviewer.
