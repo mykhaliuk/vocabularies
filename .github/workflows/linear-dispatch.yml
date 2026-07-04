@@ -72,8 +72,11 @@ jobs:
                   -f ref="refs/heads/$ASSETS_BRANCH" -f sha="$sha" --silent
               fi
               payload=$(mktemp)
+              b64=$(mktemp)
+              base64 -w0 "$f" > "$b64"
+              # --rawfile, not --arg: image base64 exceeds the argv size limit
               jq -n --arg m "chore(assets): add $path" \
-                    --arg c "$(base64 -w0 "$f")" \
+                    --rawfile c "$b64" \
                     --arg b "$ASSETS_BRANCH" \
                     '{message: $m, content: $c, branch: $b}' > "$payload"
               existing=$(gh api "repos/$REPO/contents/$path?ref=$ASSETS_BRANCH" -q .sha 2>/dev/null || true)
