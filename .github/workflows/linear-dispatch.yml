@@ -1,0 +1,101 @@
+name: Linear dispatch
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch Linear issues assigned to the agent
+        env:
+          LINEAR_API_KEY: ${{ secrets.LINEAR_BOT_API_KEY }}
+          GH_TOKEN: ${{ secrets.CLAUDE_AGENT_GH_PAT }}
+          REPO: ${{ github.repository }}
+          # "In Progress" workflow-state id of the Vocabu team (single-team workspace)
+          IN_PROGRESS_STATE_ID: 528f9035-9ab1-4ed0-9f6e-b9e443cd6c53
+          ASSETS_BRANCH: meta/linear-assets
+        run: |
+          set -euo pipefail
+
+          linear() {
+            curl -sf -X POST https://api.linear.app/graphql \
+              -H "Authorization: $LINEAR_API_KEY" \
+              -H "Content-Type: application/json" \
+              --data "$1"
+          }
+
+          resp=$(linear '{"query":"{ viewer { assignedIssues(filter: { state: { type: { eq: \"unstarted\" } } }) { nodes { id identifier title description attachments { nodes { url } } } } } }"}')
+
+          count=0
+          while IFS= read -r node; do
+            [ -z "$node" ] && continue
+            ident=$(jq -r '.identifier' <<<"$node")
+            gh_url=$(jq -r '.attachments.nodes[].url | select(test("github\\.com/.+/issues/[0-9]+$"))' <<<"$node" | head -n1)
+            if [ -z "$gh_url" ]; then
+              echo "no GitHub mirror for $ident yet, skipping this round"
+              continue
+            fi
+            num=${gh_url##*/}
+            id=$(jq -r '.id' <<<"$node")
+            title=$(jq -r '.title' <<<"$node")
+            desc=$(jq -r '.description // ""' <<<"$node")
+
+            # Re-host Linear-uploaded images: their signed URLs expire in
+            # ~5 minutes, so the CI agent would never see them. Download via
+            # the API key and commit stable copies to the assets branch.
+            i=0
+            while IFS= read -r img; do
+              [ -z "$img" ] && continue
+              i=$((i+1))
+              f=$(mktemp)
+              if ! curl -sf -H "Authorization: $LINEAR_API_KEY" -o "$f" "${img%%\?*}"; then
+                echo "could not download attachment $i of $ident"
+                continue
+              fi
+              case "$(file -b --mime-type "$f")" in
+                image/png)  ext=png ;;
+                image/jpeg) ext=jpg ;;
+                image/gif)  ext=gif ;;
+                image/webp) ext=webp ;;
+                *)          ext=bin ;;
+              esac
+              path="linear-assets/$ident/img$i.$ext"
+              if ! gh api "repos/$REPO/git/ref/heads/$ASSETS_BRANCH" --silent 2>/dev/null; then
+                sha=$(gh api "repos/$REPO/git/ref/heads/dev" -q .object.sha)
+                gh api -X POST "repos/$REPO/git/refs" \
+                  -f ref="refs/heads/$ASSETS_BRANCH" -f sha="$sha" --silent
+              fi
+              payload=$(mktemp)
+              jq -n --arg m "chore(assets): add $path" \
+                    --arg c "$(base64 -w0 "$f")" \
+                    --arg b "$ASSETS_BRANCH" \
+                    '{message: $m, content: $c, branch: $b}' > "$payload"
+              existing=$(gh api "repos/$REPO/contents/$path?ref=$ASSETS_BRANCH" -q .sha 2>/dev/null || true)
+              if [ -n "$existing" ]; then
+                jq --arg s "$existing" '. + {sha: $s}' "$payload" > "$payload.2" && mv "$payload.2" "$payload"
+              fi
+              gh api -X PUT "repos/$REPO/contents/$path" --input "$payload" --silent
+              desc=${desc//"$img"/"https://raw.githubusercontent.com/$REPO/$ASSETS_BRANCH/$path"}
+            done < <(grep -oE 'https://uploads\.linear\.app/[^) "]+' <<<"$desc" || true)
+
+            comment=$(mktemp)
+            jq -n --arg t "$title" --arg d "$desc" --arg ident "$ident" --arg num "$num" \
+              '{body: ("@claude " + $t + "\n\n" + $d + "\n\n---\nDispatched from Linear " + $ident + ". Follow the repo conventions from CLAUDE.md. Open a PR to `dev`, ready (not draft), with `Closes " + $ident + "` and `Closes #" + $num + "` in the description.")}' > "$comment"
+            gh api -X POST "repos/$REPO/issues/$num/comments" --input "$comment" --silent
+
+            # Move to In Progress so the issue is not dispatched twice.
+            mut=$(jq -n --arg id "$id" --arg state "$IN_PROGRESS_STATE_ID" \
+              '{query: "mutation($id: String!, $state: String!) { issueUpdate(id: $id, input: { stateId: $state }) { success } }", variables: {id: $id, state: $state}}')
+            linear "$mut" > /dev/null
+
+            count=$((count+1))
+            echo "dispatched $ident -> #$num"
+          done < <(jq -c '.data.viewer.assignedIssues.nodes[]' <<<"$resp")
+
+          echo "dispatched $count issue(s)"
