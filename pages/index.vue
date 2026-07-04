@@ -399,19 +399,19 @@ onMounted(() => {
   display: none;
 }
 
-:global(html[data-theme='dark']) .theme-toggle__sun {
+:global(html[data-theme='dark'] .theme-toggle__sun) {
   display: none;
 }
 
-:global(html[data-theme='dark']) .theme-toggle__moon {
+:global(html[data-theme='dark'] .theme-toggle__moon) {
   display: inline-flex;
 }
 
 @media (prefers-color-scheme: dark) {
-  :global(html:not([data-theme='light'])) .theme-toggle__sun {
+  :global(html:not([data-theme='light']) .theme-toggle__sun) {
     display: none;
   }
-  :global(html:not([data-theme='light'])) .theme-toggle__moon {
+  :global(html:not([data-theme='light']) .theme-toggle__moon) {
     display: inline-flex;
   }
 }
