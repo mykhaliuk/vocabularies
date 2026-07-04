@@ -102,5 +102,29 @@ narrative source of truth; Linear tracks execution state.
   merge closes the issue; an open PR moves it to In Review.
 - Labels mirror change types: Feature, Bug, Improvement, Chore, Refactor,
   Docs, Test, plus Design (DS/tokens/prototype) and Ops (infra/deploy/env).
-- Flow: issue → agent implements in a worktree → draft PR → human review and
-  merge → Vercel deploy (`dev` = preview, `main` = production).
+- Flow: issue → agent implements in a worktree → PR ready for review → human
+  review and merge → Vercel deploy (`dev` = preview, `main` = production).
+  Agents open PRs as **ready**, not draft — a finished agent task IS the
+  review handoff (ready flips the Linear issue to In Review and triggers the
+  CODEOWNERS auto-request). Use draft only for explicitly unfinished WIP.
+
+### Agent identity (claude-agent)
+
+Agent-authored work is committed and pushed as the **claude-agent-myka**
+GitHub machine account, so authorship is visible in history and PRs. The
+human's own commits keep their normal identity.
+
+- Git author: `claude-agent-myka <299917915+claude-agent-myka@users.noreply.github.com>`
+- Token: macOS Keychain — `security find-generic-password -s vocabu-agent-pat -w`
+  (classic PAT, `repo` scope, collaborator with Write). Never write the token
+  to disk or into git config; read it from Keychain at use time.
+- Commit (signed): agent commits are SSH-signed with a key held in Keychain
+  (`vocabu-agent-signing-key`) via the `~/.config/vocabu/bin/agent-ssh-sign`
+  wrapper — no key file on disk. Full incantation:
+  `git -c gpg.format=ssh -c gpg.ssh.program=$HOME/.config/vocabu/bin/agent-ssh-sign -c user.signingkey="key::$(cat $HOME/.config/vocabu/claude-agent-signing.pub)" -c commit.gpgsign=true -c user.name=claude-agent-myka -c user.email=<noreply> commit …`
+- Every agent commit message ends with the co-author trailer (after a blank
+  line): `Co-authored-by: Volodymyr Mykhaliouk <mykhaliuk@me.com>`
+- Push / gh: run with `GH_TOKEN=$(security find-generic-password -s vocabu-agent-pat -w)`
+  so pushes and `gh pr create` act as the bot.
+- PRs opened by the bot request review from `mykhaliuk` — real review
+  requests work because author ≠ reviewer.
