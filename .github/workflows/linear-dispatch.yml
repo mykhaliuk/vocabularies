@@ -20,6 +20,7 @@ jobs:
           # "In Progress" workflow-state id of the Vocabu team (single-team workspace)
           IN_PROGRESS_STATE_ID: 528f9035-9ab1-4ed0-9f6e-b9e443cd6c53
           ASSETS_BRANCH: meta/linear-assets
+          QUEUE_BRANCH: meta/agent-queue
         run: |
           set -euo pipefail
 
@@ -30,7 +31,14 @@ jobs:
               --data "$1"
           }
 
-          resp=$(linear '{"query":"{ viewer { assignedIssues(filter: { state: { type: { eq: \"unstarted\" } } }) { nodes { id identifier title description attachments { nodes { url } } } } } }"}')
+          resp=$(linear '{"query":"{ viewer { assignedIssues(filter: { state: { type: { eq: \"unstarted\" } } }) { nodes { id identifier title description labels { nodes { name } } attachments { nodes { url } } } } } }"}')
+
+          ensure_branch() {
+            if ! gh api "repos/$REPO/git/ref/heads/$1" --silent 2>/dev/null; then
+              sha=$(gh api "repos/$REPO/git/ref/heads/dev" -q .object.sha)
+              gh api -X POST "repos/$REPO/git/refs" -f ref="refs/heads/$1" -f sha="$sha" --silent
+            fi
+          }
 
           count=0
           while IFS= read -r node; do
@@ -66,11 +74,7 @@ jobs:
                 *)          ext=bin ;;
               esac
               path="linear-assets/$ident/img$i.$ext"
-              if ! gh api "repos/$REPO/git/ref/heads/$ASSETS_BRANCH" --silent 2>/dev/null; then
-                sha=$(gh api "repos/$REPO/git/ref/heads/dev" -q .object.sha)
-                gh api -X POST "repos/$REPO/git/refs" \
-                  -f ref="refs/heads/$ASSETS_BRANCH" -f sha="$sha" --silent
-              fi
+              ensure_branch "$ASSETS_BRANCH"
               payload=$(mktemp)
               b64=$(mktemp)
               base64 -w0 "$f" > "$b64"
@@ -87,10 +91,27 @@ jobs:
               desc=${desc//"$img"/"https://raw.githubusercontent.com/$REPO/$ASSETS_BRANCH/$path"}
             done < <(grep -oE 'https://uploads\.linear\.app/[^) "]+' <<<"$desc" || true)
 
-            comment=$(mktemp)
-            jq -n --arg t "$title" --arg d "$desc" --arg ident "$ident" --arg num "$num" \
-              '{body: ("@claude " + $t + "\n\n" + $d + "\n\n---\nDispatched from Linear " + $ident + ". Follow the repo conventions from CLAUDE.md. Open a PR to `dev`, ready (not draft), with `Closes " + $ident + "` and `Closes #" + $num + "` in the description.")}' > "$comment"
-            gh api -X POST "repos/$REPO/issues/$num/comments" --input "$comment" --silent
+            # Enqueue for the cloud executor: one task file per issue on the
+            # queue branch. The executor picks tasks matching its model tier
+            # and deletes the file when the PR is open.
+            model=$(jq -r 'if ([.labels.nodes[].name] | index("model:opus")) then "opus" else "sonnet" end' <<<"$node")
+            task=$(mktemp)
+            printf -- "---\nid: %s\ngh_issue: %s\nmodel: %s\ntitle: %s\n---\n\n%s\n" \
+              "$ident" "$num" "$model" "$title" "$desc" > "$task"
+            ensure_branch "$QUEUE_BRANCH"
+            qpath="queue/$ident.md"
+            payload=$(mktemp)
+            b64=$(mktemp)
+            base64 -w0 "$task" > "$b64"
+            jq -n --arg m "chore(queue): enqueue $ident" \
+                  --rawfile c "$b64" \
+                  --arg b "$QUEUE_BRANCH" \
+                  '{message: $m, content: $c, branch: $b}' > "$payload"
+            existing=$(gh api "repos/$REPO/contents/$qpath?ref=$QUEUE_BRANCH" -q .sha 2>/dev/null || true)
+            if [ -n "$existing" ]; then
+              jq --arg s "$existing" '. + {sha: $s}' "$payload" > "$payload.2" && mv "$payload.2" "$payload"
+            fi
+            gh api -X PUT "repos/$REPO/contents/$qpath" --input "$payload" --silent
 
             # Move to In Progress so the issue is not dispatched twice.
             mut=$(jq -n --arg id "$id" --arg state "$IN_PROGRESS_STATE_ID" \
