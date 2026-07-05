@@ -134,3 +134,28 @@ human's own commits keep their normal identity.
   that CI agents must still follow: Conventional Commits, `vkbt-<n>` in the
   branch name when the issue mirrors a Linear ticket, PRs ready (not draft),
   the co-author trailer.
+
+### Agent execution contract (any executor: local, Actions, cloud)
+
+This section is the single source of truth for HOW agents work in this repo.
+If an executor cannot satisfy a point, it must say so in the PR instead of
+silently skipping it.
+
+- **Commits:** Conventional Commits — `<type>(<scope>): <subject>`, imperative,
+  lowercase, no trailing period, ≤ 72 chars. Types: feat, fix, chore, refactor,
+  docs, test, perf, ci, build, style. Branch: `<type>/vkbt-<n>-<short-desc>`.
+- **Verify hands-on, never ship blind.** For any UI-affecting change: install
+  deps (`bun install`), run the app (`bun run dev`, or `bun run build` +
+  preview), open the affected pages with Playwright (already a dev dep),
+  capture before/after screenshots and actually look at them. Check both
+  themes when styles are involved. A UI change without a rendered check is
+  not done.
+- **Checks before shipping:** `bun run lint`, `bun run fmt:check`,
+  `bun run ds:check` (plus `proto:check` when design files are touched), and
+  `bun run test:e2e` when the change affects covered flows. CI enforces these,
+  but run them yourself first.
+- **Known sandbox limits:** flows requiring live Postgres or real email
+  (magic-link login, `/me`) cannot be fully exercised in agent sandboxes.
+  State explicitly in the PR what was verified and what needs a local check.
+- **No scope creep:** implement the ticket; file follow-up ideas as new
+  Linear issues instead of expanding the diff.
