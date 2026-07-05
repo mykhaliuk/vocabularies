@@ -87,6 +87,18 @@ checks. The coupling is the check, not a convention.
 - Lint/format: `bun run lint`, `bun run fmt:check` (oxlint + oxfmt).
 - All in-source artifacts are English (identifiers, comments, log strings).
 
+### Code rules (mandatory reading before writing code)
+
+`.claude/rules/*.md` is the full rulebook for HOW code is written here —
+JS conventions and V8-friendly optimizations, error handling, GoF pattern
+usage, data structures, no-DTO policy, refactor hygiene. Every executor
+(local, CI, cloud) MUST read these files before producing code; they are
+not summarized here on purpose — the files ARE the summary.
+
+Maintenance: the source of truth lives outside the repo on the owner's
+machine; after a rule changes there, run `bun run rules:sync` and commit
+the diff. Do not hand-edit `.claude/rules/` in the repo.
+
 ## Project management — Linear
 
 Work is tracked in Linear: team **Vocabu team** (prefix `VKBT`), project
