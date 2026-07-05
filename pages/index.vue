@@ -255,7 +255,7 @@ onMounted(() => {
               first one today — it takes about thirty seconds.
             </p>
             <div class="closer__actions">
-              <VButton href="#start" variant="primary" size="lg">
+              <VButton href="/login" variant="primary" size="lg">
                 start your dictionary
               </VButton>
               <VButton href="/login" variant="secondary" size="lg">
@@ -277,7 +277,6 @@ onMounted(() => {
         <span class="foot__tag">never lose your sweet moments.</span>
         <nav class="foot__links">
           <a href="#why">why vocabu</a>
-          <a href="/login">sign in</a>
         </nav>
       </div>
     </footer>
