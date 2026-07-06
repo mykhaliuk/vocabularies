@@ -19,5 +19,46 @@
       "signinFailed": "Un problème est survenu lors de la connexion. Réessayez.",
       "tooMany": "Trop de tentatives depuis votre réseau. Patientez un instant et réessayez."
     }
+  },
+  "magicLink": {
+    "errors": {
+      "tooManyRetry": "Trop de tentatives. Patientez {seconds}s et réessayez.",
+      "tooMany": "Trop de tentatives. Patientez un instant et réessayez.",
+      "invalidEmail": "Cette adresse e-mail ne semble pas valide. Réessayez.",
+      "serverError": "Un souci est survenu de notre côté. Réessayez dans un instant.",
+      "networkError": "Impossible de joindre Vocabu. Vérifiez votre connexion et réessayez.",
+      "generic": "Impossible d'envoyer le lien. Réessayez dans un instant."
+    }
+  },
+  "me": {
+    "greeting": "Bonjour, {name}",
+    "emailLabel": "e-mail : {email}",
+    "avatar": {
+      "title": "Avatar",
+      "alt": "Avatar",
+      "empty": "Pas encore d'avatar.",
+      "uploading": "Envoi en cours…",
+      "loadError": "Impossible de charger l'avatar",
+      "invalidType": "PNG ou JPEG uniquement.",
+      "uploadError": "Échec de l'envoi."
+    },
+    "debug": {
+      "title": "Débogage",
+      "trigger": "Déclencher une erreur de test",
+      "sending": "envoi…",
+      "unexpected": "inattendu : aucune erreur déclenchée",
+      "triggered": "déclenchée (HTTP {code})"
+    },
+    "signOut": "Se déconnecter",
+    "signingOut": "Déconnexion…",
+    "logoutError": "La déconnexion a échoué ; redirection quand même."
+  },
+  "offline": {
+    "pageTitle": "Hors ligne · Vocabu",
+    "title": "Vous êtes hors ligne",
+    "body": "Vos mots sont en sécurité — gardés ici même. On les synchronisera dès votre retour.",
+    "checking": "Vérification…",
+    "tryAgain": "Réessayer",
+    "stillOffline": "Toujours aucun signal. On sera là à votre retour."
   }
 }
