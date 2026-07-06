@@ -3,7 +3,9 @@ import type { LocationQueryValue } from 'vue-router';
 import { ArrowRight, ExternalLink, Mail } from 'lucide-vue-next';
 
 definePageMeta({ layout: false });
-useHead({ title: 'Sign in · Vocabu' });
+
+const { t } = useI18n();
+useHead(() => ({ title: t('login.pageTitle') }));
 
 const route = useRoute();
 const {
@@ -25,14 +27,10 @@ errorMessage.value = getErrorMessage(route.query.error);
 function getErrorMessage(
   code: LocationQueryValue | LocationQueryValue[] | undefined,
 ): string {
-  if (code === 'token-invalid')
-    return "That link is no longer valid. We'll send a fresh one.";
-  if (code === 'token-expired')
-    return "That link expired. Ask for a new one and you're in.";
-  if (code === 'signin-failed')
-    return 'Something got tangled signing you in. Try again.';
-  if (code === 'too-many')
-    return 'Too many attempts from your network. Wait a moment and try again.';
+  if (code === 'token-invalid') return t('login.errors.tokenInvalid');
+  if (code === 'token-expired') return t('login.errors.tokenExpired');
+  if (code === 'signin-failed') return t('login.errors.signinFailed');
+  if (code === 'too-many') return t('login.errors.tooMany');
   return '';
 }
 
@@ -60,8 +58,8 @@ async function resend() {
             height="56"
             class="auth__logo"
           />
-          <h1 class="auth__title">Vocabu</h1>
-          <p class="auth__tagline">Never lose your sweet moments.</p>
+          <h1 class="auth__title">{{ $t('login.brand') }}</h1>
+          <p class="auth__tagline">{{ $t('login.tagline') }}</p>
         </header>
 
         <p v-if="errorMessage" role="alert" class="auth__error">
@@ -69,7 +67,9 @@ async function resend() {
         </p>
 
         <form class="auth__form" novalidate @submit.prevent="submit">
-          <label for="email" class="auth__label">Your email</label>
+          <label for="email" class="auth__label">{{
+            $t('login.emailLabel')
+          }}</label>
           <input
             id="email"
             ref="inputRef"
@@ -90,14 +90,14 @@ async function resend() {
             :loading="submitting"
             :disabled="!validEmail"
           >
-            Send me a link
+            {{ $t('login.submit') }}
             <template #right>
               <ArrowRight :size="18" />
             </template>
           </VButton>
 
           <p class="auth__hint">
-            No passwords. We'll email you a link to sign in.
+            {{ $t('login.hint') }}
           </p>
         </form>
       </section>
@@ -111,9 +111,9 @@ async function resend() {
         <div class="auth__sent-icon" aria-hidden="true">
           <Mail :size="32" />
         </div>
-        <h2 class="auth__sent-title">Check your inbox</h2>
+        <h2 class="auth__sent-title">{{ $t('login.sentTitle') }}</h2>
         <p class="auth__sent-body">
-          We sent a sign-in link to<br />
+          {{ $t('login.sentBody') }}<br />
           <span class="auth__sent-email">{{ trimmedEmail }}</span>
         </p>
 
@@ -132,7 +132,7 @@ async function resend() {
             <template #left>
               <ExternalLink :size="18" />
             </template>
-            Open my inbox
+            {{ $t('login.openInbox') }}
           </VButton>
         </div>
 
@@ -142,17 +142,17 @@ async function resend() {
             type="button"
             @click="useDifferentEmail"
           >
-            Use a different email
+            {{ $t('login.useDifferentEmail') }}
           </button>
           <p class="auth__sent-resend">
-            Didn't get it?
+            {{ $t('login.resendPrompt') }}
             <button
               class="auth__sent-resend-btn"
               type="button"
               :disabled="submitting"
               @click="resend"
             >
-              {{ submitting ? 'Sending…' : 'Resend' }}
+              {{ submitting ? $t('login.resending') : $t('login.resend') }}
             </button>
           </p>
         </div>

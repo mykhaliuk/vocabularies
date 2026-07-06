@@ -1,0 +1,23 @@
+{
+  "login": {
+    "pageTitle": "Connexion · Vocabu",
+    "brand": "Vocabu",
+    "tagline": "Ne perdez plus jamais vos doux instants.",
+    "emailLabel": "Votre e-mail",
+    "submit": "Envoyez-moi un lien",
+    "hint": "Pas de mot de passe. Nous vous enverrons un lien de connexion par e-mail.",
+    "sentTitle": "Consultez votre boîte de réception",
+    "sentBody": "Nous avons envoyé un lien de connexion à",
+    "openInbox": "Ouvrir ma boîte de réception",
+    "useDifferentEmail": "Utiliser une autre adresse e-mail",
+    "resendPrompt": "Vous ne l'avez pas reçu ?",
+    "resending": "Envoi…",
+    "resend": "Renvoyer",
+    "errors": {
+      "tokenInvalid": "Ce lien n'est plus valide. Nous allons vous en envoyer un nouveau.",
+      "tokenExpired": "Ce lien a expiré. Demandez-en un nouveau, et vous y êtes.",
+      "signinFailed": "Un problème est survenu lors de la connexion. Réessayez.",
+      "tooMany": "Trop de tentatives depuis votre réseau. Patientez un instant et réessayez."
+    }
+  }
+}
