@@ -92,7 +92,7 @@ checks. The coupling is the check, not a convention.
 `.claude/rules/*.md` is the full rulebook for HOW code is written here —
 JS conventions and V8-friendly optimizations, error handling, GoF pattern
 usage, data structures, no-DTO policy, refactor hygiene. Every executor
-(local, CI, cloud) MUST read these files before producing code; they are
+(local, CI) MUST read these files before producing code; they are
 not summarized here on purpose — the files ARE the summary.
 
 Maintenance: the source of truth lives outside the repo on the owner's
@@ -149,7 +149,7 @@ human's own commits keep their normal identity.
   branch name when the issue mirrors a Linear ticket, PRs ready (not draft),
   the co-author trailer.
 
-### Agent execution contract (any executor: local, Actions, cloud)
+### Agent execution contract (any executor: local, Actions)
 
 This section is the single source of truth for HOW agents work in this repo.
 If an executor cannot satisfy a point, it must say so in the PR instead of

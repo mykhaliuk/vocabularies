@@ -63,6 +63,9 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           # Temporary while stabilizing the setup: surface the SDK stream in logs.
           show_full_output: true
+          # Commit via the GitHub API so every agent commit gets the
+          # verified badge (claude[bot]) instead of an unsigned git push.
+          use_commit_signing: true
           # Let the CI agent actually build, verify, and inspect: deps,
           # scripts, checks, read-only git/gh state, local HTTP checks.
           claude_args: |
