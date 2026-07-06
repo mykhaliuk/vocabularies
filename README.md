@@ -94,3 +94,9 @@ pages/             Nuxt pages
 scripts/           with-env.js wrapper, db-dump-dev.js
 docker-compose.yml Local Postgres + MinIO + bucket-init
 ```
+
+## Agents
+
+Agent workflows — Linear-driven dispatch, `@claude` mentions, and
+review-by-request — are documented in `CLAUDE.md`. Every executor (local or
+CI) must follow the Agent execution contract defined there.
