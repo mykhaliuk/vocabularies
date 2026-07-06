@@ -135,7 +135,9 @@ human's own commits keep their normal identity.
   wrapper — no key file on disk. Full incantation:
   `git -c gpg.format=ssh -c gpg.ssh.program=$HOME/.config/vocabu/bin/agent-ssh-sign -c user.signingkey="key::$(cat $HOME/.config/vocabu/claude-agent-signing.pub)" -c commit.gpgsign=true -c user.name=claude-agent-myka -c user.email=<noreply> commit …`
 - Every agent commit message ends with the co-author trailer (after a blank
-  line): `Co-authored-by: Volodymyr Mykhaliouk <mykhaliuk@me.com>`
+  line): `Co-authored-by: Volodymyr Mykhaliouk <18505201+mykhaliuk@users.noreply.github.com>`
+  Never put the owner's personal email into any commit field or repo file —
+  the GitHub noreply address is the only allowed form.
 - Push / gh: run with `GH_TOKEN=$(security find-generic-password -s vocabu-agent-pat -w)`
   so pushes and `gh pr create` act as the bot.
 - PRs opened by the bot request review from `mykhaliuk` — real review
