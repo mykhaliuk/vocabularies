@@ -2,15 +2,40 @@
 export default defineNuxtConfig({
   compatibilityDate: '2026-04-30',
   devtools: { enabled: true },
-  modules: ['@sentry/nuxt/module', '@vite-pwa/nuxt', '@nuxt/fonts'],
+  modules: [
+    '@sentry/nuxt/module',
+    '@vite-pwa/nuxt',
+    '@nuxt/fonts',
+    '@nuxtjs/i18n',
+  ],
+  i18n: {
+    locales: [
+      { code: 'en', language: 'en-US', name: 'English', file: 'en.json' },
+      { code: 'fr', language: 'fr-FR', name: 'Français', file: 'fr.json' },
+      { code: 'uk', language: 'uk-UA', name: 'Українська', file: 'uk.json' },
+    ],
+    defaultLocale: 'en',
+    // Single-domain mobile PWA: no /fr/ URL prefixes, locale is entirely
+    // cookie/header driven (no_prefix skips i18n routing altogether).
+    strategy: 'no_prefix',
+    detectBrowserLanguage: {
+      // SSR reads Accept-Language on first visit; once a locale is set it's
+      // written to this cookie, which then wins on every later request —
+      // the same "explicit choice persists" contract as the theme override
+      // cookie/localStorage read in `app.head.script` below.
+      useCookie: true,
+      cookieKey: 'vocabu-locale',
+    },
+  },
   fonts: {
     // Self-host the Google fonts at build: no render-blocking cross-origin
     // request, woff2 served same-origin + preloaded, fallback metrics injected
     // to keep CLS at zero. Replaces the old <link> to fonts.googleapis.com.
-    // latin-only: the English copy (incl. em-dashes + curly quotes, which live
-    // in the latin range) needs nothing more, and it slashes the @font-face
-    // count + woff2 weight that were bloating the render-blocking CSS.
-    defaults: { subsets: ['latin'] },
+    // latin + cyrillic: covers the en/fr copy (incl. em-dashes + curly quotes,
+    // which live in the latin range) and the uk locale's Cyrillic glyphs, so
+    // Hanken Grotesk/Caveat render for all three locales instead of falling
+    // back to a system font.
+    defaults: { subsets: ['latin', 'cyrillic'] },
     families: [
       // Only the weights/styles actually used — italics are body-weight only
       // (em / gloss), Caveat carries the quote marks (500) + words (600).
@@ -39,7 +64,8 @@ export default defineNuxtConfig({
   ],
   app: {
     head: {
-      htmlAttrs: { lang: 'en' },
+      // <html lang>/dir are set reactively per-locale in app.vue via
+      // useLocaleHead(); no static default needed here.
       meta: [
         // Per-mode browser-chrome colour (Android Chrome address bar,
         // iOS Safari status bar). Separate from the PWA manifest

@@ -1,0 +1,23 @@
+{
+  "login": {
+    "pageTitle": "Sign in · Vocabu",
+    "brand": "Vocabu",
+    "tagline": "Never lose your sweet moments.",
+    "emailLabel": "Your email",
+    "submit": "Send me a link",
+    "hint": "No passwords. We'll email you a link to sign in.",
+    "sentTitle": "Check your inbox",
+    "sentBody": "We sent a sign-in link to",
+    "openInbox": "Open my inbox",
+    "useDifferentEmail": "Use a different email",
+    "resendPrompt": "Didn't get it?",
+    "resending": "Sending…",
+    "resend": "Resend",
+    "errors": {
+      "tokenInvalid": "That link is no longer valid. We'll send a fresh one.",
+      "tokenExpired": "That link expired. Ask for a new one and you're in.",
+      "signinFailed": "Something got tangled signing you in. Try again.",
+      "tooMany": "Too many attempts from your network. Wait a moment and try again."
+    }
+  }
+}
