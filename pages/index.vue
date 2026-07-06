@@ -32,6 +32,11 @@ useSeoMeta({
   ogType: 'website',
 });
 
+const { public: publicConfig } = useRuntimeConfig();
+useHead({
+  link: [{ rel: 'canonical', href: new URL('/', publicConfig.appUrl).href }],
+});
+
 // Reveal-on-scroll: progressive enhancement only. Without IntersectionObserver
 // (or under reduced-motion) everything is shown up front.
 onMounted(() => {
