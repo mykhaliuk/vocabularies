@@ -34,7 +34,7 @@ useSeoMeta({
 
 const { public: publicConfig } = useRuntimeConfig();
 useHead({
-  link: [{ rel: 'canonical', href: `${publicConfig.appUrl}/` }],
+  link: [{ rel: 'canonical', href: new URL('/', publicConfig.appUrl).href }],
 });
 
 // Reveal-on-scroll: progressive enhancement only. Without IntersectionObserver
