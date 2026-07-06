@@ -115,8 +115,11 @@ jobs:
                results.
             5. Leave inline comments on specific lines where something is
                wrong via mcp__github_inline_comment__create_inline_comment.
-            6. Finish with ONE summary comment: verdict (LGTM / needs
-               changes), the list of findings ordered by severity, and
-               what you checked. Be specific and terse; no praise padding.
+            6. Finish by POSTING one summary comment with
+               `gh pr comment ${{ github.event.pull_request.number }} --body "..."`:
+               verdict (LGTM / needs changes), the list of findings
+               ordered by severity, and what you checked. Be specific
+               and terse; no praise padding. This runs unattended —
+               never ask for confirmation, just post.
           claude_args: |
-            --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr checks:*),Bash(bun install),Bash(bun run:*),Bash(bunx:*),Bash(node:*),WebFetch"
+            --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr checks:*),Bash(gh pr comment:*),Bash(bun install),Bash(bun run:*),Bash(bunx:*),Bash(node:*),WebFetch"
