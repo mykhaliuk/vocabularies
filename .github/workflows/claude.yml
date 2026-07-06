@@ -27,6 +27,25 @@ jobs:
       id-token: write
       actions: read
     steps:
+      # Instant "seen" signal on the triggering mention, before the agent
+      # posts its tracking comment. Best-effort: never fails the run.
+      - name: React with eyes on the trigger
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          case "${{ github.event_name }}" in
+            issue_comment)
+              endpoint="repos/$REPO/issues/comments/${{ github.event.comment.id }}/reactions" ;;
+            pull_request_review_comment)
+              endpoint="repos/$REPO/pulls/comments/${{ github.event.comment.id }}/reactions" ;;
+            issues)
+              endpoint="repos/$REPO/issues/${{ github.event.issue.number }}/reactions" ;;
+            *)
+              exit 0 ;;
+          esac
+          gh api -X POST "$endpoint" -f content=eyes --silent || true
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
