@@ -7,7 +7,7 @@ type FetchErrorLike = {
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-type Translate = (key: string, named?: Record<string, unknown>) => string;
+type Translate = ReturnType<typeof useI18n>['t'];
 
 const isFetchErrorLike = (value: unknown): value is FetchErrorLike =>
   typeof value === 'object' && value !== null;
