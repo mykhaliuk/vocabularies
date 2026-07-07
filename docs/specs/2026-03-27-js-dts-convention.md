@@ -10,11 +10,20 @@
 > `.js` implementations are not checked at all. Verdict: the framework is
 > built for TypeScript; fighting it costs more than it buys.
 >
-> Going forward: new app code (composables, utils, db, shared) is written
-> in `.ts`. Existing `server/**` `.js`+`.d.ts` pairs keep working (their
-> realm never checked implementations) and migrate opportunistically when
-> touched. Standalone `scripts/*.js` (excluded from typecheck, run with
-> plain node) stay JS.
+> Going forward: application code (composables, utils, db, shared,
+> server) is written in `.ts`. Standalone `scripts/*.js` (excluded from
+> typecheck, run with plain node) stay JS. Two principles carry over from
+> the original convention:
+>
+> 1. **Types are the contract.** A module's public surface is typed
+>    deliberately: exported function parameters and exported
+>    interfaces/type aliases ARE the module's contract, written where the
+>    old `.d.ts` used to state it — at the boundary.
+> 2. **Inference over annotation.** Inside the module, as few explicit
+>    types as possible: return types, locals, and intermediate values are
+>    inferred. Annotate only what inference cannot know (parameters,
+>    empty-initialized state like `let cached: Db | null = null`) or where
+>    a public return type must not silently widen/leak internals.
 
 ## Principle
 

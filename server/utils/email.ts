@@ -1,15 +1,20 @@
 import { Resend } from 'resend';
 
-const consoleEmailer = {
+export interface Emailer {
+  isNull: boolean;
+  sendMagicLink: (to: string, link: string) => Promise<void>;
+}
+
+const consoleEmailer: Emailer = {
   isNull: true,
   sendMagicLink: async (to, link) => {
     console.log(`[email:console] magic-link to=${to} link=${link}`);
   },
 };
 
-let cached = null;
+let cached: Emailer | null = null;
 
-const create = () => {
+const create = (): Emailer => {
   const apiKey = process.env.RESEND_API_KEY;
   const from = process.env.EMAIL_FROM;
   const stage = process.env.APP_ENV ?? 'local';

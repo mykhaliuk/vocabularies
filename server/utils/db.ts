@@ -2,10 +2,14 @@ import { drizzle as drizzlePg } from 'drizzle-orm/node-postgres';
 import { drizzle as drizzleNeon } from 'drizzle-orm/neon-serverless';
 import pg from 'pg';
 import { Pool as NeonPool } from '@neondatabase/serverless';
+import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import type { NeonDatabase } from 'drizzle-orm/neon-serverless';
 
-let cached = null;
+export type Db = NodePgDatabase | NeonDatabase;
 
-const create = () => {
+let cached: Db | null = null;
+
+const create = (): Db => {
   const driver = process.env.DB_DRIVER ?? 'pg';
   const url = process.env.DATABASE_URL;
   if (!url) throw new Error('[db] DATABASE_URL is required');

@@ -1,4 +1,12 @@
-export const runCheck = async (label, fn) => {
+export interface CheckResult {
+  status: string;
+  message?: string;
+}
+
+export const runCheck = async (
+  label: string,
+  fn: () => Promise<string>,
+): Promise<CheckResult> => {
   try {
     return { status: await fn() };
   } catch (error) {
@@ -8,7 +16,7 @@ export const runCheck = async (label, fn) => {
   }
 };
 
-export const sanitize = (result, includeMessage) => {
+export const sanitize = (result: CheckResult, includeMessage: boolean) => {
   if (includeMessage) return result;
   return { status: result.status };
 };

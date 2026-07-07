@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { PublicUser } from '~/server/utils/auth.d.ts';
-import { PWA_API_CACHE, PWA_AVATARS_CACHE } from '~/shared/pwa-caches.js';
+import { PWA_API_CACHE, PWA_AVATARS_CACHE } from '~/shared/pwa-caches';
 
 interface FetchError {
   statusCode?: number;

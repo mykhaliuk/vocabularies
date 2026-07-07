@@ -1,29 +1,39 @@
 import { nanoid } from 'nanoid';
 
-const EXTENSION_BY_TYPE = Object.freeze({
-  'image/png': 'png',
-  'image/jpeg': 'jpg',
-});
+export type AvatarContentType = 'image/png' | 'image/jpeg';
+export type AvatarExtension = 'png' | 'jpg';
 
-export const ALLOWED_CONTENT_TYPES = Object.freeze(['image/png', 'image/jpeg']);
+const EXTENSION_BY_TYPE: ReadonlyMap<AvatarContentType, AvatarExtension> =
+  new Map([
+    ['image/png', 'png'],
+    ['image/jpeg', 'jpg'],
+  ]);
+
+export const ALLOWED_CONTENT_TYPES = Object.freeze([
+  'image/png',
+  'image/jpeg',
+] as const);
 
 const PREFIX = 'avatars/';
 const MAX_KEY_LENGTH = 512;
 
-const buildPrefix = (userId) => `${PREFIX}${userId}/`;
+const buildPrefix = (userId: string) => `${PREFIX}${userId}/`;
 
-export const contentTypeFromKey = (key) => {
+export const contentTypeFromKey = (key: string) => {
   const dot = key.lastIndexOf('.');
   if (dot === -1) return null;
   const ext = key.slice(dot + 1);
-  for (const [type, e] of Object.entries(EXTENSION_BY_TYPE)) {
-    if (e === ext) return type;
+  for (const [type, extension] of EXTENSION_BY_TYPE) {
+    if (extension === ext) return type;
   }
   return null;
 };
 
-export const mintAvatarKey = (userId, contentType) => {
-  const ext = EXTENSION_BY_TYPE[contentType];
+export const mintAvatarKey = (
+  userId: string,
+  contentType: AvatarContentType,
+) => {
+  const ext = EXTENSION_BY_TYPE.get(contentType);
   if (!ext) {
     throw new Error(`[avatar-key] unsupported contentType: ${contentType}`);
   }
@@ -32,7 +42,7 @@ export const mintAvatarKey = (userId, contentType) => {
 
 // Validates that `raw` is a well-formed avatar key owned by `userId`.
 // Throws a plain Error on failure; callers translate to HTTP errors.
-export const parseAvatarKey = (raw, userId) => {
+export const parseAvatarKey = (raw: unknown, userId: string) => {
   if (typeof raw !== 'string') throw new Error('[avatar-key] not a string');
   if (raw.length === 0 || raw.length > MAX_KEY_LENGTH) {
     throw new Error('[avatar-key] length out of range');

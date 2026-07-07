@@ -1,8 +1,8 @@
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
-import { users } from '~/db/schema/users.js';
-import { requireUser, toPublicUser } from '~/server/utils/auth.js';
-import { useDb } from '~/server/utils/db.js';
+import { users } from '~/db/schema/users';
+import { requireUser, toPublicUser } from '~/server/utils/auth';
+import { useDb } from '~/server/utils/db';
 
 const Body = z.object({
   displayName: z.string().min(1).max(64).optional(),
