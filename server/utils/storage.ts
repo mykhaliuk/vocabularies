@@ -99,8 +99,12 @@ export const presignGet = async (key: string, ttlSec = 3600) => {
 
 export const isNotFoundError = (error: unknown) => {
   if (typeof error !== 'object' || error === null) return false;
-  const e = error as { name?: string; $metadata?: { httpStatusCode?: number } };
-  if (e.name === 'NotFound') return true;
-  if (e.$metadata && e.$metadata.httpStatusCode === 404) return true;
+  if ('name' in error && error.name === 'NotFound') return true;
+  if ('$metadata' in error) {
+    const meta = error.$metadata;
+    if (meta && typeof meta === 'object' && 'httpStatusCode' in meta) {
+      return meta.httpStatusCode === 404;
+    }
+  }
   return false;
 };

@@ -3,11 +3,11 @@ import { nanoid } from 'nanoid';
 export type AvatarContentType = 'image/png' | 'image/jpeg';
 export type AvatarExtension = 'png' | 'jpg';
 
-const EXTENSION_BY_TYPE: Record<AvatarContentType, AvatarExtension> =
-  Object.freeze({
-    'image/png': 'png',
-    'image/jpeg': 'jpg',
-  });
+const EXTENSION_BY_TYPE: ReadonlyMap<AvatarContentType, AvatarExtension> =
+  new Map([
+    ['image/png', 'png'],
+    ['image/jpeg', 'jpg'],
+  ]);
 
 export const ALLOWED_CONTENT_TYPES = Object.freeze([
   'image/png',
@@ -23,8 +23,8 @@ export const contentTypeFromKey = (key: string) => {
   const dot = key.lastIndexOf('.');
   if (dot === -1) return null;
   const ext = key.slice(dot + 1);
-  for (const type of Object.keys(EXTENSION_BY_TYPE) as AvatarContentType[]) {
-    if (EXTENSION_BY_TYPE[type] === ext) return type;
+  for (const [type, extension] of EXTENSION_BY_TYPE) {
+    if (extension === ext) return type;
   }
   return null;
 };
@@ -33,7 +33,7 @@ export const mintAvatarKey = (
   userId: string,
   contentType: AvatarContentType,
 ) => {
-  const ext = EXTENSION_BY_TYPE[contentType];
+  const ext = EXTENSION_BY_TYPE.get(contentType);
   if (!ext) {
     throw new Error(`[avatar-key] unsupported contentType: ${contentType}`);
   }

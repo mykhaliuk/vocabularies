@@ -17,9 +17,8 @@ const scrubValue = (value: unknown, depth: number): unknown => {
     return value;
   }
   if (value && typeof value === 'object') {
-    const record = value as Record<string, unknown>;
-    for (const key of Object.keys(record)) {
-      record[key] = scrubValue(record[key], depth + 1);
+    for (const [key, child] of Object.entries(value)) {
+      Reflect.set(value, key, scrubValue(child, depth + 1));
     }
     return value;
   }
@@ -80,7 +79,8 @@ export const safeScrub = (event: ErrorEvent) => {
 const isExpectedClientError = (hint?: EventHint) => {
   const error = hint && hint.originalException;
   if (!error || typeof error !== 'object') return false;
-  const status = Number((error as { statusCode?: unknown }).statusCode);
+  if (!('statusCode' in error)) return false;
+  const status = Number(error.statusCode);
   return Number.isFinite(status) && status >= 400 && status < 500;
 };
 
