@@ -18,6 +18,13 @@ export default defineNuxtConfig({
     // Single-domain mobile PWA: no /fr/ URL prefixes, locale is entirely
     // cookie/header driven (no_prefix skips i18n routing altogether).
     strategy: 'no_prefix',
+    experimental: {
+      // Editor autocomplete for message keys, generated from the default
+      // locale. NOT a hard gate: vue-i18n keeps a plain-string t() overload,
+      // so unknown keys still typecheck — `bun run i18n:check` is the
+      // enforcement (key parity across locales + usage integrity).
+      typedOptionsAndMessages: 'default',
+    },
     detectBrowserLanguage: {
       // SSR reads Accept-Language on first visit; once a locale is set it's
       // written to this cookie, which then wins on every later request —

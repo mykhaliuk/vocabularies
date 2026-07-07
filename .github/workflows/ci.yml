@@ -30,6 +30,9 @@ jobs:
       - name: Prototype ↔ design system drift
         run: bun run proto:check
 
+      - name: i18n key parity
+        run: bun run i18n:check
+
       - name: Lint
         run: bun run lint
 
