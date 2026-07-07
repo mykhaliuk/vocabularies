@@ -1,5 +1,21 @@
 # JS + .d.ts Convention
 
+> **Status: RETIRED (2026-07-07).** The convention rested on an assumption
+> that turned out to be false: a sibling `.d.ts` does NOT exempt the `.js`
+> implementation from type-checking. Under the app realm's `checkJs: true` +
+> `noImplicitAny` (`.nuxt/tsconfig.app.json`), any module-level function
+> parameter in a `.js` file is an error that plain JS cannot fix without
+> JSDoc — which rule 3 below forbids. The convention only ever "worked" in
+> the server realm, where Nuxt does not propagate `checkJs`, i.e. where
+> `.js` implementations are not checked at all. Verdict: the framework is
+> built for TypeScript; fighting it costs more than it buys.
+>
+> Going forward: new app code (composables, utils, db, shared) is written
+> in `.ts`. Existing `server/**` `.js`+`.d.ts` pairs keep working (their
+> realm never checked implementations) and migrate opportunistically when
+> touched. Standalone `scripts/*.js` (excluded from typecheck, run with
+> plain node) stay JS.
+
 ## Principle
 
 Server-side and shared code is written in plain JavaScript. Type contracts (interfaces, types, generics) live in co-located `.d.ts` declaration files — separate from logic, like C++ header/implementation pairs. Vue Single File Components are the only exception: their `<script>` blocks use TypeScript so refs, props, emits, and DOM event handlers can be typed without leaking ceremony into runtime files.
