@@ -1,13 +1,13 @@
+import type { ErrorEvent, EventHint } from '@sentry/core';
+
 const EMAIL_REGEX = /[\w.+-]+@[\w-]+(\.[\w-]+)+/g;
 const EMAIL_PLACEHOLDER = '<email>';
 const MAX_DEPTH = 6;
 
-const scrubString = (value) =>
-  typeof value === 'string'
-    ? value.replace(EMAIL_REGEX, EMAIL_PLACEHOLDER)
-    : value;
+const scrubString = (value: string) =>
+  value.replace(EMAIL_REGEX, EMAIL_PLACEHOLDER);
 
-const scrubValue = (value, depth) => {
+const scrubValue = (value: unknown, depth: number): unknown => {
   if (depth >= MAX_DEPTH) return value;
   if (typeof value === 'string') return scrubString(value);
   if (Array.isArray(value)) {
@@ -17,15 +17,16 @@ const scrubValue = (value, depth) => {
     return value;
   }
   if (value && typeof value === 'object') {
-    for (const key of Object.keys(value)) {
-      value[key] = scrubValue(value[key], depth + 1);
+    const record = value as Record<string, unknown>;
+    for (const key of Object.keys(record)) {
+      record[key] = scrubValue(record[key], depth + 1);
     }
     return value;
   }
   return value;
 };
 
-const dropSensitive = (event) => {
+const dropSensitive = (event: ErrorEvent) => {
   if (event.request) {
     if (event.request.cookies) delete event.request.cookies;
     if (event.request.headers) {
@@ -42,7 +43,7 @@ const dropSensitive = (event) => {
   }
 };
 
-const scrubEvent = (event) => {
+const scrubEvent = (event: ErrorEvent) => {
   dropSensitive(event);
 
   if (event.message) event.message = scrubString(event.message);
@@ -63,7 +64,7 @@ const scrubEvent = (event) => {
   return event;
 };
 
-export const safeScrub = (event) => {
+export const safeScrub = (event: ErrorEvent) => {
   try {
     return scrubEvent(event);
   } catch (error) {
@@ -76,14 +77,14 @@ export const safeScrub = (event) => {
 // a missing page or a rejected request is the app working as designed, not a
 // bug to alert on. statusCode rides on the original Nuxt/H3 exception, so we
 // inspect the hint rather than the serialized event.
-const isExpectedClientError = (hint) => {
+const isExpectedClientError = (hint?: EventHint) => {
   const error = hint && hint.originalException;
   if (!error || typeof error !== 'object') return false;
-  const status = Number(error.statusCode);
+  const status = Number((error as { statusCode?: unknown }).statusCode);
   return Number.isFinite(status) && status >= 400 && status < 500;
 };
 
-export const beforeSend = (event, hint) => {
+export const beforeSend = (event: ErrorEvent, hint?: EventHint) => {
   if (isExpectedClientError(hint)) return null;
   return safeScrub(event);
 };

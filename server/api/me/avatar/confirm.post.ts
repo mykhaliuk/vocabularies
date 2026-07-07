@@ -1,13 +1,10 @@
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
-import { users } from '~/db/schema/users.js';
-import { requireUser, toPublicUser } from '~/server/utils/auth.js';
-import {
-  contentTypeFromKey,
-  parseAvatarKey,
-} from '~/server/utils/avatar-key.js';
-import { useDb } from '~/server/utils/db.js';
-import { headObject, isNotFoundError } from '~/server/utils/storage.js';
+import { users } from '~/db/schema/users';
+import { requireUser, toPublicUser } from '~/server/utils/auth';
+import { contentTypeFromKey, parseAvatarKey } from '~/server/utils/avatar-key';
+import { useDb } from '~/server/utils/db';
+import { headObject, isNotFoundError } from '~/server/utils/storage';
 
 const Body = z.object({
   key: z.string(),

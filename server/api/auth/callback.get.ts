@@ -1,16 +1,16 @@
 import { eq, sql } from 'drizzle-orm';
-import { magicLinkTokens } from '~/db/schema/magic-link-tokens.js';
-import { sessions } from '~/db/schema/sessions.js';
-import { users } from '~/db/schema/users.js';
+import { magicLinkTokens } from '~/db/schema/magic-link-tokens';
+import { sessions } from '~/db/schema/sessions';
+import { users } from '~/db/schema/users';
 import {
   getSessionTtlMs,
   hashToken,
   setSessionCookie,
   signSession,
-} from '~/server/utils/auth.js';
-import { useDb } from '~/server/utils/db.js';
-import { useCallbackIpRatelimit } from '~/server/utils/ratelimit.js';
-import { noStoreRedirect } from '~/server/utils/redirect.js';
+} from '~/server/utils/auth';
+import { useDb } from '~/server/utils/db';
+import { useCallbackIpRatelimit } from '~/server/utils/ratelimit';
+import { noStoreRedirect } from '~/server/utils/redirect';
 
 export default defineEventHandler(async (event) => {
   const query = getQuery(event);

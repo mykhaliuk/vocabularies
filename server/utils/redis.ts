@@ -2,7 +2,18 @@ import { Redis } from '@upstash/redis';
 
 const NULL_PONG = 'PONG_NULL';
 
-const nullRedis = {
+// The contract every consumer codes against — both the real Upstash client
+// wrapper and the local null driver satisfy it.
+export interface RedisLike {
+  isNull: boolean;
+  ping: () => Promise<string>;
+  get: (key: string) => Promise<string | null>;
+  set: (key: string, value: string) => Promise<unknown>;
+  incr: (key: string) => Promise<number>;
+  del: (key: string) => Promise<number>;
+}
+
+const nullRedis: RedisLike = {
   isNull: true,
   ping: async () => NULL_PONG,
   get: async () => null,
@@ -11,15 +22,15 @@ const nullRedis = {
   del: async () => 0,
 };
 
-let cached = null;
+let cached: RedisLike | null = null;
 
-const wrap = (client) => ({
+const wrap = (client: Redis): RedisLike => ({
   isNull: false,
-  ping: (...args) => client.ping(...args),
-  get: (...args) => client.get(...args),
-  set: (...args) => client.set(...args),
-  incr: (...args) => client.incr(...args),
-  del: (...args) => client.del(...args),
+  ping: () => client.ping(),
+  get: (key) => client.get<string>(key),
+  set: (key, value) => client.set(key, value),
+  incr: (key) => client.incr(key),
+  del: (key) => client.del(key),
 });
 
 const create = () => {

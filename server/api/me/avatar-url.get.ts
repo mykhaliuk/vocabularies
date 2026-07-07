@@ -1,6 +1,6 @@
-import { requireUser } from '~/server/utils/auth.js';
-import { parseAvatarKey } from '~/server/utils/avatar-key.js';
-import { presignGet } from '~/server/utils/storage.js';
+import { requireUser } from '~/server/utils/auth';
+import { parseAvatarKey } from '~/server/utils/avatar-key';
+import { presignGet } from '~/server/utils/storage';
 
 const VIEW_TTL_SEC = 3600;
 

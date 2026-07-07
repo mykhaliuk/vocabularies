@@ -1,15 +1,15 @@
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
-import { magicLinkTokens } from '~/db/schema/magic-link-tokens.js';
-import { getAppUrl } from '~/server/utils/app-url.js';
+import { magicLinkTokens } from '~/db/schema/magic-link-tokens';
+import { getAppUrl } from '~/server/utils/app-url';
 import {
   generateRawToken,
   hashToken,
   normalizeEmail,
-} from '~/server/utils/auth.js';
-import { useDb } from '~/server/utils/db.js';
-import { useEmail } from '~/server/utils/email.js';
-import { checkMagicLinkRateLimits } from '~/server/utils/magic-link-ratelimit.js';
+} from '~/server/utils/auth';
+import { useDb } from '~/server/utils/db';
+import { useEmail } from '~/server/utils/email';
+import { checkMagicLinkRateLimits } from '~/server/utils/magic-link-ratelimit';
 
 const Body = z.object({
   email: z.string().email().max(254),

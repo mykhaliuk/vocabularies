@@ -2,9 +2,9 @@ import { z } from 'zod';
 import {
   ALLOWED_CONTENT_TYPES,
   mintAvatarKey,
-} from '~/server/utils/avatar-key.js';
-import { requireUser } from '~/server/utils/auth.js';
-import { presignPut } from '~/server/utils/storage.js';
+} from '~/server/utils/avatar-key';
+import { requireUser } from '~/server/utils/auth';
+import { presignPut } from '~/server/utils/storage';
 
 const Body = z.object({
   contentType: z.enum([...ALLOWED_CONTENT_TYPES]),

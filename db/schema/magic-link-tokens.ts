@@ -6,7 +6,7 @@ import {
   uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
-import { bytea } from './bytea.js';
+import { bytea } from './bytea';
 
 export const magicLinkTokens = pgTable(
   'magic_link_tokens',

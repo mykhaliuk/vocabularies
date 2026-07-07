@@ -10,7 +10,7 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 const TRUE_VALUES = new Set(['true', '1', 'yes', 'on']);
 const FALSE_VALUES = new Set(['false', '0', 'no', 'off']);
 
-const parseBool = (raw, key) => {
+const parseBool = (raw: unknown, key: string) => {
   if (raw == null || String(raw).trim() === '') {
     throw new Error(`[storage] ${key} is required`);
   }
@@ -22,7 +22,7 @@ const parseBool = (raw, key) => {
   );
 };
 
-let cached = null;
+let cached: { client: S3Client; bucket: string } | null = null;
 
 const create = () => {
   const endpoint = process.env.S3_ENDPOINT;
@@ -67,12 +67,16 @@ export const headBucket = async () => {
   await client.send(new HeadBucketCommand({ Bucket: bucket }));
 };
 
-export const headObject = async (key) => {
+export const headObject = async (key: string) => {
   const { client, bucket } = useStorage();
   return client.send(new HeadObjectCommand({ Bucket: bucket, Key: key }));
 };
 
-export const presignPut = async (key, contentType, ttlSec = 300) => {
+export const presignPut = async (
+  key: string,
+  contentType: string,
+  ttlSec = 300,
+) => {
   const { client, bucket } = useStorage();
   const command = new PutObjectCommand({
     Bucket: bucket,
@@ -87,15 +91,15 @@ export const presignPut = async (key, contentType, ttlSec = 300) => {
   });
 };
 
-export const presignGet = async (key, ttlSec = 3600) => {
+export const presignGet = async (key: string, ttlSec = 3600) => {
   const { client, bucket } = useStorage();
   const command = new GetObjectCommand({ Bucket: bucket, Key: key });
   return getSignedUrl(client, command, { expiresIn: ttlSec });
 };
 
-export const isNotFoundError = (error) => {
+export const isNotFoundError = (error: unknown) => {
   if (typeof error !== 'object' || error === null) return false;
-  const e = error;
+  const e = error as { name?: string; $metadata?: { httpStatusCode?: number } };
   if (e.name === 'NotFound') return true;
   if (e.$metadata && e.$metadata.httpStatusCode === 404) return true;
   return false;

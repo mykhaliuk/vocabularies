@@ -1,6 +1,6 @@
 import { lt } from 'drizzle-orm';
-import { magicLinkTokens } from '~/db/schema/magic-link-tokens.js';
-import { useDb } from '~/server/utils/db.js';
+import { magicLinkTokens } from '~/db/schema/magic-link-tokens';
+import { useDb } from '~/server/utils/db';
 
 // Daily Vercel Cron (see vercel.json) — delete magic-link tokens past their
 // expiry so the table does not accumulate dead rows. Vercel authenticates cron

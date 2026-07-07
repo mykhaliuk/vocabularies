@@ -1,11 +1,11 @@
 import { eq } from 'drizzle-orm';
-import { sessions } from '~/db/schema/sessions.js';
+import { sessions } from '~/db/schema/sessions';
 import {
   clearSessionCookie,
   getSessionCookieName,
   verifySession,
-} from '~/server/utils/auth.js';
-import { useDb } from '~/server/utils/db.js';
+} from '~/server/utils/auth';
+import { useDb } from '~/server/utils/db';
 
 export default defineEventHandler(async (event) => {
   const jwt = getCookie(event, getSessionCookieName());

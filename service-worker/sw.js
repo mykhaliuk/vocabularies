@@ -21,7 +21,7 @@ import {
   NetworkOnly,
   StaleWhileRevalidate,
 } from 'workbox-strategies';
-import { PWA_API_CACHE, PWA_AVATARS_CACHE } from '../shared/pwa-caches.js';
+import { PWA_API_CACHE, PWA_AVATARS_CACHE } from '../shared/pwa-caches';
 
 // registerType: autoUpdate — take over immediately rather than waiting.
 self.skipWaiting();

@@ -1,8 +1,8 @@
 import { sql } from 'drizzle-orm';
-import { useDb } from '~/server/utils/db.js';
-import { runCheck, sanitize } from '~/server/utils/health-check.js';
-import { NULL_PONG_VALUE, useRedis } from '~/server/utils/redis.js';
-import { headBucket } from '~/server/utils/storage.js';
+import { useDb } from '~/server/utils/db';
+import { runCheck, sanitize } from '~/server/utils/health-check';
+import { NULL_PONG_VALUE, useRedis } from '~/server/utils/redis';
+import { headBucket } from '~/server/utils/storage';
 
 export default defineEventHandler(async (event) => {
   const env = process.env.APP_ENV ?? 'local';

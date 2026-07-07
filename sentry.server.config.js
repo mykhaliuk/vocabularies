@@ -1,5 +1,5 @@
 import * as Sentry from '@sentry/nuxt';
-import { beforeSend } from '~/server/utils/sentry-scrub.js';
+import { beforeSend } from '~/server/utils/sentry-scrub';
 
 const dsn = process.env.SENTRY_DSN ?? '';
 const environment = process.env.APP_ENV ?? 'local';

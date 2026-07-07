@@ -4,14 +4,24 @@ import { Redis } from '@upstash/redis';
 const WINDOW = '5 m';
 const MAX = 5;
 
-const nullLimiter = {
+export interface RatelimitResult {
+  success: boolean;
+  remaining: number;
+  reset: number;
+}
+
+export interface RatelimitLike {
+  limit: (key: string) => Promise<RatelimitResult>;
+}
+
+const nullLimiter: RatelimitLike = {
   limit: async () => ({ success: true, remaining: MAX, reset: 0 }),
 };
 
-let cachedRedis;
-let cachedEmail;
-let cachedIp;
-let cachedCallbackIp;
+let cachedRedis: Redis | null | undefined;
+let cachedEmail: RatelimitLike | undefined;
+let cachedIp: RatelimitLike | undefined;
+let cachedCallbackIp: RatelimitLike | undefined;
 
 const getRedis = () => {
   if (cachedRedis !== undefined) return cachedRedis;
@@ -25,7 +35,7 @@ const getRedis = () => {
   return cachedRedis;
 };
 
-const createLimiter = (bucket, suffix) => {
+const createLimiter = (bucket: string, suffix: string): RatelimitLike => {
   const stage = process.env.APP_ENV ?? 'local';
   const redis = getRedis();
 
