@@ -45,8 +45,9 @@ Word/audio capture, feeds, follows, IndexedDB sync, friends-only visibility.
 - ✅ GitHub Actions CI (lint + fmt:check + typecheck + ds:check + proto:check).
 - ✅ Sentry source-map upload, gated on `SENTRY_AUTH_TOKEN` (deploy build only).
 - ✅ Migration runner on deploy (`vercel-build` → guarded `drizzle-kit migrate`).
-- ✅ Cron cleanup of expired `magic-link-tokens` (bearer-protected
-  `/api/cron/cleanup-tokens`, nightly via `vercel.json`).
+- ✅ Cleanup of expired `magic-link-tokens` — lazy delete-on-write in
+  `magic-link.post` (replaced the original nightly Vercel cron, VKB-53;
+  an admitted crutch until tokens live in a store with native TTL).
 - ✅ IP-based rate limit on `/api/auth/callback` (dedicated bucket, fail-open).
 - ✅ Friendly `/offline` restored via `injectManifest`: custom service worker
   routes navigations through Workbox and `setCatchHandler` returns an inline,
@@ -55,8 +56,11 @@ Word/audio capture, feeds, follows, IndexedDB sync, friends-only visibility.
 
 ## Still deferred (need external action)
 
-- Vercel project env-var population, incl. `CRON_SECRET`, `SENTRY_AUTH_TOKEN`,
-  `SENTRY_ORG`, `SENTRY_PROJECT` (Vercel UI).
-- Resend domain verification on `words.myka.me` (DNS).
-- R2 admin-scoped API token to enable `r2:cors:*` scripts (currently CORS is
-  configured via the Cloudflare dashboard).
+All three closed on 2026-07-07:
+
+- ✅ Vercel env vars populated: `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`,
+  `SENTRY_PROJECT` in Production + Preview (VKB-22). `CRON_SECRET` was set
+  too, then retired with the cron itself (VKB-53).
+- ✅ Resend domain verified on `words.myka.me` (VKB-23).
+- ✅ R2 admin-scoped API token created; `r2:cors:*` applied CORS to both
+  buckets (VKB-24).

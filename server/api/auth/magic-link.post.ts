@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { lt } from 'drizzle-orm';
 import { z } from 'zod';
 import { magicLinkTokens } from '~/db/schema/magic-link-tokens';
 import { getAppUrl } from '~/server/utils/app-url';
@@ -48,6 +49,19 @@ export default defineEventHandler(async (event) => {
   const expiresAt = new Date(Date.now() + TOKEN_TTL_MS);
 
   const db = useDb();
+
+  // Lazy cleanup — an admitted crutch, not a design. Postgres has no native
+  // row TTL, and every scheduler we could point at it is worse on our infra
+  // (Vercel cron needs a secret + endpoint; pg_cron never fires on Neon's
+  // scale-to-zero compute). So expired tokens are swept here, at the only
+  // moment the table grows. Correctness never depends on this: the callback
+  // checks expiresAt itself. When tokens move to a store with real TTL
+  // semantics (Redis SET..EX + GETDEL for single-use), this whole sweep goes
+  // straight to the bin — see VKB-53 for the trade-off record.
+  await db
+    .delete(magicLinkTokens)
+    .where(lt(magicLinkTokens.expiresAt, new Date()));
+
   await db.insert(magicLinkTokens).values({ email, tokenHash, expiresAt });
 
   const link = `${getAppUrl()}/api/auth/callback?token=${token}`;
