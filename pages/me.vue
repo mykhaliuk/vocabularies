@@ -20,6 +20,8 @@ const messageOf = (error: unknown, fallback: string): string => {
   return fallback;
 };
 
+const { t } = useI18n();
+
 const {
   data: me,
   error,
@@ -53,7 +55,7 @@ async function loadAvatarUrl() {
     avatarUrl.value = data.url;
     avatarError.value = '';
   } catch (err) {
-    avatarError.value = messageOf(err, 'Failed to load avatar');
+    avatarError.value = messageOf(err, t('me.avatar.loadError'));
   }
 }
 
@@ -64,7 +66,7 @@ async function uploadAvatar(domEvent: Event) {
   const file = target.files?.[0];
   if (!file || uploading.value) return;
   if (file.type !== 'image/png' && file.type !== 'image/jpeg') {
-    uploadError.value = 'Only PNG or JPEG.';
+    uploadError.value = t('me.avatar.invalidType');
     return;
   }
   uploading.value = true;
@@ -92,7 +94,7 @@ async function uploadAvatar(domEvent: Event) {
     await refresh();
   } catch (err) {
     console.error('[me] avatar upload failed', err);
-    uploadError.value = messageOf(err, 'Upload failed.');
+    uploadError.value = messageOf(err, t('me.avatar.uploadError'));
   } finally {
     uploading.value = false;
     target.value = '';
@@ -102,13 +104,13 @@ async function uploadAvatar(domEvent: Event) {
 const triggerErrorState = ref('');
 
 async function triggerError() {
-  triggerErrorState.value = 'sending…';
+  triggerErrorState.value = t('me.debug.sending');
   try {
     await $fetch('/api/dev/error');
-    triggerErrorState.value = 'unexpected: did not throw';
+    triggerErrorState.value = t('me.debug.unexpected');
   } catch (err) {
     const code = isFetchError(err) ? err.statusCode : undefined;
-    triggerErrorState.value = `triggered (HTTP ${code ?? '?'})`;
+    triggerErrorState.value = t('me.debug.triggered', { code: code ?? '?' });
   }
 }
 
@@ -123,7 +125,7 @@ async function logout() {
     await $fetch('/api/auth/logout', { method: 'POST' });
   } catch (err) {
     console.error('[me] logout request failed', err);
-    logoutError.value = 'Logout request failed; navigating anyway.';
+    logoutError.value = t('me.logoutError');
   } finally {
     loggingOut.value = false;
   }
@@ -144,20 +146,20 @@ async function logout() {
 
 <template>
   <main v-if="me">
-    <h1>Hello, {{ me.displayName ?? me.email }}</h1>
-    <p>email: {{ me.email }}</p>
+    <h1>{{ $t('me.greeting', { name: me.displayName ?? me.email }) }}</h1>
+    <p>{{ $t('me.emailLabel', { email: me.email }) }}</p>
 
     <section>
-      <h2>Avatar</h2>
+      <h2>{{ $t('me.avatar.title') }}</h2>
       <img
         v-if="avatarUrl"
         :src="avatarUrl"
-        alt="avatar"
+        :alt="$t('me.avatar.alt')"
         width="128"
         height="128"
       />
       <p v-else-if="avatarError" role="alert">{{ avatarError }}</p>
-      <p v-else-if="!me.hasAvatar">No avatar yet.</p>
+      <p v-else-if="!me.hasAvatar">{{ $t('me.avatar.empty') }}</p>
 
       <input
         type="file"
@@ -165,19 +167,21 @@ async function logout() {
         :disabled="uploading"
         @change="uploadAvatar"
       />
-      <p v-if="uploading">Uploading…</p>
+      <p v-if="uploading">{{ $t('me.avatar.uploading') }}</p>
       <p v-if="uploadError" role="alert">{{ uploadError }}</p>
     </section>
 
     <section>
-      <h2>Debug</h2>
-      <button type="button" @click="triggerError">Trigger test error</button>
+      <h2>{{ $t('me.debug.title') }}</h2>
+      <button type="button" @click="triggerError">
+        {{ $t('me.debug.trigger') }}
+      </button>
       <p v-if="triggerErrorState">{{ triggerErrorState }}</p>
     </section>
 
     <p v-if="logoutError" role="alert">{{ logoutError }}</p>
     <button type="button" :disabled="loggingOut" @click="logout">
-      {{ loggingOut ? 'Signing out…' : 'Sign out' }}
+      {{ loggingOut ? $t('me.signingOut') : $t('me.signOut') }}
     </button>
   </main>
 </template>

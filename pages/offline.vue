@@ -2,7 +2,9 @@
 import { CloudOff, RefreshCw } from 'lucide-vue-next';
 
 definePageMeta({ layout: false });
-useHead({ title: 'Offline · Vocabu' });
+
+const { t } = useI18n();
+useHead(() => ({ title: t('offline.pageTitle') }));
 
 const checking = ref(false);
 const stillOffline = ref(false);
@@ -45,10 +47,9 @@ async function retry() {
       <div class="offline__icon" aria-hidden="true">
         <CloudOff :size="38" />
       </div>
-      <h1 class="offline__title">You're offline</h1>
+      <h1 class="offline__title">{{ $t('offline.title') }}</h1>
       <p class="offline__body">
-        Your words are safe — kept right here. We'll sync the moment you're
-        back.
+        {{ $t('offline.body') }}
       </p>
       <div class="offline__cta">
         <VButton
@@ -60,7 +61,7 @@ async function retry() {
           <template v-if="!checking" #left>
             <RefreshCw :size="18" />
           </template>
-          {{ checking ? 'Checking…' : 'Try again' }}
+          {{ checking ? $t('offline.checking') : $t('offline.tryAgain') }}
         </VButton>
       </div>
       <p
@@ -69,7 +70,7 @@ async function retry() {
         aria-live="polite"
         class="offline__note"
       >
-        Still no signal. We'll be here when you're back.
+        {{ $t('offline.stillOffline') }}
       </p>
     </div>
   </main>

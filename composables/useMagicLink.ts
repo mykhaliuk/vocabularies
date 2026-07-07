@@ -7,40 +7,43 @@ type FetchErrorLike = {
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+type Translate = (key: string, named?: Record<string, unknown>) => string;
+
 const isFetchErrorLike = (value: unknown): value is FetchErrorLike =>
   typeof value === 'object' && value !== null;
 
 // Map a failed magic-link request to a calm, human sentence. Network/DNS
 // failures arrive as Error instances; HTTP failures carry a statusCode.
-const translateError = (error: unknown): string => {
+const translateError = (error: unknown, t: Translate): string => {
   if (isFetchErrorLike(error)) {
     const status = error.statusCode;
     if (status === 429) {
       const retryAfter = error.response?.headers?.get?.('Retry-After');
       const seconds = Number(retryAfter);
       if (Number.isFinite(seconds) && seconds > 0) {
-        return `Too many tries. Wait ${seconds}s and try again.`;
+        return t('magicLink.errors.tooManyRetry', { seconds });
       }
-      return 'Too many tries. Wait a moment and try again.';
+      return t('magicLink.errors.tooMany');
     }
-    if (status === 400) return "That email doesn't look right. Try again.";
+    if (status === 400) return t('magicLink.errors.invalidEmail');
     if (typeof status === 'number' && status >= 500) {
-      return 'Our side hiccuped. Try again in a moment.';
+      return t('magicLink.errors.serverError');
     }
     if (typeof error.statusMessage === 'string' && error.statusMessage) {
       return error.statusMessage;
     }
   }
   if (error instanceof Error && error.message) {
-    return "We couldn't reach Vocabu. Check your connection and try again.";
+    return t('magicLink.errors.networkError');
   }
-  return "We couldn't send the link. Try again in a moment.";
+  return t('magicLink.errors.generic');
 };
 
 // Shared passwordless sign-in flow: holds the email field, validity, request
 // state and a friendly error. Used by both the landing hero and /login so the
 // POST + error handling live in exactly one place.
 export const useMagicLink = () => {
+  const { t } = useI18n();
   const email = ref('');
   const submitting = ref(false);
   const sent = ref(false);
@@ -60,7 +63,7 @@ export const useMagicLink = () => {
       });
       sent.value = true;
     } catch (error) {
-      errorMessage.value = translateError(error);
+      errorMessage.value = translateError(error, t);
     } finally {
       submitting.value = false;
     }

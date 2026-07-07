@@ -19,5 +19,46 @@
       "signinFailed": "Something got tangled signing you in. Try again.",
       "tooMany": "Too many attempts from your network. Wait a moment and try again."
     }
+  },
+  "magicLink": {
+    "errors": {
+      "tooManyRetry": "Too many tries. Wait {seconds}s and try again.",
+      "tooMany": "Too many tries. Wait a moment and try again.",
+      "invalidEmail": "That email doesn't look right. Try again.",
+      "serverError": "Our side hiccuped. Try again in a moment.",
+      "networkError": "We couldn't reach Vocabu. Check your connection and try again.",
+      "generic": "We couldn't send the link. Try again in a moment."
+    }
+  },
+  "me": {
+    "greeting": "Hello, {name}",
+    "emailLabel": "email: {email}",
+    "avatar": {
+      "title": "Avatar",
+      "alt": "Avatar",
+      "empty": "No avatar yet.",
+      "uploading": "Uploading…",
+      "loadError": "Failed to load avatar",
+      "invalidType": "Only PNG or JPEG.",
+      "uploadError": "Upload failed."
+    },
+    "debug": {
+      "title": "Debug",
+      "trigger": "Trigger test error",
+      "sending": "sending…",
+      "unexpected": "unexpected: did not throw",
+      "triggered": "triggered (HTTP {code})"
+    },
+    "signOut": "Sign out",
+    "signingOut": "Signing out…",
+    "logoutError": "Logout request failed; navigating anyway."
+  },
+  "offline": {
+    "pageTitle": "Offline · Vocabu",
+    "title": "You're offline",
+    "body": "Your words are safe — kept right here. We'll sync the moment you're back.",
+    "checking": "Checking…",
+    "tryAgain": "Try again",
+    "stillOffline": "Still no signal. We'll be here when you're back."
   }
 }
