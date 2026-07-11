@@ -73,6 +73,15 @@ export default defineNuxtConfig({
     head: {
       // <html lang>/dir are set reactively per-locale in app.vue via
       // useLocaleHead(); no static default needed here.
+      link: [
+        // Icon set generated from the brand mark by scripts/generate-icons.js
+        // (`bun run icons:gen`). SVG listed first so modern browsers pick it
+        // over the .ico; the .ico (16x16 + 32x32 frames) is the legacy
+        // fallback for browsers that don't support SVG favicons.
+        { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
+        { rel: 'icon', href: '/favicon.ico', sizes: '16x16 32x32' },
+        { rel: 'apple-touch-icon', href: '/apple-touch-icon.png' },
+      ],
       meta: [
         // Per-mode browser-chrome colour (Android Chrome address bar,
         // iOS Safari status bar). Separate from the PWA manifest
@@ -136,12 +145,33 @@ export default defineNuxtConfig({
       display: 'standalone',
       start_url: '/',
       scope: '/',
+      // Separate "any" (rounded card) and "maskable" (full-bleed paper,
+      // mark inside the 80% safe zone) variants — one shared
+      // "any maskable" image cannot satisfy both contracts.
       icons: [
+        {
+          src: '/icon-192.png',
+          sizes: '192x192',
+          type: 'image/png',
+          purpose: 'any',
+        },
         {
           src: '/icon-512.png',
           sizes: '512x512',
           type: 'image/png',
-          purpose: 'any maskable',
+          purpose: 'any',
+        },
+        {
+          src: '/icon-maskable-192.png',
+          sizes: '192x192',
+          type: 'image/png',
+          purpose: 'maskable',
+        },
+        {
+          src: '/icon-maskable-512.png',
+          sizes: '512x512',
+          type: 'image/png',
+          purpose: 'maskable',
         },
       ],
     },
