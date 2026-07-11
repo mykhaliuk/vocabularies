@@ -7,8 +7,8 @@
 //   favicon.ico              16+32 PNG-compressed ICO fallback
 //   apple-touch-icon.png     180x180 opaque, iOS applies its own corner mask
 //   icon-192.png/512.png     manifest icons, purpose "any" (rounded card)
-//   icon-maskable-192/512    manifest icons, purpose "maskable" (full bleed,
-//                            mark kept inside the 80% safe zone)
+//   icon-maskable-192.png/512.png  manifest icons, purpose "maskable" (full
+//                            bleed, mark kept inside the 80% safe zone)
 //
 // Usage: node scripts/generate-icons.js  (or `bun run icons:gen`)
 
@@ -102,34 +102,36 @@ const buildIco = (entries) => {
 
 const main = async () => {
   const browser = await chromium.launch();
-  const page = await browser.newPage();
+  try {
+    const page = await browser.newPage();
 
-  const targets = [
-    { file: 'icon-192.png', svg: anyIconSvg, size: 192 },
-    { file: 'icon-512.png', svg: anyIconSvg, size: 512 },
-    { file: 'icon-maskable-192.png', svg: fullBleedSvg, size: 192 },
-    { file: 'icon-maskable-512.png', svg: fullBleedSvg, size: 512 },
-    { file: 'apple-touch-icon.png', svg: appleTouchSvg, size: 180 },
-  ];
-  for (const { file, svg, size } of targets) {
-    const png = await renderPng(page, svg, size);
-    await writeFile(resolve(PUBLIC_DIR, file), png);
-    console.log(`wrote public/${file}`);
+    const targets = [
+      { file: 'icon-192.png', svg: anyIconSvg, size: 192 },
+      { file: 'icon-512.png', svg: anyIconSvg, size: 512 },
+      { file: 'icon-maskable-192.png', svg: fullBleedSvg, size: 192 },
+      { file: 'icon-maskable-512.png', svg: fullBleedSvg, size: 512 },
+      { file: 'apple-touch-icon.png', svg: appleTouchSvg, size: 180 },
+    ];
+    for (const { file, svg, size } of targets) {
+      const png = await renderPng(page, svg, size);
+      await writeFile(resolve(PUBLIC_DIR, file), png);
+      console.log(`wrote public/${file}`);
+    }
+
+    const icoSizes = [16, 32];
+    const icoEntries = [];
+    for (const size of icoSizes) {
+      const png = await renderPng(page, faviconSvg, size);
+      icoEntries.push({ size, png });
+    }
+    await writeFile(resolve(PUBLIC_DIR, 'favicon.ico'), buildIco(icoEntries));
+    console.log('wrote public/favicon.ico');
+
+    await writeFile(resolve(PUBLIC_DIR, 'favicon.svg'), `${faviconSvg}\n`);
+    console.log('wrote public/favicon.svg');
+  } finally {
+    await browser.close();
   }
-
-  const icoSizes = [16, 32];
-  const icoEntries = [];
-  for (const size of icoSizes) {
-    const png = await renderPng(page, faviconSvg, size);
-    icoEntries.push({ size, png });
-  }
-  await writeFile(resolve(PUBLIC_DIR, 'favicon.ico'), buildIco(icoEntries));
-  console.log('wrote public/favicon.ico');
-
-  await writeFile(resolve(PUBLIC_DIR, 'favicon.svg'), `${faviconSvg}\n`);
-  console.log('wrote public/favicon.svg');
-
-  await browser.close();
 };
 
 await main();

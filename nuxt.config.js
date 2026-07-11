@@ -75,10 +75,11 @@ export default defineNuxtConfig({
       // useLocaleHead(); no static default needed here.
       link: [
         // Icon set generated from the brand mark by scripts/generate-icons.js
-        // (`bun run icons:gen`). SVG wins in modern browsers; the sized .ico
-        // entry keeps legacy fallback without shadowing the SVG.
-        { rel: 'icon', href: '/favicon.ico', sizes: '32x32' },
+        // (`bun run icons:gen`). SVG listed first so modern browsers pick it
+        // over the .ico; the .ico (16x16 + 32x32 frames) is the legacy
+        // fallback for browsers that don't support SVG favicons.
         { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
+        { rel: 'icon', href: '/favicon.ico', sizes: '16x16 32x32' },
         { rel: 'apple-touch-icon', href: '/apple-touch-icon.png' },
       ],
       meta: [
