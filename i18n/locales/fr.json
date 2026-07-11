@@ -49,6 +49,9 @@
       "unexpected": "inattendu : aucune erreur déclenchée",
       "triggered": "déclenchée (HTTP {code})"
     },
+    "language": {
+      "title": "Langue"
+    },
     "signOut": "Se déconnecter",
     "signingOut": "Déconnexion…",
     "logoutError": "La déconnexion a échoué ; redirection quand même."

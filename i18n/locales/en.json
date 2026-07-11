@@ -49,6 +49,9 @@
       "unexpected": "unexpected: did not throw",
       "triggered": "triggered (HTTP {code})"
     },
+    "language": {
+      "title": "Language"
+    },
     "signOut": "Sign out",
     "signingOut": "Signing out…",
     "logoutError": "Logout request failed; navigating anyway."

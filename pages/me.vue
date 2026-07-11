@@ -20,7 +20,7 @@ const messageOf = (error: unknown, fallback: string): string => {
   return fallback;
 };
 
-const { t } = useI18n();
+const { t, locale, locales, setLocale } = useI18n();
 
 const {
   data: me,
@@ -172,6 +172,27 @@ async function logout() {
     </section>
 
     <section>
+      <h2>{{ $t('me.language.title') }}</h2>
+      <div
+        class="locale-chips"
+        role="group"
+        :aria-label="$t('me.language.title')"
+      >
+        <button
+          v-for="loc in locales"
+          :key="loc.code"
+          type="button"
+          class="locale-chip"
+          :class="{ 'is-active': loc.code === locale }"
+          :aria-pressed="loc.code === locale"
+          @click="setLocale(loc.code)"
+        >
+          {{ loc.name }}
+        </button>
+      </div>
+    </section>
+
+    <section>
       <h2>{{ $t('me.debug.title') }}</h2>
       <button type="button" @click="triggerError">
         {{ $t('me.debug.trigger') }}
@@ -185,3 +206,41 @@ async function logout() {
     </button>
   </main>
 </template>
+
+<style scoped>
+.locale-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.locale-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap-min);
+  padding: 5px 14px;
+  border: 1.5px solid var(--hairline-2);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--ink-2);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: var(--w-semibold);
+  cursor: pointer;
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
+}
+
+.locale-chip:active {
+  transform: scale(0.97);
+}
+
+.locale-chip.is-active {
+  border-color: var(--rose-200);
+  background: var(--rose-50);
+  color: var(--on-primary-soft);
+}
+</style>

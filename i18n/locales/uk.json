@@ -49,6 +49,9 @@
       "unexpected": "неочікувано: помилки не сталося",
       "triggered": "викликано (HTTP {code})"
     },
+    "language": {
+      "title": "Мова"
+    },
     "signOut": "Вийти",
     "signingOut": "Виходимо…",
     "logoutError": "Не вдалося вийти; переходимо далі."
