@@ -139,7 +139,8 @@ Conflict resolution: last-write-wins (sufficient for this data model).
 
 - **On PR:** lint + typecheck + Vitest + Playwright
 - **On merge to main:** Vercel auto-deploys production
-- **Preview deploys:** Vercel creates per-PR preview URLs automatically
+- **Preview deploys:** auto only for `dev`; other branches opt in by ending
+  the head commit subject with `[preview]` (`scripts/vercel-ignore.js`)
 
 ---
 
