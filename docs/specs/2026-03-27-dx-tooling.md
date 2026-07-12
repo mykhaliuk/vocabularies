@@ -62,4 +62,8 @@ Scripts use `nuxt dev --dotenv .env.<stage>`.
 
 - **On PR:** lint + fmt:check + typecheck + vitest + playwright
 - **On merge to main:** Vercel auto-deploys production
-- **Preview deploys:** Vercel per-PR preview URLs
+- **Preview deploys:** `dev` auto-deploys a preview; other branches are
+  skipped by default — opt in by ending the head commit subject with
+  `[preview]` (case-insensitive; see `scripts/vercel-ignore.js`). The opt-in
+  is per push: a follow-up commit without the marker leaves the previous
+  preview stale.

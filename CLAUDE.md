@@ -116,6 +116,8 @@ narrative source of truth; Linear tracks execution state.
   Docs, Test, plus Design (DS/tokens/prototype) and Ops (infra/deploy/env).
 - Flow: issue → agent implements in a worktree → PR ready for review → human
   review and merge → Vercel deploy (`dev` = preview, `main` = production).
+  Previews of other branches are skipped by default; opt in by ending the
+  head commit subject with `[preview]` (see `scripts/vercel-ignore.js`).
   Agents open PRs as **ready**, not draft — a finished agent task IS the
   review handoff (ready flips the Linear issue to In Review and triggers the
   CODEOWNERS auto-request). Use draft only for explicitly unfinished WIP.
