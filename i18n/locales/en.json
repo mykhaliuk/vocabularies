@@ -31,6 +31,7 @@
     }
   },
   "me": {
+    "pageTitle": "My profile · Vocabu",
     "greeting": "Hello, {name}",
     "emailLabel": "email: {email}",
     "avatar": {
@@ -50,7 +51,8 @@
       "triggered": "triggered (HTTP {code})"
     },
     "language": {
-      "title": "Language"
+      "title": "Language",
+      "error": "Couldn't switch the language. Try again."
     },
     "signOut": "Sign out",
     "signingOut": "Signing out…",

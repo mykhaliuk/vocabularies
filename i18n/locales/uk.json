@@ -31,6 +31,7 @@
     }
   },
   "me": {
+    "pageTitle": "Мій профіль · Vocabu",
     "greeting": "Привіт, {name}",
     "emailLabel": "пошта: {email}",
     "avatar": {
@@ -50,7 +51,8 @@
       "triggered": "викликано (HTTP {code})"
     },
     "language": {
-      "title": "Мова"
+      "title": "Мова",
+      "error": "Не вдалося змінити мову. Спробуйте ще раз."
     },
     "signOut": "Вийти",
     "signingOut": "Виходимо…",

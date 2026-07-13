@@ -22,6 +22,8 @@ const messageOf = (error: unknown, fallback: string): string => {
 
 const { t, locale, locales, setLocale } = useI18n();
 
+useHead(() => ({ title: t('me.pageTitle') }));
+
 const {
   data: me,
   error,
@@ -41,21 +43,41 @@ if (error.value) {
 }
 
 const avatarUrl = ref<string | null>(null);
-const avatarError = ref('');
+const avatarLoadFailure = ref<unknown>(null);
 const uploading = ref(false);
-const uploadError = ref('');
+
+type UploadFailure =
+  | { kind: 'invalid-type' }
+  | { kind: 'upload'; cause: unknown };
+const uploadFailure = ref<UploadFailure | null>(null);
+
+// Transient messages are derived from state at render time (not captured
+// via t() when the failure happens) so they re-translate on locale switch.
+const avatarError = computed(() => {
+  if (avatarLoadFailure.value === null) return '';
+  return messageOf(avatarLoadFailure.value, t('me.avatar.loadError'));
+});
+
+const uploadError = computed(() => {
+  if (uploadFailure.value === null) return '';
+  if (uploadFailure.value.kind === 'invalid-type') {
+    return t('me.avatar.invalidType');
+  }
+  return messageOf(uploadFailure.value.cause, t('me.avatar.uploadError'));
+});
 
 async function loadAvatarUrl() {
   if (!me.value?.hasAvatar) {
     avatarUrl.value = null;
+    avatarLoadFailure.value = null;
     return;
   }
   try {
     const data = await $fetch<{ url: string }>('/api/me/avatar-url');
     avatarUrl.value = data.url;
-    avatarError.value = '';
+    avatarLoadFailure.value = null;
   } catch (err) {
-    avatarError.value = messageOf(err, t('me.avatar.loadError'));
+    avatarLoadFailure.value = err;
   }
 }
 
@@ -66,11 +88,11 @@ async function uploadAvatar(domEvent: Event) {
   const file = target.files?.[0];
   if (!file || uploading.value) return;
   if (file.type !== 'image/png' && file.type !== 'image/jpeg') {
-    uploadError.value = t('me.avatar.invalidType');
+    uploadFailure.value = { kind: 'invalid-type' };
     return;
   }
   uploading.value = true;
-  uploadError.value = '';
+  uploadFailure.value = null;
   try {
     const { uploadUrl, key } = await $fetch<{
       uploadUrl: string;
@@ -94,38 +116,72 @@ async function uploadAvatar(domEvent: Event) {
     await refresh();
   } catch (err) {
     console.error('[me] avatar upload failed', err);
-    uploadError.value = messageOf(err, t('me.avatar.uploadError'));
+    uploadFailure.value = { kind: 'upload', cause: err };
   } finally {
     uploading.value = false;
     target.value = '';
   }
 }
 
-const triggerErrorState = ref('');
+type DebugResult =
+  | { kind: 'sending' }
+  | { kind: 'unexpected' }
+  | { kind: 'triggered'; code: number | string };
+
+const debugResult = ref<DebugResult | null>(null);
+
+const debugMessage = computed(() => {
+  const result = debugResult.value;
+  if (result === null) return '';
+  if (result.kind === 'sending') return t('me.debug.sending');
+  if (result.kind === 'unexpected') return t('me.debug.unexpected');
+  return t('me.debug.triggered', { code: result.code });
+});
 
 async function triggerError() {
-  triggerErrorState.value = t('me.debug.sending');
+  debugResult.value = { kind: 'sending' };
   try {
     await $fetch('/api/dev/error');
-    triggerErrorState.value = t('me.debug.unexpected');
+    debugResult.value = { kind: 'unexpected' };
   } catch (err) {
     const code = isFetchError(err) ? err.statusCode : undefined;
-    triggerErrorState.value = t('me.debug.triggered', { code: code ?? '?' });
+    debugResult.value = { kind: 'triggered', code: code ?? '?' };
+  }
+}
+
+const localeSwitchFailed = ref(false);
+const localeError = computed(() =>
+  localeSwitchFailed.value ? t('me.language.error') : '',
+);
+
+async function switchLocale(code: Parameters<typeof setLocale>[0]) {
+  localeSwitchFailed.value = false;
+  try {
+    // Locale messages are lazy-loaded over the network on first switch;
+    // without this catch a failed load is an unhandled rejection and the
+    // click silently does nothing.
+    await setLocale(code);
+  } catch (err) {
+    console.error('[me] locale switch failed', err);
+    localeSwitchFailed.value = true;
   }
 }
 
 const loggingOut = ref(false);
-const logoutError = ref('');
+const logoutFailed = ref(false);
+const logoutError = computed(() =>
+  logoutFailed.value ? t('me.logoutError') : '',
+);
 
 async function logout() {
   if (loggingOut.value) return;
   loggingOut.value = true;
-  logoutError.value = '';
+  logoutFailed.value = false;
   try {
     await $fetch('/api/auth/logout', { method: 'POST' });
   } catch (err) {
     console.error('[me] logout request failed', err);
-    logoutError.value = t('me.logoutError');
+    logoutFailed.value = true;
   } finally {
     loggingOut.value = false;
   }
@@ -185,11 +241,12 @@ async function logout() {
           class="locale-chip"
           :class="{ 'is-active': loc.code === locale }"
           :aria-pressed="loc.code === locale"
-          @click="setLocale(loc.code)"
+          @click="switchLocale(loc.code)"
         >
           {{ loc.name }}
         </button>
       </div>
+      <p v-if="localeError" role="alert">{{ localeError }}</p>
     </section>
 
     <section>
@@ -197,7 +254,7 @@ async function logout() {
       <button type="button" @click="triggerError">
         {{ $t('me.debug.trigger') }}
       </button>
-      <p v-if="triggerErrorState">{{ triggerErrorState }}</p>
+      <p v-if="debugMessage">{{ debugMessage }}</p>
     </section>
 
     <p v-if="logoutError" role="alert">{{ logoutError }}</p>
@@ -220,7 +277,7 @@ async function logout() {
   min-height: var(--tap-min);
   padding: 5px 14px;
   border: 1.5px solid var(--hairline-2);
-  border-radius: var(--r-sm);
+  border-radius: var(--r-pill);
   background: var(--surface);
   color: var(--ink-2);
   font-family: var(--font-sans);
