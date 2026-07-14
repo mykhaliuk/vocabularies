@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { LocationQueryValue } from 'vue-router';
-import { ArrowRight, ExternalLink, Mail } from 'lucide-vue-next';
+import { ArrowRight, Mail } from 'lucide-vue-next';
 
 definePageMeta({ layout: false });
 
@@ -120,21 +120,6 @@ async function resend() {
         <p v-if="errorMessage" role="alert" class="auth__error">
           {{ errorMessage }}
         </p>
-
-        <div class="auth__sent-cta">
-          <VButton
-            variant="blue"
-            size="lg"
-            full
-            :href="`mailto:${trimmedEmail}`"
-            target="_blank"
-          >
-            <template #left>
-              <ExternalLink :size="18" />
-            </template>
-            {{ $t('login.openInbox') }}
-          </VButton>
-        </div>
 
         <div class="auth__sent-actions">
           <button
@@ -326,11 +311,6 @@ async function resend() {
 .auth__sent-email {
   font-weight: var(--w-semibold);
   color: var(--text);
-}
-
-.auth__sent-cta {
-  display: block;
-  margin-top: var(--space-6);
 }
 
 .auth__sent-actions {
