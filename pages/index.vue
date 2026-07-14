@@ -6,6 +6,7 @@ import {
   History,
   Mail,
   Mic,
+  Monitor,
   Moon,
   Sun,
 } from 'lucide-vue-next';
@@ -20,7 +21,7 @@ const {
   submit,
   reset,
 } = useMagicLink();
-const { toggle: toggleTheme } = useTheme();
+const { mode: themeMode, setMode: setThemeMode } = useTheme();
 
 useSeoMeta({
   title: 'Vocabu — keep the way they actually talk',
@@ -74,15 +75,38 @@ onMounted(() => {
         <div class="nav__spacer"></div>
         <nav class="nav__links">
           <a class="ghost-link hide-sm" href="#why">why vocabu</a>
-          <button
-            class="theme-toggle"
-            type="button"
-            aria-label="Toggle dark mode"
-            @click="toggleTheme"
-          >
-            <span class="theme-toggle__sun"><Sun :size="20" /></span>
-            <span class="theme-toggle__moon"><Moon :size="20" /></span>
-          </button>
+          <div class="theme-toggle" role="group" aria-label="Theme">
+            <button
+              class="theme-toggle__btn"
+              type="button"
+              aria-label="Light theme"
+              :aria-pressed="themeMode === 'light'"
+              :class="{ 'is-active': themeMode === 'light' }"
+              @click="setThemeMode('light')"
+            >
+              <Sun :size="18" />
+            </button>
+            <button
+              class="theme-toggle__btn"
+              type="button"
+              aria-label="System theme"
+              :aria-pressed="themeMode === 'system'"
+              :class="{ 'is-active': themeMode === 'system' }"
+              @click="setThemeMode('system')"
+            >
+              <Monitor :size="18" />
+            </button>
+            <button
+              class="theme-toggle__btn"
+              type="button"
+              aria-label="Dark theme"
+              :aria-pressed="themeMode === 'dark'"
+              :class="{ 'is-active': themeMode === 'dark' }"
+              @click="setThemeMode('dark')"
+            >
+              <Moon :size="18" />
+            </button>
+          </div>
         </nav>
       </div>
     </header>
@@ -372,13 +396,22 @@ onMounted(() => {
 }
 
 .theme-toggle {
-  width: 40px;
-  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  background: var(--surface-sunk);
+  border-radius: var(--r-pill);
+}
+
+.theme-toggle__btn {
+  width: 32px;
+  height: 32px;
   border: 0;
   background: transparent;
   cursor: pointer;
   color: var(--text-muted);
-  border-radius: 50%;
+  border-radius: var(--r-pill);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -387,37 +420,13 @@ onMounted(() => {
     color var(--dur-fast);
 }
 
-.theme-toggle:hover {
-  background: var(--surface-sunk);
+.theme-toggle__btn:hover {
   color: var(--text);
 }
 
-.theme-toggle__sun,
-.theme-toggle__moon {
-  display: inline-flex;
-}
-
-/* Icon follows the actual theme with zero JS, mirroring theme-dark.css so
-   there's no post-hydration flip for OS-dark visitors. */
-.theme-toggle__moon {
-  display: none;
-}
-
-:global(html[data-theme='dark'] .theme-toggle__sun) {
-  display: none;
-}
-
-:global(html[data-theme='dark'] .theme-toggle__moon) {
-  display: inline-flex;
-}
-
-@media (prefers-color-scheme: dark) {
-  :global(html:not([data-theme='light']) .theme-toggle__sun) {
-    display: none;
-  }
-  :global(html:not([data-theme='light']) .theme-toggle__moon) {
-    display: inline-flex;
-  }
+.theme-toggle__btn.is-active {
+  background: var(--rose-50);
+  color: var(--on-primary-soft);
 }
 
 /* ---- hero ---- */
