@@ -12,15 +12,33 @@
 //
 // Usage: node scripts/generate-icons.js  (or `bun run icons:gen`)
 
+import { readFileSync } from 'node:fs';
 import { writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { chromium } from 'playwright';
+import { DARK_SCOPE } from './lib/ds-css.js';
 
 const PUBLIC_DIR = resolve(import.meta.dirname, '../public');
+const MANIFEST = resolve(
+  import.meta.dirname,
+  '../docs/design/design-system/project/_ds_manifest.json',
+);
 
-const PAPER = '#FBFEFF';
-const ROSE = '#ED5379';
-const ROSE_SPINE = '#F26B8C';
+// Icons are raster output — they cannot reference var() tokens, so the brand
+// colors have to be baked in. Read them from the design-system manifest rather
+// than retyping the literals: ds:check only scans assets/css + .vue, so a
+// hardcoded palette here would drift on a rebrand with the check still green,
+// and nothing would link the two. Re-run `bun run icons:gen` after a ds:pull.
+const token = (name) => {
+  const { tokens } = JSON.parse(readFileSync(MANIFEST, 'utf8'));
+  const match = tokens.find((t) => t.name === name && t.scope !== DARK_SCOPE);
+  if (!match) throw new Error(`[icons] token ${name} not found in ${MANIFEST}`);
+  return match.value;
+};
+
+const PAPER = token('--paper');
+const ROSE = token('--rose-500');
+const ROSE_SPINE = token('--rose-400');
 
 const BOOKMARK_BODY =
   'M40 28h40a8 8 0 0 1 8 8v54.6a3 3 0 0 1-4.7 2.46L62 80.2a4 4 0 ' +

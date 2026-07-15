@@ -26,23 +26,13 @@
 
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { resolve, join } from 'node:path';
+import { DARK_SCOPE, eq, parseDeclarations } from './lib/ds-css.js';
 
 const ROOT = resolve(import.meta.dirname, '..');
 const DESIGN = join(ROOT, 'docs/design');
 const CANON = join(DESIGN, 'design-system/project/_ds_manifest.json');
 const PROTO_DS_DIR = join(DESIGN, 'prototype/project/_ds');
 const BRIDGE = join(DESIGN, 'prototype/project/Vocabu/ds-bridge.css');
-
-const DARK_SCOPE = '[data-theme="dark"]';
-
-const normalize = (value) =>
-  value
-    .toLowerCase()
-    .replace(/\s+/g, '')
-    .replace(/(\.\d*?)0+(?=\D|$)/g, '$1')
-    .replace(/\.(?=\D|$)/g, '');
-
-const eq = (a, b) => normalize(a) === normalize(b);
 
 const protoTokenMap = (manifestPath) => {
   const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
@@ -65,12 +55,7 @@ const findProtoManifest = () => {
 
 const bridgeTokens = () => {
   if (!existsSync(BRIDGE)) return new Map();
-  const css = readFileSync(BRIDGE, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
-  const map = new Map();
-  const re = /(--[\w-]+)\s*:\s*([^;]+);/g;
-  let match;
-  while ((match = re.exec(css)) !== null) map.set(match[1], match[2].trim());
-  return map;
+  return parseDeclarations(readFileSync(BRIDGE, 'utf8'));
 };
 
 const report = (head, items, mark) => {
@@ -82,7 +67,17 @@ const report = (head, items, mark) => {
 const main = () => {
   const protoManifest = findProtoManifest();
   if (!protoManifest) {
-    console.log('proto-check: no embedded DS in the prototype — skipping.');
+    // A gate that cannot find its input must not report success: exiting 0
+    // here made a `proto:pull` of a bundle without an embedded _ds/ turn CI
+    // green while verifying nothing at all.
+    console.error(
+      'proto-check: no embedded DS found under\n' +
+        `  ${PROTO_DS_DIR}\n` +
+        'Expected <entry>/_ds_manifest.json one level down. The prototype is ' +
+        'unverifiable without it — re-run `bun run proto:pull` with a bundle ' +
+        'that embeds its design system.',
+    );
+    process.exitCode = 1;
     return;
   }
 
