@@ -33,6 +33,58 @@ test.describe('login', () => {
   });
 });
 
+test.describe('theme toggle', () => {
+  test('light and dark set data-theme and persist to localStorage', async ({
+    page,
+  }) => {
+    await page.goto('/');
+    const html = page.locator('html');
+
+    await page.getByRole('button', { name: /light theme/i }).click();
+    await expect(html).toHaveAttribute('data-theme', 'light');
+    await expect
+      .poll(() => page.evaluate(() => localStorage.getItem('vocabu-theme')))
+      .toBe('light');
+
+    await page.getByRole('button', { name: /dark theme/i }).click();
+    await expect(html).toHaveAttribute('data-theme', 'dark');
+    await expect
+      .poll(() => page.evaluate(() => localStorage.getItem('vocabu-theme')))
+      .toBe('dark');
+  });
+
+  test('system clears the override and follows OS changes live', async ({
+    page,
+  }) => {
+    await page.emulateMedia({ colorScheme: 'light' });
+    await page.goto('/');
+    const html = page.locator('html');
+
+    await page.getByRole('button', { name: /dark theme/i }).click();
+    await page.getByRole('button', { name: /system theme/i }).click();
+
+    await expect(html).not.toHaveAttribute('data-theme', /.+/);
+    await expect
+      .poll(() => page.evaluate(() => localStorage.getItem('vocabu-theme')))
+      .toBeNull();
+
+    const paperToken = () =>
+      page.evaluate(() =>
+        getComputedStyle(document.documentElement)
+          .getPropertyValue('--paper')
+          .trim(),
+      );
+
+    const lightPaper = await paperToken();
+    await page.emulateMedia({ colorScheme: 'dark' });
+    await expect.poll(paperToken).not.toBe(lightPaper);
+    await expect(html).not.toHaveAttribute('data-theme', /.+/);
+
+    await page.emulateMedia({ colorScheme: 'light' });
+    await expect.poll(paperToken).toBe(lightPaper);
+  });
+});
+
 test.describe('offline route', () => {
   test('renders the offline page', async ({ page }) => {
     await page.goto('/offline');
