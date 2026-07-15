@@ -22,9 +22,9 @@ const readSystemDark = (): boolean =>
 // explicit choice writes the 'vocabu-theme' key the FOUC-guard script in
 // nuxt.config reads and flips the [data-theme] attribute the CSS keys off;
 // choosing 'system' clears both, handing control back to the
-// @media (prefers-color-scheme: dark) block in theme-dark.css. While in
-// system mode, a matchMedia listener keeps isDark live if the OS theme flips
-// without a reload.
+// @media (prefers-color-scheme: dark) block in theme-dark.css. The matchMedia
+// listener is only ever attached while mode is 'system' — setMode attaches or
+// detaches it as the mode changes, so light/dark modes carry no listener.
 export const useTheme = () => {
   const mode = ref<ThemeMode>('system');
   const isDark = ref(false);
@@ -32,7 +32,18 @@ export const useTheme = () => {
   let media: MediaQueryList | null = null;
 
   const onSystemChange = (event: MediaQueryListEvent) => {
-    if (mode.value === 'system') isDark.value = event.matches;
+    isDark.value = event.matches;
+  };
+
+  const attachSystemListener = () => {
+    if (media) return;
+    media = window.matchMedia('(prefers-color-scheme: dark)');
+    media.addEventListener('change', onSystemChange);
+  };
+
+  const detachSystemListener = () => {
+    media?.removeEventListener('change', onSystemChange);
+    media = null;
   };
 
   const setMode = (next: ThemeMode) => {
@@ -45,8 +56,10 @@ export const useTheme = () => {
         // Storage may be blocked (private mode); the in-memory flip still works.
       }
       isDark.value = readSystemDark();
+      attachSystemListener();
       return;
     }
+    detachSystemListener();
     document.documentElement.dataset.theme = next;
     try {
       localStorage.setItem(STORAGE_KEY, next);
@@ -60,12 +73,11 @@ export const useTheme = () => {
     mode.value = readStoredMode();
     isDark.value =
       mode.value === 'system' ? readSystemDark() : mode.value === 'dark';
-    media = window.matchMedia('(prefers-color-scheme: dark)');
-    media.addEventListener('change', onSystemChange);
+    if (mode.value === 'system') attachSystemListener();
   });
 
   onUnmounted(() => {
-    media?.removeEventListener('change', onSystemChange);
+    detachSystemListener();
   });
 
   return { mode, isDark, setMode };
