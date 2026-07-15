@@ -2,6 +2,18 @@
 export default defineNuxtConfig({
   compatibilityDate: '2026-04-30',
   devtools: { enabled: true },
+  // Agent worktrees live inside the repo at .claude/worktrees/*, each a full
+  // Nuxt checkout with its own node_modules/.nuxt (~13k dirs total). chokidar
+  // v5 has no fsevents and opens one fs.watch descriptor per directory, so the
+  // dev watcher recursing into every worktree exhausts file descriptors
+  // (EMFILE: too many open files, watch). Exclude .claude from every watcher:
+  // Nuxt's own builder watcher (this `ignore`), plus Vite and Nitro below.
+  ignore: ['**/.claude/**'],
+  watchers: {
+    chokidar: {
+      ignored: [(path) => path.includes('/.claude/')],
+    },
+  },
   modules: [
     '@sentry/nuxt/module',
     '@vite-pwa/nuxt',
@@ -109,8 +121,24 @@ export default defineNuxtConfig({
       ],
     },
   },
+  vite: {
+    server: {
+      // Agent worktrees live inside the repo (.claude/worktrees/*), each a
+      // full Nuxt checkout with its own node_modules/.nuxt. Left unignored,
+      // the dev watcher recurses into every copy and exhausts file-watch
+      // descriptors (EMFILE: too many open files, watch).
+      watch: {
+        ignored: ['**/.claude/**'],
+      },
+    },
+  },
   nitro: {
     prerender: { routes: ['/offline'] },
+    // Keep Nitro's server-side file watcher out of the agent worktrees too;
+    // same EMFILE reason as the Vite watch ignore above.
+    watchOptions: {
+      ignored: ['**/.claude/**'],
+    },
     // Pre-generate gzip + brotli for static assets so the JS/CSS go over the
     // wire compressed (Vercel does this in prod; this makes preview/self-host
     // match and keeps transfer weight — the main mobile-perf lever — low).
