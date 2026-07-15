@@ -16,6 +16,7 @@
 
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve, join } from 'node:path';
+import { DARK_SCOPE, normalize, stripComments } from './lib/ds-css.js';
 
 const ROOT = resolve(import.meta.dirname, '..');
 const MANIFEST = join(
@@ -23,16 +24,6 @@ const MANIFEST = join(
   'docs/design/design-system/project/_ds_manifest.json',
 );
 const CSS_DIR = join(ROOT, 'assets/css');
-const DARK_SCOPE = '[data-theme="dark"]';
-
-const normalize = (value) =>
-  value
-    .toLowerCase()
-    .replace(/\s+/g, '')
-    .replace(/(\.\d*?)0+(?=\D|$)/g, '$1')
-    .replace(/\.(?=\D|$)/g, '');
-
-const stripComments = (css) => css.replace(/\/\*[\s\S]*?\*\//g, '');
 
 // Replace the value of `name` in `css` if present; returns {css, old} or null.
 const patch = (css, name, value) => {

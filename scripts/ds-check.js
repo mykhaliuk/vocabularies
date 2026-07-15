@@ -19,6 +19,7 @@
 
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { resolve, join, basename } from 'node:path';
+import { DARK_SCOPE, normalize, parseDeclarations } from './lib/ds-css.js';
 
 const ROOT = resolve(import.meta.dirname, '..');
 const MANIFEST = join(
@@ -27,42 +28,23 @@ const MANIFEST = join(
 );
 const CSS_DIR = join(ROOT, 'assets/css');
 
-const DARK_SCOPE = '[data-theme="dark"]';
 const DARK_PREFIX = '--_dk-';
 
 // Files that DEFINE tokens — literals are expected and allowed here.
 const TOKEN_FILES = ['tokens.css', 'theme-light.css', 'theme-dark.css'];
 
-// Non-token CSS that must use var() instead of raw hex.
-const APP_CSS = ['animations.css', 'base.css', 'typography.css'];
+// Every other stylesheet must use var() instead of raw hex. Derived by walking
+// CSS_DIR rather than listed literally: a hardcoded list silently leaves any
+// newly added stylesheet unchecked.
+const appCss = () =>
+  readdirSync(CSS_DIR)
+    .filter((name) => name.endsWith('.css') && !TOKEN_FILES.includes(name))
+    .sort();
 
 // Roots scanned for raw hex in application markup.
 const VUE_ROOTS = ['app.vue', 'error.vue', 'components', 'pages', 'layouts'];
 
 const HEX_RE = /#[0-9a-fA-F]{3,8}\b/;
-
-const normalize = (value) =>
-  value
-    .toLowerCase()
-    .replace(/\s+/g, '')
-    .replace(/(\.\d*?)0+(?=\D|$)/g, '$1')
-    .replace(/\.(?=\D|$)/g, '');
-
-const parseDeclarations = (css) => {
-  const map = new Map();
-  // Strip comments first so prose mentioning `--token:` is never parsed
-  // as a declaration.
-  const stripped = css.replace(/\/\*[\s\S]*?\*\//g, '');
-  const re = /(--[\w-]+)\s*:\s*([^;]+);/g;
-  let match;
-  while ((match = re.exec(stripped)) !== null) {
-    const name = match[1];
-    const value = match[2].trim();
-    // Last write wins — mirrors the CSS cascade within a file set.
-    map.set(name, value);
-  }
-  return map;
-};
 
 const readCss = (name) => readFileSync(join(CSS_DIR, name), 'utf8');
 
@@ -138,7 +120,7 @@ const walkVue = (entry, acc) => {
 const checkAdherence = () => {
   const files = [];
   for (const root of VUE_ROOTS) walkVue(root, files);
-  for (const css of APP_CSS) files.push(join('assets/css', css));
+  for (const css of appCss()) files.push(join('assets/css', css));
 
   const violations = [];
   for (const rel of files) {
