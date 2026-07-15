@@ -37,7 +37,7 @@ Three stages, each with its own `.env.<stage>` (gitignored). Copy `.env.example`
 | --------- | --------------------- | ------------------------- | --------------------------------- | ---------- | -------- |
 | `local`   | Docker Postgres       | Docker MinIO              | bypassed (link logged to console) | disabled   | disabled |
 | `dev`     | Neon `dev` branch     | R2 `vocabu-medea-dev`     | Resend sandbox sender             | enabled    | enabled  |
-| `preprod` | Neon `preprod` branch | R2 `vocabu-medea-preprod` | Resend `auth@words.myka.me`       | enabled    | enabled  |
+| `preprod` | Neon `preprod` branch | R2 `vocabu-medea-preprod` | Resend `auth@vocabu.myka.me`      | enabled    | enabled  |
 
 ## Quick start (local)
 
