@@ -101,16 +101,16 @@ the diff. Do not hand-edit `.claude/rules/` in the repo.
 
 ## Project management — Linear
 
-Work is tracked in Linear: team **Vocabu team** (prefix `VKBT`), project
+Work is tracked in Linear: team **Vocabu team** (prefix `VKB`), project
 **Vocabu**, milestones `M1…M11` mirroring ROADMAP.md. ROADMAP.md stays the
 narrative source of truth; Linear tracks execution state.
 
-- Every code task starts from a Linear issue (`VKBT-N`). Create or decompose
+- Every code task starts from a Linear issue (`VKB-N`). Create or decompose
   issues via the Linear MCP before starting work.
-- Branch naming: `<type>/vkbt-<n>-<short-desc>` (e.g. `feat/vkbt-15-i18n-setup`).
-  The `vkbt-<n>` segment lets Linear auto-link the branch and move the issue to
+- Branch naming: `<type>/vkb-<n>-<short-desc>` (e.g. `feat/vkb-15-i18n-setup`).
+  The `vkb-<n>` segment lets Linear auto-link the branch and move the issue to
   In Progress; `<type>/` follows the usual feat/fix/chore/refactor prefixes.
-- PRs target `dev` and include `Closes VKBT-<n>` in the description so the
+- PRs target `dev` and include `Closes VKB-<n>` in the description so the
   merge closes the issue; an open PR moves it to In Review.
 - Labels mirror change types: Feature, Bug, Improvement, Chore, Refactor,
   Docs, Test, plus Design (DS/tokens/prototype) and Ops (infra/deploy/env).
@@ -147,7 +147,7 @@ human's own commits keep their normal identity.
 - In GitHub Actions (`@claude` mention flow, `.github/workflows/claude.yml`)
   the Keychain identity is unavailable; there the agent acts as `claude[bot]`
   via the Claude GitHub App — also a distinct identity. Local conventions
-  that CI agents must still follow: Conventional Commits, `vkbt-<n>` in the
+  that CI agents must still follow: Conventional Commits, `vkb-<n>` in the
   branch name when the issue mirrors a Linear ticket, PRs ready (not draft),
   the co-author trailer.
 
@@ -159,7 +159,7 @@ silently skipping it.
 
 - **Commits:** Conventional Commits — `<type>(<scope>): <subject>`, imperative,
   lowercase, no trailing period, ≤ 72 chars. Types: feat, fix, chore, refactor,
-  docs, test, perf, ci, build, style. Branch: `<type>/vkbt-<n>-<short-desc>`.
+  docs, test, perf, ci, build, style. Branch: `<type>/vkb-<n>-<short-desc>`.
 - **Verify hands-on, never ship blind.** For any UI-affecting change: install
   deps (`bun install`), run the app (`bun run dev`, or `bun run build` +
   preview), open the affected pages with Playwright (already a dev dep),
