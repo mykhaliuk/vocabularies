@@ -175,3 +175,10 @@ silently skipping it.
   State explicitly in the PR what was verified and what needs a local check.
 - **No scope creep:** implement the ticket; file follow-up ideas as new
   Linear issues instead of expanding the diff.
+- **Decisions & vocabulary:** `docs/adr/` is the decision log — before
+  proposing to change or reverse an architectural choice, read it and argue
+  against the recorded reasoning, not from scratch. A new hard-to-reverse /
+  surprising / trade-off decision lands as an ADR in the same PR that
+  implements it. `docs/GLOSSARY.md` pins the project's terms — use them in
+  code, copy, and issues; when planning settles a new term or decision, the
+  planning round is not done until both files reflect it.
