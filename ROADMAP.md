@@ -61,6 +61,7 @@ All three closed on 2026-07-07:
 - ✅ Vercel env vars populated: `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`,
   `SENTRY_PROJECT` in Production + Preview (VKB-22). `CRON_SECRET` was set
   too, then retired with the cron itself (VKB-53).
-- ✅ Resend domain verified on `words.myka.me` (VKB-23).
+- ✅ Resend domain verified on `words.myka.me` (VKB-23) — migrated to
+  `vocabu.myka.me` in VKB-54.
 - ✅ R2 admin-scoped API token created; `r2:cors:*` applied CORS to both
   buckets (VKB-24).
