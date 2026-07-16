@@ -42,7 +42,11 @@ export interface LandingCopy {
     bodyPre: string;
     bodyEm: string;
     bodyPost: string;
-    cards: { title: string; body: string }[];
+    cards: [
+      { title: string; body: string },
+      { title: string; body: string },
+      { title: string; body: string },
+    ];
   };
   how: {
     overline: string;
