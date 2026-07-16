@@ -143,12 +143,68 @@ export default defineNuxtConfig({
     // wire compressed (Vercel does this in prod; this makes preview/self-host
     // match and keeps transfer weight — the main mobile-perf lever — low).
     compressPublicAssets: { gzip: true, brotli: true },
+    // Entry-locale redirect for the static landing, expressed as Vercel edge
+    // routes because on Vercel the CDN serves prerendered HTML before any
+    // Nitro code runs — a server middleware never sees `/`. Nitro merges
+    // these BEFORE its own `handle: filesystem` route, so they win over the
+    // static index.html. Same rules as server/middleware/landing-locale.ts
+    // (which covers Node preview/self-host); see ADR-0006. `has`/`missing`
+    // conditions: explicit vocabu-locale cookie first, else the browser's
+    // most-preferred language (first Accept-Language tag; regexes are
+    // RE2-safe, no lookaheads).
+    vercel: {
+      config: {
+        routes: [
+          {
+            src: '/',
+            has: [{ type: 'cookie', key: 'vocabu-locale', value: 'fr' }],
+            status: 302,
+            headers: { Location: '/fr' },
+          },
+          {
+            src: '/',
+            has: [{ type: 'cookie', key: 'vocabu-locale', value: 'uk' }],
+            status: 302,
+            headers: { Location: '/uk' },
+          },
+          {
+            src: '/',
+            missing: [{ type: 'cookie', key: 'vocabu-locale' }],
+            has: [
+              {
+                type: 'header',
+                key: 'accept-language',
+                value: '^fr$|^fr[-,;].*',
+              },
+            ],
+            status: 302,
+            headers: { Location: '/fr' },
+          },
+          {
+            src: '/',
+            missing: [{ type: 'cookie', key: 'vocabu-locale' }],
+            has: [
+              {
+                type: 'header',
+                key: 'accept-language',
+                value: '^uk$|^uk[-,;].*',
+              },
+            ],
+            status: 302,
+            headers: { Location: '/uk' },
+          },
+        ],
+      },
+    },
   },
   routeRules: {
-    // Marketing landing is fully static: prerendered to HTML at build for
-    // instant first paint and full SEO. The hero form / theme toggle hydrate
-    // as small islands on top of the static shell.
+    // Marketing landing is fully static: one prerendered HTML page per locale
+    // (/, /fr, /uk — copy baked in at build, no i18n runtime on the landing;
+    // ADR-0006) for instant first paint and full SEO. The hero form / theme
+    // toggle hydrate as small islands on top of the static shell.
     '/': { prerender: true },
+    '/fr': { prerender: true },
+    '/uk': { prerender: true },
   },
   sentry: {
     // Upload source maps during the deploy build only when the auth token is
