@@ -156,19 +156,19 @@ export default defineNuxtConfig({
       config: {
         routes: [
           {
-            src: '/',
+            src: '^/$',
             has: [{ type: 'cookie', key: 'vocabu-locale', value: 'fr' }],
             status: 302,
             headers: { Location: '/fr' },
           },
           {
-            src: '/',
+            src: '^/$',
             has: [{ type: 'cookie', key: 'vocabu-locale', value: 'uk' }],
             status: 302,
             headers: { Location: '/uk' },
           },
           {
-            src: '/',
+            src: '^/$',
             missing: [{ type: 'cookie', key: 'vocabu-locale' }],
             has: [
               {
@@ -181,7 +181,7 @@ export default defineNuxtConfig({
             headers: { Location: '/fr' },
           },
           {
-            src: '/',
+            src: '^/$',
             missing: [{ type: 'cookie', key: 'vocabu-locale' }],
             has: [
               {
