@@ -1,4 +1,4 @@
-import { eq, sql } from 'drizzle-orm';
+import { eq, lt, sql } from 'drizzle-orm';
 import { magicLinkTokens } from '~/db/schema/magic-link-tokens';
 import { sessions } from '~/db/schema/sessions';
 import { users } from '~/db/schema/users';
@@ -55,6 +55,11 @@ export default defineEventHandler(async (event) => {
 
   const userAgent = getRequestHeader(event, 'user-agent') ?? null;
   const sessionExpiresAt = new Date(Date.now() + getSessionTtlMs());
+
+  // Lazy sweep of expired sessions at the only moment the table grows,
+  // mirroring the token sweep in magic-link.post. Expired rows are inert
+  // (requireUser rejects them) but carry ip/user_agent — see ADR-0005.
+  await db.delete(sessions).where(lt(sessions.expiresAt, new Date()));
 
   try {
     const session = await db.transaction(async (tx) => {
