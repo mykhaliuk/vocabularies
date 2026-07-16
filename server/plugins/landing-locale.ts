@@ -55,6 +55,7 @@ export default defineNitroPlugin((nitroApp) => {
     if (!header) return;
     const locale = pickLandingLocale(header);
     if (locale !== null && LANDING_LOCALES.has(locale)) {
+      setResponseHeader(event, 'Cache-Control', 'no-store');
       await sendRedirect(event, `/${locale}`, 302);
     }
   });
