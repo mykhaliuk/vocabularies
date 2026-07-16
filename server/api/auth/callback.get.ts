@@ -59,7 +59,14 @@ export default defineEventHandler(async (event) => {
   // Lazy sweep of expired sessions at the only moment the table grows,
   // mirroring the token sweep in magic-link.post. Expired rows are inert
   // (requireUser rejects them) but carry ip/user_agent — see ADR-0005.
-  await db.delete(sessions).where(lt(sessions.expiresAt, new Date()));
+  try {
+    await db.delete(sessions).where(lt(sessions.expiresAt, new Date()));
+  } catch (error) {
+    console.error(
+      '[auth.callback] session sweep failure (failing open)',
+      error,
+    );
+  }
 
   try {
     const session = await db.transaction(async (tx) => {
