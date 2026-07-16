@@ -147,7 +147,7 @@ export default defineNuxtConfig({
     // routes because on Vercel the CDN serves prerendered HTML before any
     // Nitro code runs — a server middleware never sees `/`. Nitro merges
     // these BEFORE its own `handle: filesystem` route, so they win over the
-    // static index.html. Same rules as server/middleware/landing-locale.ts
+    // static index.html. Same rules as server/plugins/landing-locale.ts
     // (which covers Node preview/self-host); see ADR-0006. `has`/`missing`
     // conditions: explicit vocabu-locale cookie first, else the browser's
     // most-preferred language (first Accept-Language tag; regexes are
