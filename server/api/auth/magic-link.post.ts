@@ -11,12 +11,17 @@ import {
 import { useDb } from '~/server/utils/db';
 import { useEmail } from '~/server/utils/email';
 import { checkMagicLinkRateLimits } from '~/server/utils/magic-link-ratelimit';
+import { resolveRequestLocale } from '~/server/utils/request-locale';
 
 const Body = z.object({
   email: z.string().email().max(254),
 });
 
-const TOKEN_TTL_MS = 1000 * 60 * 15; // 15 minutes
+// Single source for the token lifetime: TOKEN_TTL_MS derives from the minutes
+// figure the email copy shows, so the "expires in N minutes" line can never
+// drift from the real TTL.
+const TOKEN_TTL_MINUTES = 15;
+const TOKEN_TTL_MS = 1000 * 60 * TOKEN_TTL_MINUTES;
 
 export default defineEventHandler(async (event) => {
   // Body parsing runs before rate limit checks: malformed requests do not
@@ -66,8 +71,16 @@ export default defineEventHandler(async (event) => {
 
   const link = `${getAppUrl()}/api/auth/callback?token=${token}`;
 
+  // Locale for the email follows ADR-0004 precedence: explicit vocabu-locale
+  // cookie, then Accept-Language, then the default. Resolved here because the
+  // request event is only in scope at the send site.
+  const locale = resolveRequestLocale(event);
+
   const mailer = useEmail();
-  await mailer.sendMagicLink(email, link);
+  await mailer.sendMagicLink(email, link, {
+    locale,
+    expiryMinutes: TOKEN_TTL_MINUTES,
+  });
 
   setResponseHeader(event, 'Cache-Control', 'no-store');
   return { ok: true };

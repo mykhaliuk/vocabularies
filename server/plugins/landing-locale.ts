@@ -13,40 +13,12 @@
 // passes straight through.
 import {
   LANDING_ALT_LOCALES,
-  LANDING_LOCALES,
   LOCALE_COOKIE,
+  pickAcceptLanguageLocale,
 } from '~/shared/landing-locales';
 import { noStoreRedirect } from '~/server/utils/redirect';
 
-const KNOWN_LOCALES: readonly string[] = LANDING_LOCALES;
 const ALT_LOCALES = new Set<string>(LANDING_ALT_LOCALES);
-
-// Minimal Accept-Language negotiation over the locales the landing ships:
-// highest-q primary subtag among the roster wins; anything else is ignored so
-// an unsupported browser locale falls through to English.
-const pickLandingLocale = (header: string): string | undefined => {
-  const ranges = header.split(',');
-  let best: string | undefined;
-  let bestQuality = 0;
-  for (const range of ranges) {
-    const parts = range.trim().split(';');
-    const tag = parts[0]?.trim().toLowerCase() ?? '';
-    if (tag === '') continue;
-    const primary = tag.split('-')[0] ?? tag;
-    if (!KNOWN_LOCALES.includes(primary)) continue;
-    let quality = 1;
-    for (let i = 1; i < parts.length; i++) {
-      const param = parts[i]?.trim() ?? '';
-      if (param.startsWith('q=')) quality = Number(param.slice(2));
-    }
-    if (!Number.isFinite(quality)) quality = 0;
-    if (quality > bestQuality) {
-      bestQuality = quality;
-      best = primary;
-    }
-  }
-  return best;
-};
 
 export default defineNitroPlugin((nitroApp) => {
   nitroApp.hooks.hook('request', async (event) => {
@@ -67,7 +39,7 @@ export default defineNitroPlugin((nitroApp) => {
     }
     const header = getHeader(event, 'accept-language');
     if (!header) return;
-    const locale = pickLandingLocale(header);
+    const locale = pickAcceptLanguageLocale(header);
     if (locale !== undefined && ALT_LOCALES.has(locale)) {
       await noStoreRedirect(event, `/${locale}`);
     }

@@ -1,4 +1,19 @@
 {
+  "email": {
+    "magicLink": {
+      "subject": "Your Vocabu sign-in link",
+      "preview": "Your sign-in link is ready — it expires in {minutes} minutes.",
+      "heading": "Here's your sign-in link",
+      "body": "Tap the button below to sign in — no password needed.",
+      "cta": "Sign in to Vocabu",
+      "expiry": "This link expires in {minutes} minutes and can be used once.",
+      "fallback": "If the button doesn't work, copy and paste this link into your browser:",
+      "ignore": "If you didn't ask to sign in, you can safely ignore this email."
+    },
+    "footer": {
+      "tagline": "Never lose your sweet moments."
+    }
+  },
   "login": {
     "pageTitle": "Sign in · Vocabu",
     "brand": "Vocabu",

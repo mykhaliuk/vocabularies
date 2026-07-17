@@ -1,4 +1,19 @@
 {
+  "email": {
+    "magicLink": {
+      "subject": "Votre lien de connexion Vocabu",
+      "preview": "Votre lien de connexion est prêt — il expire dans {minutes} minutes.",
+      "heading": "Voici votre lien de connexion",
+      "body": "Appuyez sur le bouton ci-dessous pour vous connecter — aucun mot de passe requis.",
+      "cta": "Se connecter à Vocabu",
+      "expiry": "Ce lien expire dans {minutes} minutes et ne peut être utilisé qu'une seule fois.",
+      "fallback": "Si le bouton ne fonctionne pas, copiez-collez ce lien dans votre navigateur :",
+      "ignore": "Si vous n'avez pas demandé à vous connecter, vous pouvez ignorer cet e-mail en toute sécurité."
+    },
+    "footer": {
+      "tagline": "Ne perdez plus jamais vos doux instants."
+    }
+  },
   "login": {
     "pageTitle": "Connexion · Vocabu",
     "brand": "Vocabu",
