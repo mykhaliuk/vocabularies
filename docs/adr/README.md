@@ -28,3 +28,8 @@ Format: `NNNN-short-slug.md`, template in [0000-template.md](0000-template.md).
   `injectManifest` custom service worker, not `generateSW`
 - [ADR-0004](0004-i18n-no-prefix-cookie-locale.md) — i18n `no_prefix`
   strategy: locale is cookie/header state, not part of the URL
+- [ADR-0005](0005-lazy-session-cleanup.md) — expired sessions swept lazily
+  on sign-in, mirroring the token sweep
+- [ADR-0006](0006-per-locale-static-landing.md) — per-locale prerendered
+  landings (/, /fr, /uk) with baked copy and an Accept-Language entry
+  redirect

@@ -15,5 +15,10 @@ export const sessions = pgTable(
     userAgent: text('user_agent'),
     ip: text('ip'),
   },
-  (table) => [index('sessions_user_id_idx').on(table.userId)],
+  (table) => [
+    index('sessions_user_id_idx').on(table.userId),
+    // The lazy sweep (ADR-0005) deletes WHERE expires_at < now() on every
+    // sign-in; without this index that is a full-table scan.
+    index('sessions_expires_at_idx').on(table.expiresAt),
+  ],
 );

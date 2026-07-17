@@ -19,5 +19,8 @@ export const magicLinkTokens = pgTable(
   (table) => [
     uniqueIndex('magic_link_tokens_token_hash_unique').on(table.tokenHash),
     index('magic_link_tokens_email_idx').on(table.email),
+    // The lazy sweep (ADR-0002) deletes WHERE expires_at < now() on every
+    // link request; without this index that is a full-table scan.
+    index('magic_link_tokens_expires_at_idx').on(table.expiresAt),
   ],
 );

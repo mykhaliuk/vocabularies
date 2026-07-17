@@ -1,3 +1,9 @@
+import {
+  landingPrerenderRules,
+  landingVercelRoutes,
+  LOCALE_COOKIE,
+} from './shared/landing-locales';
+
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   compatibilityDate: '2026-04-30',
@@ -43,7 +49,7 @@ export default defineNuxtConfig({
       // the same "explicit choice persists" contract as the theme override
       // cookie/localStorage read in `app.head.script` below.
       useCookie: true,
-      cookieKey: 'vocabu-locale',
+      cookieKey: LOCALE_COOKIE,
     },
   },
   fonts: {
@@ -143,12 +149,26 @@ export default defineNuxtConfig({
     // wire compressed (Vercel does this in prod; this makes preview/self-host
     // match and keeps transfer weight — the main mobile-perf lever — low).
     compressPublicAssets: { gzip: true, brotli: true },
+    // Entry-locale redirect for the static landing, expressed as Vercel edge
+    // routes because on Vercel the CDN serves prerendered HTML before any
+    // Nitro code runs — a server middleware never sees `/`. Nitro merges
+    // these BEFORE its own `handle: filesystem` route, so they win over the
+    // static index.html. Generated from the shared roster; the edge leg is a
+    // FIRST-TAG APPROXIMATION of the Nitro plugin's full q-ordering (RE2
+    // `has` regexes can't parse q-values, so `fr;q=0` refusals and uppercase
+    // tags deviate — accepted, see ADR-0006).
+    vercel: {
+      config: {
+        routes: landingVercelRoutes(),
+      },
+    },
   },
   routeRules: {
-    // Marketing landing is fully static: prerendered to HTML at build for
-    // instant first paint and full SEO. The hero form / theme toggle hydrate
-    // as small islands on top of the static shell.
-    '/': { prerender: true },
+    // Marketing landing is fully static: one prerendered HTML page per locale
+    // (/, /fr, /uk — copy baked in at build, no i18n runtime on the landing;
+    // ADR-0006) for instant first paint and full SEO. The hero form / theme
+    // toggle hydrate as small islands on top of the static shell.
+    ...landingPrerenderRules(),
   },
   sentry: {
     // Upload source maps during the deploy build only when the auth token is
