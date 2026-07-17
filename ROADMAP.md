@@ -17,6 +17,11 @@ Detailed plan: `~/.claude/plans/1-could-be-bun-floofy-moon.md` (not committed).
 | M9  | Multi-env runner + DB dump      | ✅ done    | `m9`  | health passes for all 3 envs; `db:dump:dev` populates local                                 |
 | M10 | i18n core (En/Fr/Uk) + switcher | ⏳ planned | `m10` | device locale `fr` → app loads in French; switch to Uk in settings → persists across reload |
 | M11 | Localized landing (per-locale)  | ⏳ planned | `m11` | `/`, `/fr`, `/uk` prerender to static HTML; mobile Lighthouse still 95+/100/100/100         |
+| M12 | Media pipeline spike            | ⏳ planned | `m12` | 20s 4K60 iPhone .mov: presigned PUT → async ffmpeg → 720p + poster → plays; ADR on transcode location |
+| M13 | Entries + media schema & API    | ⏳ planned | `m13` | `db:migrate` creates `entries`+`media`; API lifecycle create → upload → processing → ready  |
+| M14 | App shell (chrome)              | ⏳ planned | `m14` | BottomNav/TopBar tabs render in both themes; `ds:check` green                               |
+| M15 | Feed (read path)                | ⏳ planned | `m15` | seeded entries render with media playback; empty state; `processing` placeholder           |
+| M16 | Compose (write path)            | ⏳ planned | `m16` | phone: compose → upload 20s video → feed shows processing → ready → plays                  |
 
 ## Internationalization (M10–M11)
 
@@ -36,9 +41,32 @@ auto-detect, lazy translation chunks, SEO tags out of the box). Locales: **En**
   Cyrillic — extend to `['latin', 'cyrillic-ext']`, scoped so it does not inflate the
   render-blocking weight of the En/Fr landing variants.
 
+## Media core (M12–M16) — the product itself
+
+Media (a ≤20s audio or video **moment** of the speaker) is the killer feature;
+it is de-risked first (M12) and every screen builds around it. Decisions
+settled 2026-07-17 (details in the M12 ADR once the spike lands):
+
+- **Upload-first, no in-browser recording** in v1 — moments are captured
+  spontaneously with the dictaphone/camera and uploaded as files (any format,
+  audio or video).
+- **Entity is `media`** (kind `audio | video`), limits ≤20s / ~250MB original.
+- **Pipeline:** presigned PUT of the original as-is to R2 `originals/`
+  (direct, bypassing the server) → entry visible as `processing` → async
+  ffmpeg normalization → `ready`. Originals kept forever as source of truth.
+- **Derivatives:** video → 720p H.264/AAC + poster frame (720p for now —
+  revisit when there's revenue); audio → one canonical format (opus vs m4a
+  decided in the spike); both → duration; audio → waveform peaks.
+- **Open question the spike answers:** where transcoding lives — ffmpeg in a
+  Vercel function (a 20s 4K60 HEVC clip must fit the 300s limit) vs
+  Cloudflare Stream as fallback.
+
+Linear: VKB-63 (spike) → VKB-64 (schema/API) → VKB-65 (shell) → VKB-66
+(feed) → VKB-67 (compose).
+
 ## Out of scope for v0
 
-Word/audio capture, feeds, follows, IndexedDB sync, friends-only visibility.
+In-browser recording, follows, IndexedDB sync, friends-only visibility.
 
 ## Closed before M10 (hardening pass)
 
