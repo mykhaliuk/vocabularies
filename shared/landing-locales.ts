@@ -38,21 +38,22 @@ export const LANDING_LOCALE_NAMES: Record<LandingLocale, string> = {
   uk: 'Українська',
 };
 
-// Vercel edge routes for the entry-locale redirect on `/` (ADR-0006). The
-// header regexes are a first-tag approximation of the Nitro plugin's full
-// q-ordering: RE2 `has` conditions cannot parse q-values, so `fr;q=0`
-// (explicit refusal) and uppercase tags deviate from the Node leg — accepted
-// and recorded in ADR-0006. Cookie routes come first so an explicit choice
-// always wins.
+// Vercel edge routes for the entry-locale redirect on `/` (ADR-0006). `src`
+// is anchored (`^/$`) — Vercel treats it as a regex, unanchored `/` would
+// match every path. The header regexes are a first-tag approximation of the
+// Nitro plugin's full q-ordering: RE2 `has` conditions cannot parse
+// q-values, so `fr;q=0` (explicit refusal) and uppercase tags deviate from
+// the Node leg — accepted and recorded in ADR-0006. Cookie routes come first
+// so an explicit choice always wins.
 export const landingVercelRoutes = () => [
   ...LANDING_ALT_LOCALES.map((locale) => ({
-    src: '/',
+    src: '^/$',
     has: [{ type: 'cookie', key: LOCALE_COOKIE, value: locale }],
     status: 302,
     headers: { Location: LANDING_LOCALE_PATHS[locale] },
   })),
   ...LANDING_ALT_LOCALES.map((locale) => ({
-    src: '/',
+    src: '^/$',
     missing: [{ type: 'cookie', key: LOCALE_COOKIE }],
     has: [
       {
