@@ -1,0 +1,2 @@
+CREATE INDEX IF NOT EXISTS "sessions_expires_at_idx" ON "sessions" USING btree ("expires_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "magic_link_tokens_expires_at_idx" ON "magic_link_tokens" USING btree ("expires_at");
