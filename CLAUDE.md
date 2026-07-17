@@ -174,7 +174,12 @@ silently skipping it.
   (magic-link login, `/me`) cannot be fully exercised in agent sandboxes.
   State explicitly in the PR what was verified and what needs a local check.
 - **No scope creep:** implement the ticket; file follow-up ideas as new
-  Linear issues instead of expanding the diff.
+  Linear issues instead of expanding the diff. One ticket = one branch =
+  one PR; if the session or branch setup conflicts with that, flag it
+  BEFORE implementing instead of following the setup.
+- **Pre-PR checklist:** run `docs/PR-CHECKLIST.md` before opening a PR or
+  flipping it ready — including the adversarial `/code-review` pass; fix
+  confirmed findings first.
 - **Decisions & vocabulary:** `docs/adr/` is the decision log — before
   proposing to change or reverse an architectural choice, read it and argue
   against the recorded reasoning, not from scratch. A new hard-to-reverse /
