@@ -52,7 +52,20 @@ const create = (): Emailer => {
         link,
         expiryMinutes: options.expiryMinutes,
       });
-      await resend.emails.send({ from, to, subject, html, text });
+      // Resend resolves { data, error } instead of throwing on API failures;
+      // propagate so the handler returns 5xx (and Sentry sees it) rather than a
+      // false "check your inbox". Send happens for any address regardless of
+      // registration, so surfacing the failure leaks no enumeration signal.
+      const { error } = await resend.emails.send({
+        from,
+        to,
+        subject,
+        html,
+        text,
+      });
+      if (error) {
+        throw new Error(`[email] resend send failed: ${error.message}`);
+      }
     },
   };
 };
