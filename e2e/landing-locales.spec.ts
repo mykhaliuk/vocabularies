@@ -45,6 +45,29 @@ test.describe('entry locale redirect', () => {
       await expect(page).toHaveURL(/\/fr$/);
     });
 
+    test('the redirect also fires for / with query params', async ({
+      page,
+    }) => {
+      await page.goto('/?utm_source=e2e');
+      await expect(page).toHaveURL(/\/fr/);
+    });
+
+    test('the nav locale switcher reaches English and persists it', async ({
+      page,
+      context,
+    }) => {
+      await page.goto('/');
+      await expect(page).toHaveURL(/\/fr$/);
+      // Click "en" in the switcher: sets vocabu-locale=en, then navigates
+      // to / — which must now stay English instead of bouncing back.
+      await page.locator('.locale-switch__link[hreflang="en"]').click();
+      await expect(page).toHaveURL(/\/$/);
+      await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+      const cookies = await context.cookies();
+      const locale = cookies.find((c) => c.name === 'vocabu-locale');
+      expect(locale?.value).toBe('en');
+    });
+
     test('an explicit English choice wins over the browser language', async ({
       page,
       context,

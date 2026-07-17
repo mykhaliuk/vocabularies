@@ -10,20 +10,39 @@ import {
   Moon,
   Sun,
 } from 'lucide-vue-next';
-import type { LandingCopy, LandingLocale } from './copy.en';
-
-const props = defineProps<{
-  locale: LandingLocale;
-  copy: LandingCopy;
-}>();
+import {
+  LANDING_LOCALE_NAMES,
+  LANDING_LOCALE_PATHS,
+  LANDING_LOCALES,
+  LANDING_OG_LOCALES,
+  LOCALE_COOKIE,
+} from '~/shared/landing-locales';
+import type { LandingCopy } from './copy.en';
 
 // One prerendered page per locale: / is English, /fr and /uk are baked
 // variants of the same component (ADR-0006). Copy comes in as a plain data
-// prop, not through the i18n runtime.
-const LOCALE_PATHS = { en: '/', fr: '/fr', uk: '/uk' };
-const OG_LOCALES = { en: 'en_US', fr: 'fr_FR', uk: 'uk_UA' };
+// prop, not through the i18n runtime; the locale travels ON the copy object
+// so a copy/locale mismatch is unrepresentable.
+const props = defineProps<{
+  copy: LandingCopy;
+}>();
 
-const cardIcons = [Mic, BadgeCheck, History];
+const locale = props.copy.locale;
+
+const CARD_ICONS = [Mic, BadgeCheck, History];
+
+// Locale switcher: sets the vocabu-locale cookie before the (static) link
+// navigation so the entry redirect on `/` honors the explicit choice — the
+// only unauthenticated way to reach the English page from /fr | /uk
+// (ADR-0004's "explicit choice persists" contract).
+const rememberLocale = (code: string) => {
+  // Direct document.cookie on purpose: the landing ships no i18n runtime
+  // (ADR-0006) so setLocale/useCookie are unavailable, the Cookie Store API
+  // is not universal, and the write must land synchronously before the
+  // link's default navigation proceeds.
+  // oxlint-disable-next-line no-document-cookie
+  document.cookie = `${LOCALE_COOKIE}=${code}; path=/; max-age=31536000; samesite=lax`;
+};
 
 const {
   email,
@@ -43,7 +62,7 @@ useSeoMeta({
   ogTitle: props.copy.seo.ogTitle,
   ogDescription: props.copy.seo.ogDescription,
   ogType: 'website',
-  ogLocale: OG_LOCALES[props.locale],
+  ogLocale: LANDING_OG_LOCALES[locale],
 });
 
 const { public: publicConfig } = useRuntimeConfig();
@@ -51,12 +70,16 @@ const toAbsolute = (path: string) => new URL(path, publicConfig.appUrl).href;
 useHead({
   // Baked per page; overrides the app-level reactive lang from app.vue so
   // the prerendered HTML carries the page's own language.
-  htmlAttrs: { lang: props.locale },
+  htmlAttrs: { lang: locale },
   link: [
-    { rel: 'canonical', href: toAbsolute(LOCALE_PATHS[props.locale]) },
-    { rel: 'alternate', hreflang: 'en', href: toAbsolute(LOCALE_PATHS.en) },
-    { rel: 'alternate', hreflang: 'fr', href: toAbsolute(LOCALE_PATHS.fr) },
-    { rel: 'alternate', hreflang: 'uk', href: toAbsolute(LOCALE_PATHS.uk) },
+    { rel: 'canonical', href: toAbsolute(LANDING_LOCALE_PATHS[locale]) },
+    // Derived from the roster so a new locale can't be silently dropped
+    // from the hreflang cluster.
+    ...LANDING_LOCALES.map((code) => ({
+      rel: 'alternate',
+      hreflang: code,
+      href: toAbsolute(LANDING_LOCALE_PATHS[code]),
+    })),
     { rel: 'alternate', hreflang: 'x-default', href: toAbsolute('/') },
   ],
 });
@@ -91,13 +114,35 @@ onMounted(() => {
     <!-- NAV -->
     <header class="nav">
       <div class="wrap nav__in">
-        <a class="brand" href="/" :aria-label="copy.nav.homeAria">
+        <a
+          class="brand"
+          :href="LANDING_LOCALE_PATHS[locale]"
+          :aria-label="copy.nav.homeAria"
+        >
           <img src="/logo-mark.svg" alt="" width="28" height="28" />
           <b>Vocabu</b>
         </a>
         <div class="nav__spacer"></div>
         <nav class="nav__links">
           <a class="ghost-link hide-sm" href="#why">{{ copy.nav.why }}</a>
+          <div
+            class="locale-switch"
+            role="group"
+            :aria-label="copy.nav.langAria"
+          >
+            <a
+              v-for="code in LANDING_LOCALES"
+              :key="code"
+              class="locale-switch__link"
+              :class="{ 'is-active': code === locale }"
+              :href="LANDING_LOCALE_PATHS[code]"
+              :hreflang="code"
+              :aria-label="LANDING_LOCALE_NAMES[code]"
+              :aria-current="code === locale ? 'page' : undefined"
+              @click="rememberLocale(code)"
+              >{{ code }}</a
+            >
+          </div>
           <div
             class="theme-toggle"
             role="group"
@@ -237,7 +282,7 @@ onMounted(() => {
               :class="index === 1 ? 'card--rose' : 'card--blue'"
             >
               <div class="card__badge">
-                <component :is="cardIcons[index]" :size="24" />
+                <component :is="CARD_ICONS[index]" :size="24" />
               </div>
               <h3>{{ card.title }}</h3>
               <p>{{ card.body }}</p>
@@ -296,7 +341,7 @@ onMounted(() => {
     <!-- FOOTER -->
     <footer class="foot">
       <div class="wrap foot__in">
-        <a class="brand" href="/">
+        <a class="brand" :href="LANDING_LOCALE_PATHS[locale]">
           <img src="/logo-mark.svg" alt="" width="24" height="24" />
           <b>Vocabu</b>
         </a>
@@ -388,6 +433,36 @@ onMounted(() => {
 }
 
 .ghost-link:hover {
+  color: var(--text);
+  background: var(--surface-sunk);
+}
+
+.locale-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.locale-switch__link {
+  font-size: 13px;
+  font-weight: var(--w-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  padding: 8px 10px;
+  border-radius: var(--r-btn);
+  text-decoration: none;
+  transition:
+    color var(--dur-fast),
+    background var(--dur-fast);
+}
+
+.locale-switch__link:hover {
+  color: var(--text);
+  background: var(--surface-sunk);
+}
+
+.locale-switch__link.is-active {
   color: var(--text);
   background: var(--surface-sunk);
 }

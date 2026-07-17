@@ -1,6 +1,7 @@
 import type { LandingCopy } from './copy.en';
 
 export const landingCopyUk: LandingCopy = {
+  locale: 'uk',
   seo: {
     title: 'Vocabu — збережіть, як вони говорять насправді',
     description:
@@ -15,6 +16,7 @@ export const landingCopyUk: LandingCopy = {
   nav: {
     homeAria: 'На головну Vocabu',
     why: 'чому vocabu',
+    langAria: 'Мова',
     themeAria: 'Тема',
     themeLight: 'Світла тема',
     themeSystem: 'Системна тема',
@@ -30,10 +32,12 @@ export const landingCopyUk: LandingCopy = {
       'Перші кумедно перекручені слова доньки. Татова порада, чута сто ' +
       'разів. Безглузда фраза найкращого друга. Vocabu зберігає їх — ' +
       'їхнім голосом — поки вони тихо не вислизнули.',
-    emailPlaceholder: 'you@email.com',
+    emailPlaceholder: 'ви@email.com',
     emailAria: 'ваша пошта',
     submit: 'отримати посилання для входу',
-    note: 'без пароля — надішлемо посилання на пошту. почати можна безкоштовно.',
+    note:
+      'без пароля — надішлемо посилання на пошту. ' +
+      'почати можна безкоштовно.',
   },
   sent: {
     title: 'Перевірте пошту',

@@ -43,17 +43,28 @@ Nitro registers the public-assets handler ahead of middleware.
 - The landing copy is deliberately OUTSIDE the i18n message files; the
   `/login`+app translations (i18n runtime) and the landing copy modules are
   two systems, and copy edits must touch the right one.
-- The redirect logic exists in two places (edge routes + Nitro plugin) that
-  must be kept in sync by hand; `e2e/landing-locales.spec.ts` pins the Node
-  side, the Vercel side is only checkable on a deploy.
+- The redirect logic exists in two places (edge routes + Nitro plugin); both
+  derive from `shared/landing-locales.ts` (the roster, paths, cookie key, and
+  the edge routes are generated from one module), so adding a locale is a
+  type-checked change there plus a copy module and a page wrapper.
+  `e2e/landing-locales.spec.ts` pins the Node side; the Vercel side is only
+  checkable on a deploy.
 - Vercel's edge `has` conditions can't parse q-values, so the edge leg keys
   off the first (most-preferred) Accept-Language tag; the Node leg does real
-  q-ordering. Divergence is only visible to visitors whose top tag differs
-  from their top q — acceptable.
-- Repeat visitors can be served `/` by the PWA service worker precache
-  without hitting the server; the redirect is best-effort on first contact,
-  and the in-app locale switcher plus `hreflang` links stay the correction
-  paths.
+  q-ordering. Known accepted deviations of the edge leg: header order
+  (`en;q=0.8,fr` serves English on Vercel, French on Node), explicit refusal
+  (`fr;q=0, en` still redirects to /fr on Vercel — RE2 `has` regexes cannot
+  express "q≠0" without lookaheads), and case (`FR-FR` is not matched;
+  real browsers send lowercase primary subtags). The Node leg is the
+  reference semantics.
+- Navigations to `/` are network-first in the service worker (offline falls
+  back to the precached English page), so the entry redirect and the
+  `vocabu-locale` cookie are honored even for installed-PWA launches
+  (start_url `/`); /fr and /uk stay precache-first and work offline.
+- The landing carries a visible locale switcher (nav) whose links set
+  `vocabu-locale` before navigating — the unauthenticated path to any
+  locale, including back to English (without it, every path to `/` would
+  redirect an fr/uk visitor straight back).
 - The phone mock (`LandingPhoneMock`) stays English on all three pages — it
   depicts the product UI, not landing copy.
 

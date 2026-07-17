@@ -1,6 +1,7 @@
 import type { LandingCopy } from './copy.en';
 
 export const landingCopyFr: LandingCopy = {
+  locale: 'fr',
   seo: {
     title: 'Vocabu — gardez leur vraie façon de parler',
     description:
@@ -15,6 +16,7 @@ export const landingCopyFr: LandingCopy = {
   nav: {
     homeAria: 'Accueil Vocabu',
     why: 'pourquoi vocabu',
+    langAria: 'Langue',
     themeAria: 'Thème',
     themeLight: 'Thème clair',
     themeSystem: 'Thème système',
@@ -33,7 +35,9 @@ export const landingCopyFr: LandingCopy = {
     emailPlaceholder: 'vous@email.com',
     emailAria: 'votre e-mail',
     submit: 'recevoir mon lien de connexion',
-    note: 'pas de mot de passe — on vous envoie un lien par e-mail. gratuit pour commencer.',
+    note:
+      'pas de mot de passe — on vous envoie un lien par e-mail. ' +
+      'gratuit pour commencer.',
   },
   sent: {
     title: 'Vérifiez votre boîte mail',

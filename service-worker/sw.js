@@ -9,7 +9,7 @@
 import { CacheableResponsePlugin } from 'workbox-cacheable-response';
 import { clientsClaim } from 'workbox-core';
 import { ExpirationPlugin } from 'workbox-expiration';
-import { precacheAndRoute } from 'workbox-precaching';
+import { matchPrecache, precacheAndRoute } from 'workbox-precaching';
 import {
   NavigationRoute,
   registerRoute,
@@ -26,6 +26,33 @@ import { PWA_API_CACHE, PWA_AVATARS_CACHE } from '../shared/pwa-caches';
 // registerType: autoUpdate — take over immediately rather than waiting.
 self.skipWaiting();
 clientsClaim();
+
+// Navigations to `/` go to the network first so the server-side entry-locale
+// redirect (ADR-0006) and the vocabu-locale cookie are honored — `/` is also
+// the PWA start_url, so without this every installed-app launch would be
+// answered from the precache with the English page, bypassing the locale
+// contract. Registered BEFORE precacheAndRoute (Workbox matches routes in
+// registration order). Offline falls back to the precached English landing —
+// same behavior as before this route existed. fetch(event.request) on a
+// navigation returns an opaqueredirect the browser follows, so the 302 to
+// /fr | /uk works through the SW.
+registerRoute(
+  ({ request, url, sameOrigin }) =>
+    sameOrigin && request.mode === 'navigate' && url.pathname === '/',
+  async ({ event }) => {
+    try {
+      return await fetch(event.request);
+    } catch {
+      const cached = await matchPrecache('/');
+      if (cached) return cached;
+      return new Response(OFFLINE_HTML, {
+        status: 503,
+        statusText: 'Offline',
+        headers: { 'Content-Type': 'text/html; charset=utf-8' },
+      });
+    }
+  },
+);
 
 // Precache the build assets injected by vite-pwa, including the prerendered
 // /offline page that the catch handler serves.
@@ -74,8 +101,9 @@ registerRoute(
 // Route navigations through Workbox (NetworkOnly = always-fresh SSR, no stale
 // shell) so the catch handler below can serve /offline when the network is
 // gone. Without this, navigations bypass Workbox and the browser shows its
-// native offline screen. Precached prerendered routes (e.g. /) are matched by
-// precacheAndRoute above first, so this only governs uncached navigations.
+// native offline screen. Precached prerendered routes (/fr, /uk) are matched
+// by precacheAndRoute above first ('/' by the network-first route at the
+// top), so this only governs uncached navigations.
 registerRoute(new NavigationRoute(new NetworkOnly()));
 
 // --- offline fallback ---

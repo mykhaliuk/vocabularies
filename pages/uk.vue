@@ -3,5 +3,5 @@ import { landingCopyUk } from '~/components/landing/copy.uk';
 </script>
 
 <template>
-  <LandingPage locale="uk" :copy="landingCopyUk" />
+  <LandingPage :copy="landingCopyUk" />
 </template>

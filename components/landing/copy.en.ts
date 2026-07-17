@@ -2,9 +2,14 @@
 // a plain data module, deliberately outside the i18n runtime so the landing
 // ships zero client-side translation JS (see ADR-0006).
 
-export type LandingLocale = 'en' | 'fr' | 'uk';
+import type { LandingLocale } from '~/shared/landing-locales';
+
+export type { LandingLocale };
 
 export interface LandingCopy {
+  // The locale travels on the copy object (not as a separate prop) so a
+  // copy/locale mismatch is unrepresentable in a page wrapper.
+  locale: LandingLocale;
   seo: {
     title: string;
     description: string;
@@ -14,6 +19,7 @@ export interface LandingCopy {
   nav: {
     homeAria: string;
     why: string;
+    langAria: string;
     themeAria: string;
     themeLight: string;
     themeSystem: string;
@@ -69,6 +75,7 @@ export interface LandingCopy {
 }
 
 export const landingCopyEn: LandingCopy = {
+  locale: 'en',
   seo: {
     title: 'Vocabu — keep the way they actually talk',
     description:
@@ -82,6 +89,7 @@ export const landingCopyEn: LandingCopy = {
   nav: {
     homeAria: 'Vocabu home',
     why: 'why vocabu',
+    langAria: 'Language',
     themeAria: 'Theme',
     themeLight: 'Light theme',
     themeSystem: 'System theme',
