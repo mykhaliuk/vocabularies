@@ -18,7 +18,9 @@ export default defineEventHandler(async (event) => {
     Body.parse(data),
   );
   const key = mintAvatarKey(user.id, contentType);
-  const uploadUrl = await presignPut(key, contentType, UPLOAD_TTL_SEC);
+  const uploadUrl = await presignPut(key, contentType, {
+    ttlSec: UPLOAD_TTL_SEC,
+  });
   setResponseHeader(event, 'Cache-Control', 'no-store');
   return { uploadUrl, key };
 });

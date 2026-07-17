@@ -1,11 +1,17 @@
 import {
+  GetObjectCommand,
   HeadBucketCommand,
   HeadObjectCommand,
   PutObjectCommand,
-  GetObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+
+// Two buckets per stage (ADR pending in VKB-63):
+// - media: derivatives + posters + avatars; the only bucket the app reads.
+// - originals: private ingest for raw uploads; presigned PUT + transcoder
+//   reads, never served to clients.
+export type BucketKind = 'media' | 'originals';
 
 const TRUE_VALUES = new Set(['true', '1', 'yes', 'on']);
 const FALSE_VALUES = new Set(['false', '0', 'no', 'off']);
@@ -22,14 +28,23 @@ const parseBool = (raw: unknown, key: string) => {
   );
 };
 
-let cached: { client: S3Client; bucket: string } | null = null;
+interface Storage {
+  client: S3Client;
+  mediaBucket: string;
+  originalsBucket: string | null;
+}
 
-const create = () => {
+let cached: Storage | null = null;
+
+const create = (): Storage => {
   const endpoint = process.env.S3_ENDPOINT;
   const region = process.env.S3_REGION ?? 'auto';
   const accessKeyId = process.env.S3_ACCESS_KEY_ID;
   const secretAccessKey = process.env.S3_SECRET_ACCESS_KEY;
-  const bucket = process.env.S3_BUCKET;
+  // S3_BUCKET_MEDIA is the canonical name; S3_BUCKET is the pre-two-bucket
+  // fallback kept so deployed envs keep working until their vars migrate.
+  const mediaBucket = process.env.S3_BUCKET_MEDIA || process.env.S3_BUCKET;
+  const originalsBucket = process.env.S3_BUCKET_ORIGINALS || null;
   const forcePathStyle = parseBool(
     process.env.S3_FORCE_PATH_STYLE,
     'S3_FORCE_PATH_STYLE',
@@ -40,7 +55,11 @@ const create = () => {
   if (!secretAccessKey) {
     throw new Error('[storage] S3_SECRET_ACCESS_KEY is required');
   }
-  if (!bucket) throw new Error('[storage] S3_BUCKET is required');
+  if (!mediaBucket) {
+    throw new Error(
+      '[storage] S3_BUCKET_MEDIA (or legacy S3_BUCKET) is required',
+    );
+  }
 
   const client = new S3Client({
     endpoint,
@@ -52,9 +71,9 @@ const create = () => {
   });
 
   console.log(
-    `[storage] endpoint=${endpoint} bucket=${bucket} pathStyle=${forcePathStyle}`,
+    `[storage] endpoint=${endpoint} media=${mediaBucket} originals=${originalsBucket ?? '(unset)'} pathStyle=${forcePathStyle}`,
   );
-  return { client, bucket };
+  return { client, mediaBucket, originalsBucket };
 };
 
 const useStorage = () => {
@@ -62,38 +81,92 @@ const useStorage = () => {
   return cached;
 };
 
-export const headBucket = async () => {
-  const { client, bucket } = useStorage();
-  await client.send(new HeadBucketCommand({ Bucket: bucket }));
+const bucketName = (kind: BucketKind) => {
+  const storage = useStorage();
+  if (kind === 'media') return storage.mediaBucket;
+  if (!storage.originalsBucket) {
+    throw new Error('[storage] S3_BUCKET_ORIGINALS is required for originals');
+  }
+  return storage.originalsBucket;
 };
 
-export const headObject = async (key: string) => {
-  const { client, bucket } = useStorage();
-  return client.send(new HeadObjectCommand({ Bucket: bucket, Key: key }));
+export const hasOriginalsBucket = () => useStorage().originalsBucket !== null;
+
+export const headBucket = async (kind: BucketKind = 'media') => {
+  const { client } = useStorage();
+  await client.send(new HeadBucketCommand({ Bucket: bucketName(kind) }));
 };
+
+export const headObject = async (key: string, kind: BucketKind = 'media') => {
+  const { client } = useStorage();
+  return client.send(
+    new HeadObjectCommand({ Bucket: bucketName(kind), Key: key }),
+  );
+};
+
+export const getObject = async (key: string, kind: BucketKind = 'media') => {
+  const { client } = useStorage();
+  return client.send(
+    new GetObjectCommand({ Bucket: bucketName(kind), Key: key }),
+  );
+};
+
+export const putObject = async (
+  key: string,
+  body: Buffer,
+  contentType: string,
+  kind: BucketKind = 'media',
+) => {
+  const { client } = useStorage();
+  return client.send(
+    new PutObjectCommand({
+      Bucket: bucketName(kind),
+      Key: key,
+      Body: body,
+      ContentType: contentType,
+    }),
+  );
+};
+
+export interface PresignPutOptions {
+  kind?: BucketKind;
+  ttlSec?: number;
+  // When set, the signature covers Content-Length, so the client cannot
+  // upload a bigger (or smaller) body than what was authorised.
+  contentLength?: number;
+}
 
 export const presignPut = async (
   key: string,
   contentType: string,
-  ttlSec = 300,
+  options: PresignPutOptions = {},
 ) => {
-  const { client, bucket } = useStorage();
+  const { kind = 'media', ttlSec = 300, contentLength } = options;
+  const { client } = useStorage();
   const command = new PutObjectCommand({
-    Bucket: bucket,
+    Bucket: bucketName(kind),
     Key: key,
     ContentType: contentType,
+    ContentLength: contentLength,
   });
-  // Force the signature to cover Content-Type so a client cannot PUT with a
-  // different MIME than what was authorised.
+  // Force the signature to cover Content-Type (and Content-Length when
+  // given) so a client cannot PUT with a different MIME or size than what
+  // was authorised.
+  const signableHeaders = new Set(['content-type']);
+  if (contentLength !== undefined) signableHeaders.add('content-length');
   return getSignedUrl(client, command, {
     expiresIn: ttlSec,
-    signableHeaders: new Set(['content-type']),
+    signableHeaders,
   });
 };
 
-export const presignGet = async (key: string, ttlSec = 3600) => {
-  const { client, bucket } = useStorage();
-  const command = new GetObjectCommand({ Bucket: bucket, Key: key });
+export const presignGet = async (
+  key: string,
+  ttlSec = 3600,
+  kind: BucketKind = 'media',
+) => {
+  const { client } = useStorage();
+  const command = new GetObjectCommand({ Bucket: bucketName(kind), Key: key });
   return getSignedUrl(client, command, { expiresIn: ttlSec });
 };
 

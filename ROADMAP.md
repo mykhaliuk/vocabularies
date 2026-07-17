@@ -4,24 +4,24 @@ Smoke-test scaffold (v0). Each milestone is independently verifiable and tagged 
 
 Detailed plan: `~/.claude/plans/1-could-be-bun-floofy-moon.md` (not committed).
 
-| #   | Milestone                       | Status     | Tag   | Verification                                                                                |
-| --- | ------------------------------- | ---------- | ----- | ------------------------------------------------------------------------------------------- |
-| M1  | Skeleton + tooling              | ✅ done    | `m1`  | `bun run start:local` → `/` shows "hi there"                                                |
-| M2  | Local infra + health endpoint   | ✅ done    | `m2`  | `/api/health` → `{db:ok, storage:ok, redis:skipped}`                                        |
-| M3  | Drizzle schema + migrations     | ✅ done    | `m3`  | 3 tables + unique index on `lower(email)` after `db:migrate`                                |
-| M4  | Magic-link auth E2E             | ✅ done    | `m4`  | login → `/me` → logout works locally; expired link 401                                      |
-| M5  | Avatar upload                   | ✅ done    | `m5`  | upload PNG → reload `/me` → avatar renders                                                  |
-| M6  | Sentry + debug error            | ✅ done    | `m6`  | dev: error in Sentry tagged `environment:dev`, no PII                                       |
-| M7  | Rate limit on magic-link        | ✅ done    | `m7`  | dev: 6 rapid POSTs → 6th = 429                                                              |
-| M8  | PWA                             | ✅ done    | `m8`  | offline page renders airplane-mode; `/me` not cached                                        |
-| M9  | Multi-env runner + DB dump      | ✅ done    | `m9`  | health passes for all 3 envs; `db:dump:dev` populates local                                 |
-| M10 | i18n core (En/Fr/Uk) + switcher | ⏳ planned | `m10` | device locale `fr` → app loads in French; switch to Uk in settings → persists across reload |
-| M11 | Localized landing (per-locale)  | ⏳ planned | `m11` | `/`, `/fr`, `/uk` prerender to static HTML; mobile Lighthouse still 95+/100/100/100         |
+| #   | Milestone                       | Status     | Tag   | Verification                                                                                          |
+| --- | ------------------------------- | ---------- | ----- | ----------------------------------------------------------------------------------------------------- |
+| M1  | Skeleton + tooling              | ✅ done    | `m1`  | `bun run start:local` → `/` shows "hi there"                                                          |
+| M2  | Local infra + health endpoint   | ✅ done    | `m2`  | `/api/health` → `{db:ok, storage:ok, redis:skipped}`                                                  |
+| M3  | Drizzle schema + migrations     | ✅ done    | `m3`  | 3 tables + unique index on `lower(email)` after `db:migrate`                                          |
+| M4  | Magic-link auth E2E             | ✅ done    | `m4`  | login → `/me` → logout works locally; expired link 401                                                |
+| M5  | Avatar upload                   | ✅ done    | `m5`  | upload PNG → reload `/me` → avatar renders                                                            |
+| M6  | Sentry + debug error            | ✅ done    | `m6`  | dev: error in Sentry tagged `environment:dev`, no PII                                                 |
+| M7  | Rate limit on magic-link        | ✅ done    | `m7`  | dev: 6 rapid POSTs → 6th = 429                                                                        |
+| M8  | PWA                             | ✅ done    | `m8`  | offline page renders airplane-mode; `/me` not cached                                                  |
+| M9  | Multi-env runner + DB dump      | ✅ done    | `m9`  | health passes for all 3 envs; `db:dump:dev` populates local                                           |
+| M10 | i18n core (En/Fr/Uk) + switcher | ⏳ planned | `m10` | device locale `fr` → app loads in French; switch to Uk in settings → persists across reload           |
+| M11 | Localized landing (per-locale)  | ⏳ planned | `m11` | `/`, `/fr`, `/uk` prerender to static HTML; mobile Lighthouse still 95+/100/100/100                   |
 | M12 | Media pipeline spike            | ⏳ planned | `m12` | 20s 4K60 iPhone .mov: presigned PUT → async ffmpeg → 720p + poster → plays; ADR on transcode location |
-| M13 | Entries + media schema & API    | ⏳ planned | `m13` | `db:migrate` creates `entries`+`media`; API lifecycle create → upload → processing → ready  |
-| M14 | App shell (chrome)              | ⏳ planned | `m14` | BottomNav/TopBar tabs render in both themes; `ds:check` green                               |
-| M15 | Feed (read path)                | ⏳ planned | `m15` | seeded entries render with media playback; empty state; `processing` placeholder           |
-| M16 | Compose (write path)            | ⏳ planned | `m16` | phone: compose → upload 20s video → feed shows processing → ready → plays                  |
+| M13 | Entries + media schema & API    | ⏳ planned | `m13` | `db:migrate` creates `entries`+`media`; API lifecycle create → upload → processing → ready            |
+| M14 | App shell (chrome)              | ⏳ planned | `m14` | BottomNav/TopBar tabs render in both themes; `ds:check` green                                         |
+| M15 | Feed (read path)                | ⏳ planned | `m15` | seeded entries render with media playback; empty state; `processing` placeholder                      |
+| M16 | Compose (write path)            | ⏳ planned | `m16` | phone: compose → upload 20s video → feed shows processing → ready → plays                             |
 
 ## Internationalization (M10–M11)
 

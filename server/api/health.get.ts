@@ -2,7 +2,7 @@ import { sql } from 'drizzle-orm';
 import { useDb } from '~/server/utils/db';
 import { runCheck, sanitize } from '~/server/utils/health-check';
 import { NULL_PONG_VALUE, useRedis } from '~/server/utils/redis';
-import { headBucket } from '~/server/utils/storage';
+import { hasOriginalsBucket, headBucket } from '~/server/utils/storage';
 
 export default defineEventHandler(async (event) => {
   const env = process.env.APP_ENV ?? 'local';
@@ -15,7 +15,10 @@ export default defineEventHandler(async (event) => {
       return 'ok';
     }),
     runCheck('storage', async () => {
-      await headBucket();
+      await headBucket('media');
+      // Originals is optional until every env migrates to the two-bucket
+      // layout; when configured it must be reachable like the media bucket.
+      if (hasOriginalsBucket()) await headBucket('originals');
       return 'ok';
     }),
     runCheck('redis', async () => {

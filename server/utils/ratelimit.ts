@@ -22,6 +22,7 @@ let cachedRedis: Redis | null | undefined;
 let cachedEmail: RatelimitLike | undefined;
 let cachedIp: RatelimitLike | undefined;
 let cachedCallbackIp: RatelimitLike | undefined;
+let cachedMediaUpload: RatelimitLike | undefined;
 
 const getRedis = () => {
   if (cachedRedis !== undefined) return cachedRedis;
@@ -35,7 +36,12 @@ const getRedis = () => {
   return cachedRedis;
 };
 
-const createLimiter = (bucket: string, suffix: string): RatelimitLike => {
+const createLimiter = (
+  bucket: string,
+  suffix: string,
+  max: number = MAX,
+  window: Parameters<typeof Ratelimit.slidingWindow>[1] = WINDOW,
+): RatelimitLike => {
   const stage = process.env.APP_ENV ?? 'local';
   const redis = getRedis();
 
@@ -52,7 +58,7 @@ const createLimiter = (bucket: string, suffix: string): RatelimitLike => {
   console.log(`[ratelimit] driver=upstash bucket=${bucket}:${suffix}`);
   return new Ratelimit({
     redis,
-    limiter: Ratelimit.slidingWindow(MAX, WINDOW),
+    limiter: Ratelimit.slidingWindow(max, window),
     prefix: `vocabu:${stage}:rl:${bucket}:${suffix}`,
   });
 };
@@ -73,4 +79,14 @@ export const useIpRatelimit = () => {
 export const useCallbackIpRatelimit = () => {
   if (!cachedCallbackIp) cachedCallbackIp = createLimiter('callback', 'ip');
   return cachedCallbackIp;
+};
+
+// Per-user cap on presigned upload slots: generous enough for a burst of
+// captured moments, tight enough that a stuck client cannot mint thousands
+// of pending originals.
+export const useMediaUploadRatelimit = () => {
+  if (!cachedMediaUpload) {
+    cachedMediaUpload = createLimiter('media-upload', 'user', 20, '10 m');
+  }
+  return cachedMediaUpload;
 };
