@@ -46,10 +46,24 @@ export const interpolate = (
 ): string =>
   template.replace(/\{(\w+)\}/g, (match, key: string) => params[key] ?? match);
 
+// Escape text before it lands in an HTML text/attribute context. renderEmailDocument
+// applies it to every field it treats as text, so the shell is safe-by-default even
+// if a future email pipes user-controlled data (a display name) through it. `&` first
+// so the entity ampersands it introduces are not re-escaped.
+export const escapeHtml = (value: string): string =>
+  value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
 export interface EmailDocument {
   locale: LandingLocale;
   title: string;
   previewText: string;
+  // Trusted, pre-composed HTML markup — the ONE escape hatch. The caller owns
+  // its safety and MUST escapeHtml() any dynamic/user data it interpolates.
   bodyHtml: string;
   footerTagline: string;
   logoUrl: string;
@@ -63,10 +77,10 @@ export const renderEmailDocument = (doc: EmailDocument): string =>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light" />
     <meta name="supported-color-schemes" content="light" />
-    <title>${doc.title}</title>
+    <title>${escapeHtml(doc.title)}</title>
   </head>
   <body style="margin:0;padding:0;background-color:${EMAIL_BRAND.paper};font-family:${FONT_STACK};color:${EMAIL_BRAND.ink};">
-    <div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">${doc.previewText}</div>
+    <div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">${escapeHtml(doc.previewText)}</div>
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:${EMAIL_BRAND.paper};">
       <tr>
         <td align="center" style="padding:32px 16px;">
@@ -83,7 +97,7 @@ export const renderEmailDocument = (doc: EmailDocument): string =>
             </tr>
             <tr>
               <td align="center" style="padding:24px 8px 0;font-family:${FONT_STACK};font-size:13px;line-height:1.5;color:${EMAIL_BRAND.inkMuted};">
-                Vocabu · ${doc.footerTagline}
+                Vocabu · ${escapeHtml(doc.footerTagline)}
               </td>
             </tr>
           </table>
