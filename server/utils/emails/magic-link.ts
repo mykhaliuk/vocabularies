@@ -8,6 +8,7 @@ import {
   EMAIL_BRAND,
   FONT_STACK,
   emailCopy,
+  escapeHtml,
   interpolate,
   renderEmailDocument,
 } from './shell';
@@ -37,15 +38,30 @@ export const renderMagicLinkEmail = (
   const expiry = interpolate(message.expiry, { minutes });
   const logoUrl = `${getAppUrl()}/icon-192.png`;
 
+  // bodyHtml is the shell's trusted-HTML hatch, so this renderer owns escaping.
+  // The copy and link are repo/operator-controlled today, but escaping keeps the
+  // markup valid if a translation ever contains &/</'" or the link gains query
+  // params (& must be an entity in HTML). escapeHtml(link) is safe in both the
+  // href attribute and the text node.
+  const safe = {
+    heading: escapeHtml(message.heading),
+    body: escapeHtml(message.body),
+    cta: escapeHtml(message.cta),
+    expiry: escapeHtml(expiry),
+    fallback: escapeHtml(message.fallback),
+    ignore: escapeHtml(message.ignore),
+    link: escapeHtml(link),
+  };
+
   const bodyHtml = [
-    `<h1 style="margin:0 0 12px;font-family:${FONT_STACK};font-size:20px;font-weight:600;line-height:1.3;color:${EMAIL_BRAND.ink};">${message.heading}</h1>`,
-    `<p style="margin:0 0 24px;font-family:${FONT_STACK};font-size:16px;line-height:1.5;color:${EMAIL_BRAND.ink};">${message.body}</p>`,
-    `<table role="presentation" cellpadding="0" cellspacing="0"><tr><td align="center" bgcolor="${EMAIL_BRAND.action}" style="border-radius:${EMAIL_BRAND.radiusBtn};"><a href="${link}" style="display:inline-block;padding:12px 28px;font-family:${FONT_STACK};font-size:16px;font-weight:500;line-height:1;color:${EMAIL_BRAND.onAction};text-decoration:none;border-radius:${EMAIL_BRAND.radiusBtn};">${message.cta}</a></td></tr></table>`,
-    `<p style="margin:24px 0 4px;font-family:${FONT_STACK};font-size:13px;line-height:1.5;color:${EMAIL_BRAND.inkMuted};">${expiry}</p>`,
-    `<p style="margin:16px 0 4px;font-family:${FONT_STACK};font-size:13px;line-height:1.5;color:${EMAIL_BRAND.inkMuted};">${message.fallback}</p>`,
-    `<p style="margin:0;font-family:${FONT_STACK};font-size:13px;line-height:1.5;word-break:break-all;"><a href="${link}" style="color:${EMAIL_BRAND.link};">${link}</a></p>`,
+    `<h1 style="margin:0 0 12px;font-family:${FONT_STACK};font-size:20px;font-weight:600;line-height:1.3;color:${EMAIL_BRAND.ink};">${safe.heading}</h1>`,
+    `<p style="margin:0 0 24px;font-family:${FONT_STACK};font-size:16px;line-height:1.5;color:${EMAIL_BRAND.ink};">${safe.body}</p>`,
+    `<table role="presentation" cellpadding="0" cellspacing="0"><tr><td align="center" bgcolor="${EMAIL_BRAND.action}" style="border-radius:${EMAIL_BRAND.radiusBtn};"><a href="${safe.link}" style="display:inline-block;padding:12px 28px;font-family:${FONT_STACK};font-size:16px;font-weight:500;line-height:1;color:${EMAIL_BRAND.onAction};text-decoration:none;border-radius:${EMAIL_BRAND.radiusBtn};">${safe.cta}</a></td></tr></table>`,
+    `<p style="margin:24px 0 4px;font-family:${FONT_STACK};font-size:13px;line-height:1.5;color:${EMAIL_BRAND.inkMuted};">${safe.expiry}</p>`,
+    `<p style="margin:16px 0 4px;font-family:${FONT_STACK};font-size:13px;line-height:1.5;color:${EMAIL_BRAND.inkMuted};">${safe.fallback}</p>`,
+    `<p style="margin:0;font-family:${FONT_STACK};font-size:13px;line-height:1.5;word-break:break-all;"><a href="${safe.link}" style="color:${EMAIL_BRAND.link};">${safe.link}</a></p>`,
     `<hr style="border:none;border-top:1px solid ${EMAIL_BRAND.hairline};margin:24px 0 0;" />`,
-    `<p style="margin:24px 0 0;font-family:${FONT_STACK};font-size:13px;line-height:1.5;color:${EMAIL_BRAND.inkMuted};">${message.ignore}</p>`,
+    `<p style="margin:24px 0 0;font-family:${FONT_STACK};font-size:13px;line-height:1.5;color:${EMAIL_BRAND.inkMuted};">${safe.ignore}</p>`,
   ].join('\n');
 
   const html = renderEmailDocument({

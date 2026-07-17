@@ -46,10 +46,11 @@ export const interpolate = (
 ): string =>
   template.replace(/\{(\w+)\}/g, (match, key: string) => params[key] ?? match);
 
-// Escape text before it lands in an HTML text/attribute context. renderEmailDocument
-// applies it to every field it treats as text, so the shell is safe-by-default even
-// if a future email pipes user-controlled data (a display name) through it. `&` first
-// so the entity ampersands it introduces are not re-escaped.
+// Escape a value before it lands in an HTML text or double-quoted attribute
+// context. renderEmailDocument runs it over every dynamic insertion it makes
+// (title, preview, footer, logo URL, lang), so the shell is safe-by-default even
+// if a future email pipes user-controlled data through it. bodyHtml is the one
+// exception — see its field doc. `&` first so introduced entities aren't re-escaped.
 export const escapeHtml = (value: string): string =>
   value
     .replace(/&/g, '&amp;')
@@ -71,7 +72,7 @@ export interface EmailDocument {
 
 export const renderEmailDocument = (doc: EmailDocument): string =>
   `<!doctype html>
-<html lang="${doc.locale}">
+<html lang="${escapeHtml(doc.locale)}">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -87,7 +88,7 @@ export const renderEmailDocument = (doc: EmailDocument): string =>
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;">
             <tr>
               <td align="center" style="padding-bottom:24px;">
-                <img src="${doc.logoUrl}" width="48" height="48" alt="Vocabu" style="display:block;border-radius:${EMAIL_BRAND.radiusBtn};" />
+                <img src="${escapeHtml(doc.logoUrl)}" width="48" height="48" alt="Vocabu" style="display:block;border-radius:${EMAIL_BRAND.radiusBtn};" />
               </td>
             </tr>
             <tr>
