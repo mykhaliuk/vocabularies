@@ -33,3 +33,5 @@ Format: `NNNN-short-slug.md`, template in [0000-template.md](0000-template.md).
 - [ADR-0006](0006-per-locale-static-landing.md) — per-locale prerendered
   landings (/, /fr, /uk) with baked copy and an Accept-Language entry
   redirect
+- [ADR-0007](0007-transactional-email-rendering.md) — transactional emails are
+  hand-rolled inline-styled HTML, localized server-side (magic-link first)

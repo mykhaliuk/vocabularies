@@ -1,14 +1,27 @@
 import { Resend } from 'resend';
+import { renderMagicLinkEmail } from '~/server/utils/emails/magic-link';
+import type { LandingLocale } from '~/shared/landing-locales';
+
+export interface MagicLinkOptions {
+  locale: LandingLocale;
+  expiryMinutes: number;
+}
 
 export interface Emailer {
   isNull: boolean;
-  sendMagicLink: (to: string, link: string) => Promise<void>;
+  sendMagicLink: (
+    to: string,
+    link: string,
+    options: MagicLinkOptions,
+  ) => Promise<void>;
 }
 
 const consoleEmailer: Emailer = {
   isNull: true,
-  sendMagicLink: async (to, link) => {
-    console.log(`[email:console] magic-link to=${to} link=${link}`);
+  sendMagicLink: async (to, link, options) => {
+    console.log(
+      `[email:console] magic-link to=${to} locale=${options.locale} link=${link}`,
+    );
   },
 };
 
@@ -33,13 +46,26 @@ const create = (): Emailer => {
   console.log(`[email] driver=resend from=${from}`);
   return {
     isNull: false,
-    sendMagicLink: async (to, link) => {
-      await resend.emails.send({
+    sendMagicLink: async (to, link, options) => {
+      const { subject, html, text } = renderMagicLinkEmail({
+        locale: options.locale,
+        link,
+        expiryMinutes: options.expiryMinutes,
+      });
+      // Resend resolves { data, error } instead of throwing on API failures;
+      // propagate so the handler returns 5xx (and Sentry sees it) rather than a
+      // false "check your inbox". Send happens for any address regardless of
+      // registration, so surfacing the failure leaks no enumeration signal.
+      const { error } = await resend.emails.send({
         from,
         to,
-        subject: 'Your Vocabu sign-in link',
-        text: `Click to sign in: ${link}\n\nThe link expires in 15 minutes.`,
+        subject,
+        html,
+        text,
       });
+      if (error) {
+        throw new Error(`[email] resend send failed: ${error.message}`);
+      }
     },
   };
 };

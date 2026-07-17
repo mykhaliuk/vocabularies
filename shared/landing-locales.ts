@@ -15,6 +15,43 @@ export const LANDING_ALT_LOCALES = LANDING_LOCALES.filter(
   (locale) => locale !== LANDING_DEFAULT_LOCALE,
 );
 
+export const isLandingLocale = (value: string): value is LandingLocale =>
+  (LANDING_LOCALES as readonly string[]).includes(value);
+
+// Minimal Accept-Language negotiation over the locales we ship: the highest-q
+// primary subtag among the roster wins; anything unsupported is ignored so the
+// caller can fall back (to English for the landing redirect, to the default
+// for the email locale — VKB-55). Shared so the Nitro landing plugin and the
+// server-side email locale resolver run one implementation, not two hand-synced
+// copies. RE2 `has` conditions on the Vercel edge cannot parse q-values, so the
+// edge leg (landingVercelRoutes) stays a first-tag approximation of this —
+// ADR-0006.
+export const pickAcceptLanguageLocale = (
+  header: string,
+): LandingLocale | undefined => {
+  const ranges = header.split(',');
+  let best: LandingLocale | undefined;
+  let bestQuality = 0;
+  for (const range of ranges) {
+    const parts = range.trim().split(';');
+    const tag = parts[0]?.trim().toLowerCase() ?? '';
+    if (tag === '') continue;
+    const primary = tag.split('-')[0] ?? tag;
+    if (!isLandingLocale(primary)) continue;
+    let quality = 1;
+    for (let i = 1; i < parts.length; i++) {
+      const param = parts[i]?.trim() ?? '';
+      if (param.startsWith('q=')) quality = Number(param.slice(2));
+    }
+    if (!Number.isFinite(quality)) quality = 0;
+    if (quality > bestQuality) {
+      bestQuality = quality;
+      best = primary;
+    }
+  }
+  return best;
+};
+
 // The same cookie @nuxtjs/i18n writes (detectBrowserLanguage.cookieKey) — the
 // "explicit choice persists" contract of ADR-0004 that the landing honors.
 export const LOCALE_COOKIE = 'vocabu-locale';
