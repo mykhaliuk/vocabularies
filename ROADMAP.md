@@ -57,9 +57,22 @@ settled 2026-07-17 (details in the M12 ADR once the spike lands):
 - **Derivatives:** video → 720p H.264/AAC + poster frame (720p for now —
   revisit when there's revenue); audio → one canonical format (opus vs m4a
   decided in the spike); both → duration; audio → waveform peaks.
-- **Open question the spike answers:** where transcoding lives — ffmpeg in a
-  Vercel function (a 20s 4K60 HEVC clip must fit the 300s limit) vs
-  Cloudflare Stream as fallback.
+- **Two buckets per stage** (architecture review 2026-07-17):
+  `vocabu-originals-<stage>` — fully private ingest (presigned PUT only,
+  lifecycle sweeps stale multiparts and orphaned uploads) and the media
+  bucket — derivatives + posters + avatars, GET-only CORS, future candidate
+  for an R2 custom domain / CDN. Per-bucket scoped R2 tokens. Renames while
+  it's cheap: `vocabu-audio-local` → `vocabu-media-local`,
+  `vocabu-medea-*` → `vocabu-media-*`.
+- **Size enforcement:** presigned PUT signs `Content-Length` alongside
+  `Content-Type`; confirm re-checks `head.ContentLength`; presign endpoint
+  rate-limited.
+- **Open questions the spike answers:** where transcoding lives — ffmpeg in
+  a Vercel function (a 20s 4K60 HEVC clip must fit the 300s limit; explicit
+  `maxDuration`, plan allows it, ffmpeg binary fits the bundle) vs
+  Cloudflare Stream as fallback — and the async trigger (QStash first
+  candidate vs R2 events → CF Queues; QStash to be discussed with the owner
+  before it's final).
 
 Linear: VKB-63 (spike) → VKB-64 (schema/API) → VKB-65 (shell) → VKB-66
 (feed) → VKB-67 (compose).
