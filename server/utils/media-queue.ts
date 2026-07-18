@@ -57,8 +57,9 @@ export const enqueueMediaProcessing = async (key: string, userId: string) => {
     return 'inline-blocking';
   }
 
-  processMedia(key, userId).catch((error) => {
-    console.error('[media-queue] local processing failed', { key, error });
-  });
+  // The catch exists only to keep the detached promise from becoming an
+  // unhandled rejection — processMedia already logged the error and
+  // persisted the failure manifest; a second log here would duplicate it.
+  processMedia(key, userId).catch(() => {});
   return 'inline';
 };
