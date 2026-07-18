@@ -18,6 +18,10 @@ export const getAppUrl = () => {
 // asset; override with EMAIL_ASSET_ORIGIN if the public host changes. Trailing
 // slashes are trimmed so `${origin}/icon-192.png` never doubles up.
 export const getEmailAssetOrigin = () => {
-  const origin = process.env.EMAIL_ASSET_ORIGIN ?? 'https://vocabu.myka.me';
+  // `||`, not `??`: an env set-but-empty (as .env.example ships it) must fall
+  // back too — an empty origin would yield a host-less `/icon-192.png` and
+  // re-break the logo. trim() also rejects a whitespace-only value.
+  const configured = process.env.EMAIL_ASSET_ORIGIN?.trim();
+  const origin = configured || 'https://vocabu.myka.me';
   return origin.replace(/\/+$/, '');
 };
