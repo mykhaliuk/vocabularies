@@ -35,11 +35,22 @@ export default defineEventHandler(async (event) => {
   const key = mintOriginalKey(user.id, mediaId, contentType);
   // Content-Length is part of the signature: the client can upload exactly
   // the size it declared, nothing bigger.
-  const uploadUrl = await presignPut(key, contentType, {
-    kind: 'originals',
-    ttlSec: UPLOAD_TTL_SEC,
-    contentLength: sizeBytes,
-  });
+  let uploadUrl;
+  try {
+    uploadUrl = await presignPut(key, contentType, {
+      kind: 'originals',
+      ttlSec: UPLOAD_TTL_SEC,
+      contentLength: sizeBytes,
+    });
+  } catch (error) {
+    // Missing originals bucket / bad creds is an availability problem,
+    // not a client error — surface it as 503 like media/confirm does.
+    console.error('[media.upload] presign failed', { key, error });
+    throw createError({
+      statusCode: 503,
+      statusMessage: 'storage unavailable',
+    });
+  }
 
   setResponseHeader(event, 'Cache-Control', 'no-store');
   return { mediaId, key, uploadUrl, maxBytes: MAX_ORIGINAL_BYTES };

@@ -1,3 +1,5 @@
+import { createReadStream } from 'node:fs';
+import { stat } from 'node:fs/promises';
 import {
   GetObjectCommand,
   HeadBucketCommand,
@@ -121,6 +123,27 @@ export const putObject = async (
       Bucket: bucket,
       Key: key,
       Body: body,
+      ContentType: contentType,
+    }),
+  );
+};
+
+// Streams a file from disk instead of buffering it — derivatives can be
+// tens of MB and the lambda already holds the original plus PCM.
+export const putFile = async (
+  key: string,
+  filePath: string,
+  contentType: string,
+  kind: BucketKind = 'media',
+) => {
+  const { size } = await stat(filePath);
+  const { client, bucket } = resolve(kind);
+  return client.send(
+    new PutObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      Body: createReadStream(filePath),
+      ContentLength: size,
       ContentType: contentType,
     }),
   );

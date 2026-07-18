@@ -1,6 +1,6 @@
 import { execFile } from 'node:child_process';
 import { createWriteStream } from 'node:fs';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pipeline } from 'node:stream/promises';
@@ -12,7 +12,7 @@ import {
   derivedKeys,
   parseOriginalKey,
 } from './media-key';
-import { getObject, isNotFoundError, putObject } from './storage';
+import { getObject, isNotFoundError, putFile, putObject } from './storage';
 import type { Readable } from 'node:stream';
 
 const execFileAsync = promisify(execFile);
@@ -58,6 +58,11 @@ export interface MediaFailure {
   error: string;
   processedAt: string;
 }
+
+// A rejection whose message is safe to show to the user (too long,
+// unreadable file). Everything else — ffmpeg stderr, S3 errors, key
+// layout — stays in server logs; the client gets a generic message.
+export class MediaRejection extends Error {}
 
 interface ProbeResult {
   durationSec: number | null;
@@ -234,8 +239,8 @@ const runPipeline = async (
   // carries one (mp4/m4a moov box).
   const sourceDurationSec = probe.durationSec;
   if (sourceDurationSec !== null && sourceDurationSec > DURATION_CAP_SEC) {
-    throw new Error(
-      `[media-process] duration ${sourceDurationSec.toFixed(1)}s exceeds ${MAX_DURATION_SEC}s limit`,
+    throw new MediaRejection(
+      `moment is ${sourceDurationSec.toFixed(1)}s — the limit is ${MAX_DURATION_SEC}s`,
     );
   }
   const capArgs =
@@ -310,12 +315,8 @@ const runPipeline = async (
     derivedDurationSec = derivedProbe.durationSec;
 
     uploads.push(
-      readFile(videoPath).then((data) =>
-        putObject(keys.video, data, 'video/mp4'),
-      ),
-      readFile(posterPath).then((data) =>
-        putObject(keys.poster, data, 'image/jpeg'),
-      ),
+      putFile(keys.video, videoPath, 'video/mp4'),
+      putFile(keys.poster, posterPath, 'image/jpeg'),
     );
   } else {
     const audioPath = join(workDir, 'audio.m4a');
@@ -340,22 +341,18 @@ const runPipeline = async (
       derivedDurationSec = derivedProbe.durationSec;
     }
 
-    uploads.push(
-      readFile(audioPath).then((data) =>
-        putObject(keys.audio, data, 'audio/mp4'),
-      ),
-    );
+    uploads.push(putFile(keys.audio, audioPath, 'audio/mp4'));
   }
 
   let durationSec = sourceDurationSec;
   if (durationSec === null) {
     durationSec = derivedDurationSec;
     if (durationSec === null) {
-      throw new Error('[media-process] could not determine duration');
+      throw new MediaRejection('could not read this file as audio or video');
     }
     if (durationSec > DURATION_CAP_SEC) {
-      throw new Error(
-        `[media-process] duration exceeds ${MAX_DURATION_SEC}s limit (capped derivative)`,
+      throw new MediaRejection(
+        `moment is longer than the ${MAX_DURATION_SEC}s limit`,
       );
     }
   }
@@ -431,9 +428,14 @@ const writeFailureManifest = async (
     }
   }
 
+  // Only MediaRejection messages are client-safe; anything else (ffmpeg
+  // stderr, storage errors) is logged server-side and replaced with a
+  // generic message so internals never reach the client.
+  console.error('[media-process] processing failed', { key, error });
   const failure: MediaFailure = {
     status: 'failed',
-    error: error instanceof Error ? error.message : String(error),
+    error:
+      error instanceof MediaRejection ? error.message : 'processing failed',
     processedAt: new Date().toISOString(),
   };
   await putObject(
