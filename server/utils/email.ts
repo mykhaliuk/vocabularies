@@ -47,7 +47,7 @@ const create = (): Emailer => {
   return {
     isNull: false,
     sendMagicLink: async (to, link, options) => {
-      const { subject, html, text } = renderMagicLinkEmail({
+      const { subject, html, text, attachments } = renderMagicLinkEmail({
         locale: options.locale,
         link,
         expiryMinutes: options.expiryMinutes,
@@ -62,6 +62,7 @@ const create = (): Emailer => {
         subject,
         html,
         text,
+        attachments,
       });
       if (error) {
         throw new Error(`[email] resend send failed: ${error.message}`);
