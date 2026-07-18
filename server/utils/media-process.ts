@@ -12,7 +12,7 @@ import {
   derivedKeys,
   parseOriginalKey,
 } from './media-key';
-import { getObject, putObject } from './storage';
+import { getObject, isNotFoundError, putObject } from './storage';
 import type { Readable } from 'node:stream';
 
 const execFileAsync = promisify(execFile);
@@ -416,8 +416,19 @@ const writeFailureManifest = async (
       );
       return;
     }
-  } catch {
-    // Not found (the normal case) or unreadable — proceed to write.
+  } catch (readError) {
+    // NotFound is the normal first-run case — proceed to record the
+    // failure. Any OTHER read error is a transient exactly when a
+    // retry-after-transient is running, so writing now risks clobbering
+    // a ready manifest we could not see; skip instead (the client keeps
+    // seeing 'processing', which a later retry resolves either way).
+    if (!isNotFoundError(readError)) {
+      console.error(
+        '[media-process] manifest read failed — skipping failure write',
+        { key, readError },
+      );
+      return;
+    }
   }
 
   const failure: MediaFailure = {
