@@ -5,17 +5,23 @@ import {
   S3Client,
 } from '@aws-sdk/client-s3';
 
+// Two buckets, two CORS profiles (VKB-63):
+// - media: the app only ever GETs derivatives/posters/avatars from it.
+// - originals: the browser only ever PUTs raw uploads into it.
+// Content-Length is in AllowedHeaders because presigned PUTs sign it.
+
 const endpoint = process.env.S3_ENDPOINT;
 const region = process.env.S3_REGION ?? 'auto';
 const accessKeyId = process.env.S3_ACCESS_KEY_ID;
 const secretAccessKey = process.env.S3_SECRET_ACCESS_KEY;
-const bucket = process.env.S3_BUCKET;
+const mediaBucket = process.env.S3_BUCKET_MEDIA ?? process.env.S3_BUCKET;
+const originalsBucket = process.env.S3_BUCKET_ORIGINALS;
 const appUrl = process.env.APP_URL;
 const stage = process.env.APP_ENV;
 
-if (!endpoint || !accessKeyId || !secretAccessKey || !bucket || !appUrl) {
+if (!endpoint || !accessKeyId || !secretAccessKey || !mediaBucket || !appUrl) {
   console.error(
-    '[r2-cors-set] missing one of S3_ENDPOINT, S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY, S3_BUCKET, APP_URL',
+    '[r2-cors-set] missing one of S3_ENDPOINT, S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY, S3_BUCKET_MEDIA, APP_URL',
   );
   process.exit(2);
 }
@@ -28,18 +34,56 @@ if (!stage || stage === 'local') {
   process.exit(2);
 }
 
-const allowedOrigins = ['http://localhost:3000', appUrl];
-const cors = {
-  CORSRules: [
+// Browsers send the Origin header without a trailing slash — an origin
+// stored as 'https://host/' would never match and every preflight would
+// fail, which is exactly what this script exists to prevent.
+const allowedOrigins = ['http://localhost:3000', appUrl.replace(/\/+$/, '')];
+
+const profiles = [
+  {
+    bucket: mediaBucket,
+    rules: [
+      {
+        AllowedOrigins: allowedOrigins,
+        AllowedMethods: ['GET', 'HEAD'],
+        AllowedHeaders: ['Content-Type'],
+        ExposeHeaders: ['ETag'],
+        MaxAgeSeconds: 3600,
+      },
+      // Avatars still upload straight into the media bucket; drop this rule
+      // once they move behind the originals-style flow (VKB-64).
+      {
+        AllowedOrigins: allowedOrigins,
+        AllowedMethods: ['PUT'],
+        AllowedHeaders: ['Content-Type', 'x-amz-*'],
+        ExposeHeaders: ['ETag'],
+        MaxAgeSeconds: 3600,
+      },
+    ],
+  },
+];
+
+// This script only runs against cloud stages, where the media upload path
+// exists — a missing originals bucket is a hard error, not a skip: exiting
+// green while the bucket the browser PUTs to has no CORS would hide the
+// exact failure this script exists to prevent.
+if (!originalsBucket) {
+  console.error('[r2-cors-set] S3_BUCKET_ORIGINALS is required');
+  process.exit(2);
+}
+
+profiles.push({
+  bucket: originalsBucket,
+  rules: [
     {
       AllowedOrigins: allowedOrigins,
-      AllowedMethods: ['PUT', 'GET', 'HEAD'],
-      AllowedHeaders: ['Content-Type', 'x-amz-*'],
+      AllowedMethods: ['PUT'],
+      AllowedHeaders: ['Content-Type', 'Content-Length', 'x-amz-*'],
       ExposeHeaders: ['ETag'],
       MaxAgeSeconds: 3600,
     },
   ],
-};
+});
 
 const client = new S3Client({
   endpoint,
@@ -48,24 +92,30 @@ const client = new S3Client({
   forcePathStyle: false,
 });
 
-console.log(
-  `[r2-cors-set] stage=${stage} endpoint=${endpoint} bucket=${bucket}`,
-);
-console.log('[r2-cors-set] applying rules:');
-console.log(JSON.stringify(cors.CORSRules[0], null, 2));
-
-try {
-  await client.send(
-    new PutBucketCorsCommand({ Bucket: bucket, CORSConfiguration: cors }),
+let failed = false;
+for (const profile of profiles) {
+  console.log(
+    `[r2-cors-set] stage=${stage} endpoint=${endpoint} bucket=${profile.bucket}`,
   );
-  const verify = await client.send(
-    new GetBucketCorsCommand({ Bucket: bucket }),
-  );
-  console.log('[r2-cors-set] readback:');
-  console.log(JSON.stringify(verify.CORSRules, null, 2));
-  console.log('[r2-cors-set] done');
-} catch (err) {
-  const message = err instanceof Error ? err.message : String(err);
-  console.error(`[r2-cors-set] failed: ${message}`);
-  process.exit(1);
+  console.log(JSON.stringify(profile.rules, null, 2));
+  try {
+    await client.send(
+      new PutBucketCorsCommand({
+        Bucket: profile.bucket,
+        CORSConfiguration: { CORSRules: profile.rules },
+      }),
+    );
+    const verify = await client.send(
+      new GetBucketCorsCommand({ Bucket: profile.bucket }),
+    );
+    console.log('[r2-cors-set] readback:');
+    console.log(JSON.stringify(verify.CORSRules, null, 2));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`[r2-cors-set] ${profile.bucket} failed: ${message}`);
+    failed = true;
+  }
 }
+
+if (failed) process.exit(1);
+console.log('[r2-cors-set] done');

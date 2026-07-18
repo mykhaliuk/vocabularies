@@ -161,6 +161,12 @@ export default defineNuxtConfig({
       config: {
         routes: landingVercelRoutes(),
       },
+      // Media transcoding (/api/media/process) needs minutes, not seconds;
+      // Nitro ships one function, so the cap is global. Actual ceiling is
+      // plan-dependent — the VKB-63 spike verifies it on a real deploy.
+      functions: {
+        maxDuration: 300,
+      },
     },
   },
   routeRules: {
@@ -260,7 +266,6 @@ export default defineNuxtConfig({
     s3Region: process.env.S3_REGION ?? 'auto',
     s3AccessKeyId: process.env.S3_ACCESS_KEY_ID ?? '',
     s3SecretAccessKey: process.env.S3_SECRET_ACCESS_KEY ?? '',
-    s3Bucket: process.env.S3_BUCKET ?? '',
     s3ForcePathStyle: process.env.S3_FORCE_PATH_STYLE === 'true',
     resendApiKey: process.env.RESEND_API_KEY ?? '',
     emailFrom: process.env.EMAIL_FROM ?? '',

@@ -22,6 +22,7 @@ let cachedRedis: Redis | null | undefined;
 let cachedEmail: RatelimitLike | undefined;
 let cachedIp: RatelimitLike | undefined;
 let cachedCallbackIp: RatelimitLike | undefined;
+let cachedMediaUpload: RatelimitLike | undefined;
 
 const getRedis = () => {
   if (cachedRedis !== undefined) return cachedRedis;
@@ -35,7 +36,17 @@ const getRedis = () => {
   return cachedRedis;
 };
 
-const createLimiter = (bucket: string, suffix: string): RatelimitLike => {
+interface LimiterOptions {
+  max?: number;
+  window?: Parameters<typeof Ratelimit.slidingWindow>[1];
+}
+
+const createLimiter = (
+  bucket: string,
+  suffix: string,
+  options: LimiterOptions = {},
+): RatelimitLike => {
+  const { max = MAX, window = WINDOW } = options;
   const stage = process.env.APP_ENV ?? 'local';
   const redis = getRedis();
 
@@ -52,7 +63,7 @@ const createLimiter = (bucket: string, suffix: string): RatelimitLike => {
   console.log(`[ratelimit] driver=upstash bucket=${bucket}:${suffix}`);
   return new Ratelimit({
     redis,
-    limiter: Ratelimit.slidingWindow(MAX, WINDOW),
+    limiter: Ratelimit.slidingWindow(max, window),
     prefix: `vocabu:${stage}:rl:${bucket}:${suffix}`,
   });
 };
@@ -73,4 +84,32 @@ export const useIpRatelimit = () => {
 export const useCallbackIpRatelimit = () => {
   if (!cachedCallbackIp) cachedCallbackIp = createLimiter('callback', 'ip');
   return cachedCallbackIp;
+};
+
+// Per-user cap on presigned upload slots: generous enough for a burst of
+// captured moments, tight enough that a stuck client cannot mint thousands
+// of pending originals.
+export const useMediaUploadRatelimit = () => {
+  if (!cachedMediaUpload) {
+    cachedMediaUpload = createLimiter('media-upload', 'user', {
+      max: 20,
+      window: '10 m',
+    });
+  }
+  return cachedMediaUpload;
+};
+
+// Fail-open wrapper matching the magic-link limiter policy: an Upstash
+// outage must not turn every upload into a 500 — abuse control is not
+// worth an availability hole.
+export const checkMediaUploadRateLimit = async (userId: string) => {
+  try {
+    const verdict = await useMediaUploadRatelimit().limit(userId);
+    return verdict.success;
+  } catch (error) {
+    console.error('[ratelimit] media-upload check failed — failing open', {
+      error,
+    });
+    return true;
+  }
 };

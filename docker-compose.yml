@@ -52,8 +52,9 @@ services:
       - |
         set -e
         mc alias set local http://minio:9000 minioadmin minioadmin
-        mc mb -p local/vocabu-audio-local
-        echo 'minio-init: bucket ready (CORS handled by MINIO_API_CORS_ALLOW_ORIGIN)'
+        mc mb -p local/vocabu-media-local
+        mc mb -p local/vocabu-originals-local
+        echo 'minio-init: buckets ready (CORS handled by MINIO_API_CORS_ALLOW_ORIGIN)'
     restart: 'no'
 
 volumes:
