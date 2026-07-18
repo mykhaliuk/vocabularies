@@ -1,6 +1,12 @@
 <script setup>
 // VKB-63 spike page: bare-bones upload → processing → playback loop.
 // Throwaway UI — no design, tokens only where color is unavoidable.
+// Dev tooling only: hard-404s on the production stage so experimental
+// surfaces never ship to real users even after dev → main merges.
+const { public: publicConfig } = useRuntimeConfig();
+if (publicConfig.appEnv === 'production') {
+  throw createError({ statusCode: 404, statusMessage: 'Page not found' });
+}
 
 /** @type {import('vue').Ref<File | null>} */
 const file = ref(null);
