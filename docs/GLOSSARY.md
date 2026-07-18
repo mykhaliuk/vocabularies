@@ -30,6 +30,13 @@ crystallizes during planning, add it here in the same PR.
   it is tapped to play.
 - **peaks** — the amplitude array extracted from audio, used to draw the
   waveform.
+- **plan** — the user's tier (`free`, `plus`); the only thing billing ever
+  writes. Read exclusively through `can()`.
+- **entitlement** (also **capability**) — a product right derived from the
+  plan (e.g. video upload on Plus), answered by the `can(user, capability)`
+  policy module and enforced server-side. Distinct from a _feature flag_,
+  which is an ops rollout tool — Vocabu has no feature-flags table until a
+  real cohort need exists.
 
 ## Platform
 
