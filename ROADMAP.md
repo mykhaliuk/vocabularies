@@ -50,7 +50,10 @@ settled 2026-07-17 (details in the M12 ADR once the spike lands):
 - **Upload-first, no in-browser recording** in v1 — moments are captured
   spontaneously with the dictaphone/camera and uploaded as files (any format,
   audio or video).
-- **Entity is `media`** (kind `audio | video`), limits ≤20s / ~250MB original.
+- **Entity is `media`** (kind `audio | video`); limits per kind: video
+  ≤20s (weight + transcode cost), audio ≤3min (cheap in every dimension);
+  original ≤~250MB. Client pre-checks duration via `loadedmetadata`
+  (best-effort), the server is authoritative.
 - **Pipeline:** presigned PUT of the original as-is to R2 `originals/`
   (direct, bypassing the server) → entry visible as `processing` → async
   ffmpeg normalization → `ready`. Originals kept forever as source of truth.

@@ -18,8 +18,9 @@ crystallizes during planning, add it here in the same PR.
 - **collection** — a named group of words curated by a user.
 - **magic link** — the emailed one-time sign-in link; the only way in, there
   are no passwords.
-- **moment** — the captured piece of the speaker actually saying it: an audio
-  or video clip of up to 20 seconds attached to an entry.
+- **moment** — the captured piece of the speaker actually saying it: a video
+  clip of up to 20 seconds or an audio clip of up to 3 minutes attached to
+  an entry.
 - **media** — the umbrella term for a moment's file, audio or video alike.
   The entity is called _media_, never "audio" — video is a first-class kind.
 - **original** — the media file exactly as the user uploaded it, kept forever

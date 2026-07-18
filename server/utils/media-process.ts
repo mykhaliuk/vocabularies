@@ -8,7 +8,8 @@ import { promisify } from 'node:util';
 import ffmpegInstaller from '@ffmpeg-installer/ffmpeg';
 import {
   DURATION_TOLERANCE_SEC,
-  MAX_DURATION_SEC,
+  MAX_AUDIO_DURATION_SEC,
+  MAX_VIDEO_DURATION_SEC,
   derivedKeys,
   parseOriginalKey,
 } from './media-key';
@@ -215,7 +216,8 @@ const SCALE_720 =
   `scale=w='if(gt(iw,ih),-2,min(${VIDEO_TARGET_EDGE_PX},iw))'` +
   `:h='if(gt(iw,ih),min(${VIDEO_TARGET_EDGE_PX},ih),-2)'`;
 
-const DURATION_CAP_SEC = MAX_DURATION_SEC + DURATION_TOLERANCE_SEC;
+const durationLimitSec = (kind: 'audio' | 'video') =>
+  kind === 'video' ? MAX_VIDEO_DURATION_SEC : MAX_AUDIO_DURATION_SEC;
 
 const runPipeline = async (
   key: string,
@@ -233,23 +235,26 @@ const runPipeline = async (
   const probe = await probeBanner(originalPath);
   const probeMs = Date.now() - probeStart;
 
+  const kind = probe.hasVideo ? 'video' : 'audio';
+  const sourceCodecs = probe.codecs;
+  // Per-kind limits: video is capped tight, audio may run to minutes.
+  const limitSec = durationLimitSec(kind);
+  const capSec = limitSec + DURATION_TOLERANCE_SEC;
+
   // Some valid containers (browser MediaRecorder WebM) report no duration
   // in the banner. Those are NOT rejected: the transcode is capped with -t
   // and the real duration is read back from the derivative, which always
   // carries one (mp4/m4a moov box).
   const sourceDurationSec = probe.durationSec;
-  if (sourceDurationSec !== null && sourceDurationSec > DURATION_CAP_SEC) {
+  if (sourceDurationSec !== null && sourceDurationSec > capSec) {
     throw new MediaRejection(
-      `moment is ${sourceDurationSec.toFixed(1)}s — the limit is ${MAX_DURATION_SEC}s`,
+      `${kind} moment is ${sourceDurationSec.toFixed(1)}s — the limit is ${limitSec}s`,
     );
   }
   const capArgs =
     sourceDurationSec === null
-      ? ['-t', String(DURATION_CAP_SEC + CAP_DETECT_EPSILON_SEC)]
+      ? ['-t', String(capSec + CAP_DETECT_EPSILON_SEC)]
       : [];
-
-  const kind = probe.hasVideo ? 'video' : 'audio';
-  const sourceCodecs = probe.codecs;
 
   const keys = derivedKeys(userId, mediaId);
   let width: number | null = null;
@@ -350,9 +355,9 @@ const runPipeline = async (
     if (durationSec === null) {
       throw new MediaRejection('could not read this file as audio or video');
     }
-    if (durationSec > DURATION_CAP_SEC) {
+    if (durationSec > capSec) {
       throw new MediaRejection(
-        `moment is longer than the ${MAX_DURATION_SEC}s limit`,
+        `${kind} moment is longer than the ${limitSec}s limit`,
       );
     }
   }

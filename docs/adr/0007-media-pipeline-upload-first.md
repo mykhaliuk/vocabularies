@@ -20,7 +20,10 @@ serve" is not an option for video.
 ## Decision
 
 **Upload-first, no in-browser recording in v1.** The app accepts any
-audio/video file up to 20s / 250MB.
+audio/video file up to 250MB. Duration limits are per kind: video ≤20s
+(weight + transcode cost), audio ≤3min (cheap in every dimension — ~1MB
+per minute of AAC, seconds to transcode). The client pre-checks duration
+via `loadedmetadata` before uploading; the server is authoritative.
 
 **Two buckets per stage.** `originals` — fully private ingest: browser
 uploads via presigned PUT (signature pins Content-Type AND Content-Length),

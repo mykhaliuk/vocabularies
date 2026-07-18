@@ -10,13 +10,60 @@ const errorMessage = ref('');
 /** @type {import('vue').Ref<any>} */
 const result = ref(null);
 
+const MAX_VIDEO_DURATION_SEC = 20;
+const MAX_AUDIO_DURATION_SEC = 180;
+const METADATA_TIMEOUT_MS = 3000;
+
+// Best-effort duration read via loadedmetadata — catches an over-limit
+// pick BEFORE 100+MB leave the phone. null when the browser cannot parse
+// the container (exotic formats); the server stays authoritative.
+/**
+ * @param {File} picked
+ * @returns {Promise<number | null>}
+ */
+const readDurationSec = (picked) => {
+  return new Promise((resolve) => {
+    const isVideo = picked.type.startsWith('video/');
+    const element = document.createElement(isVideo ? 'video' : 'audio');
+    const url = URL.createObjectURL(picked);
+    const done = (/** @type {number | null} */ value) => {
+      URL.revokeObjectURL(url);
+      resolve(value);
+    };
+    const timer = setTimeout(() => done(null), METADATA_TIMEOUT_MS);
+    element.addEventListener('loadedmetadata', () => {
+      clearTimeout(timer);
+      done(Number.isFinite(element.duration) ? element.duration : null);
+    });
+    element.addEventListener('error', () => {
+      clearTimeout(timer);
+      done(null);
+    });
+    element.preload = 'metadata';
+    element.src = url;
+  });
+};
+
 /** @param {Event} pickEvent */
-const onPick = (pickEvent) => {
+const onPick = async (pickEvent) => {
   const input = /** @type {HTMLInputElement} */ (pickEvent.target);
-  file.value = input.files?.[0] ?? null;
+  const picked = input.files?.[0] ?? null;
+  file.value = picked;
   phase.value = 'idle';
   errorMessage.value = '';
   result.value = null;
+  if (!picked) return;
+
+  const durationSec = await readDurationSec(picked);
+  const limitSec = picked.type.startsWith('video/')
+    ? MAX_VIDEO_DURATION_SEC
+    : MAX_AUDIO_DURATION_SEC;
+  if (durationSec !== null && durationSec > limitSec + 1) {
+    file.value = null;
+    input.value = '';
+    errorMessage.value = `moment is ${durationSec.toFixed(1)}s — the limit is ${limitSec}s`;
+    phase.value = 'error';
+  }
 };
 
 /**

@@ -1,9 +1,13 @@
 import { nanoid } from 'nanoid';
 
-// Spike-scope limits (VKB-63): a moment is <= 20s; 250MB covers 20s of
-// 4K60 H.264 with headroom. Duration is enforced server-side after probe.
+// Spike-scope limits (VKB-63): 250MB covers 20s of 4K60 H.264 with
+// headroom. Duration limits differ by kind — video is capped tight (weight
+// + transcode cost), audio is cheap in every dimension so long monologues
+// are welcome. Enforced server-side after probe; the client pre-checks
+// best-effort via loadedmetadata.
 export const MAX_ORIGINAL_BYTES = 250 * 1024 * 1024;
-export const MAX_DURATION_SEC = 20;
+export const MAX_VIDEO_DURATION_SEC = 20;
+export const MAX_AUDIO_DURATION_SEC = 180;
 // Probe tolerance: containers often report 20.0x for a "20s" clip.
 export const DURATION_TOLERANCE_SEC = 0.75;
 
