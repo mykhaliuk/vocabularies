@@ -7,38 +7,50 @@ export const MAX_DURATION_SEC = 20;
 // Probe tolerance: containers often report 20.0x for a "20s" clip.
 export const DURATION_TOLERANCE_SEC = 0.75;
 
-export type MediaExtension = string;
-
 // Anything a dictaphone or phone camera realistically produces. The
 // original is stored as-is; ffmpeg decides later whether it can decode it.
-const EXTENSION_BY_TYPE: ReadonlyMap<string, MediaExtension> = new Map([
-  ['audio/mp4', 'm4a'],
-  ['audio/x-m4a', 'm4a'],
-  ['audio/aac', 'aac'],
-  ['audio/mpeg', 'mp3'],
-  ['audio/ogg', 'ogg'],
-  ['audio/wav', 'wav'],
-  ['audio/webm', 'weba'],
-  ['audio/amr', 'amr'],
-  ['audio/3gpp', '3gp'],
-  ['video/mp4', 'mp4'],
-  ['video/quicktime', 'mov'],
-  ['video/webm', 'webm'],
-  ['video/3gpp', '3gp'],
-  ['video/x-matroska', 'mkv'],
-]);
+// Several MIME types intentionally share one extension (audio/mp4 and
+// audio/x-m4a are both .m4a) — extension identifies the container, the
+// exact MIME the client declared lives on the stored object.
+const EXTENSION_BY_TYPE = Object.freeze({
+  'audio/mp4': 'm4a',
+  'audio/x-m4a': 'm4a',
+  'audio/aac': 'aac',
+  'audio/mpeg': 'mp3',
+  'audio/ogg': 'ogg',
+  'audio/wav': 'wav',
+  'audio/webm': 'weba',
+  'audio/amr': 'amr',
+  'audio/3gpp': '3gp',
+  'video/mp4': 'mp4',
+  'video/quicktime': 'mov',
+  'video/webm': 'webm',
+  'video/3gpp': '3gp',
+  'video/x-matroska': 'mkv',
+});
 
-export const ALLOWED_MEDIA_CONTENT_TYPES = Object.freeze([
-  ...EXTENSION_BY_TYPE.keys(),
-]);
+type MediaContentType = keyof typeof EXTENSION_BY_TYPE;
+
+export const ALLOWED_MEDIA_CONTENT_TYPES = Object.freeze(
+  Object.keys(EXTENSION_BY_TYPE),
+);
+
+const ALLOWED_EXTENSIONS: ReadonlySet<string> = new Set(
+  Object.values(EXTENSION_BY_TYPE),
+);
 
 const MAX_KEY_LENGTH = 512;
-const MEDIA_ID_PATTERN = /^[A-Za-z0-9_-]{10,32}$/;
+export const MEDIA_ID_PATTERN = /^[A-Za-z0-9_-]{10,32}$/;
 
 export const isVideoContentType = (contentType: string) =>
   contentType.startsWith('video/');
 
 export const mintMediaId = () => nanoid();
+
+const extensionOfKey = (key: string) => {
+  const dot = key.lastIndexOf('.');
+  return dot === -1 ? null : key.slice(dot + 1);
+};
 
 // Originals bucket layout: <userId>/<mediaId>/original.<ext>
 export const mintOriginalKey = (
@@ -46,21 +58,21 @@ export const mintOriginalKey = (
   mediaId: string,
   contentType: string,
 ) => {
-  const ext = EXTENSION_BY_TYPE.get(contentType);
+  const ext = EXTENSION_BY_TYPE[contentType as MediaContentType];
   if (!ext) {
     throw new Error(`[media-key] unsupported contentType: ${contentType}`);
   }
   return `${userId}/${mediaId}/original.${ext}`;
 };
 
-export const contentTypeFromOriginalKey = (key: string) => {
-  const dot = key.lastIndexOf('.');
-  if (dot === -1) return null;
-  const ext = key.slice(dot + 1);
-  for (const [type, extension] of EXTENSION_BY_TYPE) {
-    if (extension === ext) return type;
-  }
-  return null;
+// True when `contentType` is an allowed MIME whose extension matches the
+// key's. Extensions are shared between MIMEs, so this is the correct
+// check for confirm — an exact reverse lookup would reject audio/x-m4a
+// uploads because .m4a maps first to audio/mp4.
+export const contentTypeMatchesKey = (key: string, contentType: unknown) => {
+  if (typeof contentType !== 'string') return false;
+  const ext = EXTENSION_BY_TYPE[contentType as MediaContentType];
+  return ext !== undefined && ext === extensionOfKey(key);
 };
 
 export interface ParsedOriginalKey {
@@ -91,7 +103,8 @@ export const parseOriginalKey = (
   if (!rest.slice(slash + 1).startsWith('original.')) {
     throw new Error('[media-key] not an original key');
   }
-  if (contentTypeFromOriginalKey(raw) === null) {
+  const ext = extensionOfKey(raw);
+  if (ext === null || !ALLOWED_EXTENSIONS.has(ext)) {
     throw new Error('[media-key] disallowed extension');
   }
   return { key: raw, userId, mediaId };

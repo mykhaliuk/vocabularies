@@ -36,12 +36,17 @@ const getRedis = () => {
   return cachedRedis;
 };
 
+interface LimiterOptions {
+  max?: number;
+  window?: Parameters<typeof Ratelimit.slidingWindow>[1];
+}
+
 const createLimiter = (
   bucket: string,
   suffix: string,
-  max: number = MAX,
-  window: Parameters<typeof Ratelimit.slidingWindow>[1] = WINDOW,
+  options: LimiterOptions = {},
 ): RatelimitLike => {
+  const { max = MAX, window = WINDOW } = options;
   const stage = process.env.APP_ENV ?? 'local';
   const redis = getRedis();
 
@@ -86,7 +91,25 @@ export const useCallbackIpRatelimit = () => {
 // of pending originals.
 export const useMediaUploadRatelimit = () => {
   if (!cachedMediaUpload) {
-    cachedMediaUpload = createLimiter('media-upload', 'user', 20, '10 m');
+    cachedMediaUpload = createLimiter('media-upload', 'user', {
+      max: 20,
+      window: '10 m',
+    });
   }
   return cachedMediaUpload;
+};
+
+// Fail-open wrapper matching the magic-link limiter policy: an Upstash
+// outage must not turn every upload into a 500 — abuse control is not
+// worth an availability hole.
+export const checkMediaUploadRateLimit = async (userId: string) => {
+  try {
+    const verdict = await useMediaUploadRatelimit().limit(userId);
+    return verdict.success;
+  } catch (error) {
+    console.error('[ratelimit] media-upload check failed — failing open', {
+      error,
+    });
+    return true;
+  }
 };

@@ -60,22 +60,27 @@ const profiles = [
   },
 ];
 
-if (originalsBucket) {
-  profiles.push({
-    bucket: originalsBucket,
-    rules: [
-      {
-        AllowedOrigins: allowedOrigins,
-        AllowedMethods: ['PUT'],
-        AllowedHeaders: ['Content-Type', 'Content-Length', 'x-amz-*'],
-        ExposeHeaders: ['ETag'],
-        MaxAgeSeconds: 3600,
-      },
-    ],
-  });
-} else {
-  console.warn('[r2-cors-set] S3_BUCKET_ORIGINALS unset — skipping originals');
+// This script only runs against cloud stages, where the media upload path
+// exists — a missing originals bucket is a hard error, not a skip: exiting
+// green while the bucket the browser PUTs to has no CORS would hide the
+// exact failure this script exists to prevent.
+if (!originalsBucket) {
+  console.error('[r2-cors-set] S3_BUCKET_ORIGINALS is required');
+  process.exit(2);
 }
+
+profiles.push({
+  bucket: originalsBucket,
+  rules: [
+    {
+      AllowedOrigins: allowedOrigins,
+      AllowedMethods: ['PUT'],
+      AllowedHeaders: ['Content-Type', 'Content-Length', 'x-amz-*'],
+      ExposeHeaders: ['ETag'],
+      MaxAgeSeconds: 3600,
+    },
+  ],
+});
 
 const client = new S3Client({
   endpoint,

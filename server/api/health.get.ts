@@ -16,10 +16,15 @@ export default defineEventHandler(async (event) => {
     }),
     runCheck('storage', async () => {
       await headBucket('media');
-      // Originals is optional until every env migrates to the two-bucket
-      // layout; when configured it must be reachable like the media bucket.
-      if (hasOriginalsBucket()) await headBucket('originals');
-      return 'ok';
+      if (hasOriginalsBucket()) {
+        await headBucket('originals');
+        return 'ok';
+      }
+      // Missing originals must be VISIBLE: media upload/confirm will 500
+      // on this stage until S3_BUCKET_ORIGINALS is set. Reported as
+      // degraded (not error) so pre-media envs keep passing health while
+      // the gap still shows up in the payload.
+      return env === 'local' ? 'ok' : 'degraded: originals bucket unset';
     }),
     runCheck('redis', async () => {
       const client = useRedis();
@@ -30,7 +35,11 @@ export default defineEventHandler(async (event) => {
 
   const redisOk =
     redis.status === 'ok' || (env === 'local' && redis.status === 'skipped');
-  const healthy = db.status === 'ok' && storage.status === 'ok' && redisOk;
+  // Degraded storage (originals bucket not yet configured) is visible in
+  // the payload but does not fail health — pre-media envs stay green.
+  const storageOk =
+    storage.status === 'ok' || storage.status.startsWith('degraded');
+  const healthy = db.status === 'ok' && storageOk && redisOk;
 
   setResponseStatus(event, healthy ? 200 : 503);
   setResponseHeader(event, 'Cache-Control', 'no-store');

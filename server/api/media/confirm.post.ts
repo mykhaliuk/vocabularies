@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { requireUser } from '~/server/utils/auth';
 import {
   MAX_ORIGINAL_BYTES,
-  contentTypeFromOriginalKey,
+  contentTypeMatchesKey,
   parseOriginalKey,
 } from '~/server/utils/media-key';
 import { enqueueMediaProcessing } from '~/server/utils/media-queue';
@@ -45,8 +45,9 @@ export default defineEventHandler(async (event) => {
 
   // The presigned signature already pins Content-Type and Content-Length;
   // re-checking here guards against presign-flow drift, not the client.
-  const expectedContentType = contentTypeFromOriginalKey(parsed.key);
-  if (head.ContentType !== expectedContentType) {
+  // Match by extension family, not exact MIME — .m4a legitimately arrives
+  // as audio/mp4 OR audio/x-m4a depending on the uploader.
+  if (!contentTypeMatchesKey(parsed.key, head.ContentType)) {
     throw createError({
       statusCode: 400,
       statusMessage: 'content type mismatch',

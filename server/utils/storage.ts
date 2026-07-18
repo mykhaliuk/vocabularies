@@ -81,34 +81,32 @@ const useStorage = () => {
   return cached;
 };
 
-const bucketName = (kind: BucketKind) => {
+const resolve = (kind: BucketKind) => {
   const storage = useStorage();
-  if (kind === 'media') return storage.mediaBucket;
+  if (kind === 'media') {
+    return { client: storage.client, bucket: storage.mediaBucket };
+  }
   if (!storage.originalsBucket) {
     throw new Error('[storage] S3_BUCKET_ORIGINALS is required for originals');
   }
-  return storage.originalsBucket;
+  return { client: storage.client, bucket: storage.originalsBucket };
 };
 
 export const hasOriginalsBucket = () => useStorage().originalsBucket !== null;
 
 export const headBucket = async (kind: BucketKind = 'media') => {
-  const { client } = useStorage();
-  await client.send(new HeadBucketCommand({ Bucket: bucketName(kind) }));
+  const { client, bucket } = resolve(kind);
+  await client.send(new HeadBucketCommand({ Bucket: bucket }));
 };
 
 export const headObject = async (key: string, kind: BucketKind = 'media') => {
-  const { client } = useStorage();
-  return client.send(
-    new HeadObjectCommand({ Bucket: bucketName(kind), Key: key }),
-  );
+  const { client, bucket } = resolve(kind);
+  return client.send(new HeadObjectCommand({ Bucket: bucket, Key: key }));
 };
 
 export const getObject = async (key: string, kind: BucketKind = 'media') => {
-  const { client } = useStorage();
-  return client.send(
-    new GetObjectCommand({ Bucket: bucketName(kind), Key: key }),
-  );
+  const { client, bucket } = resolve(kind);
+  return client.send(new GetObjectCommand({ Bucket: bucket, Key: key }));
 };
 
 export const putObject = async (
@@ -117,10 +115,10 @@ export const putObject = async (
   contentType: string,
   kind: BucketKind = 'media',
 ) => {
-  const { client } = useStorage();
+  const { client, bucket } = resolve(kind);
   return client.send(
     new PutObjectCommand({
-      Bucket: bucketName(kind),
+      Bucket: bucket,
       Key: key,
       Body: body,
       ContentType: contentType,
@@ -142,9 +140,9 @@ export const presignPut = async (
   options: PresignPutOptions = {},
 ) => {
   const { kind = 'media', ttlSec = 300, contentLength } = options;
-  const { client } = useStorage();
+  const { client, bucket } = resolve(kind);
   const command = new PutObjectCommand({
-    Bucket: bucketName(kind),
+    Bucket: bucket,
     Key: key,
     ContentType: contentType,
     ContentLength: contentLength,
@@ -165,8 +163,8 @@ export const presignGet = async (
   ttlSec = 3600,
   kind: BucketKind = 'media',
 ) => {
-  const { client } = useStorage();
-  const command = new GetObjectCommand({ Bucket: bucketName(kind), Key: key });
+  const { client, bucket } = resolve(kind);
+  const command = new GetObjectCommand({ Bucket: bucket, Key: key });
   return getSignedUrl(client, command, { expiresIn: ttlSec });
 };
 

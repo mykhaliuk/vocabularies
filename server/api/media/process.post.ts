@@ -42,11 +42,20 @@ export default defineEventHandler(async (event) => {
     if (!valid) {
       throw createError({ statusCode: 401, statusMessage: 'bad signature' });
     }
-  } else if ((process.env.APP_ENV ?? 'local') !== 'local') {
+  } else if (process.env.APP_ENV !== 'local') {
+    // Deliberately strict: an UNSET APP_ENV must not unlock the worker —
+    // defaulting to 'local' here would leave the endpoint unauthenticated
+    // on a misconfigured cloud deploy.
     throw createError({ statusCode: 404, statusMessage: 'not found' });
   }
 
-  const parsed = Body.safeParse(JSON.parse(rawBody));
+  let json: unknown;
+  try {
+    json = JSON.parse(rawBody);
+  } catch {
+    throw createError({ statusCode: 400, statusMessage: 'invalid body' });
+  }
+  const parsed = Body.safeParse(json);
   if (!parsed.success) {
     throw createError({ statusCode: 400, statusMessage: 'invalid body' });
   }

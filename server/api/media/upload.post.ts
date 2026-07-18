@@ -6,7 +6,7 @@ import {
   mintMediaId,
   mintOriginalKey,
 } from '~/server/utils/media-key';
-import { useMediaUploadRatelimit } from '~/server/utils/ratelimit';
+import { checkMediaUploadRateLimit } from '~/server/utils/ratelimit';
 import { presignPut } from '~/server/utils/storage';
 
 const Body = z.object({
@@ -22,8 +22,8 @@ const UPLOAD_TTL_SEC = 600;
 export default defineEventHandler(async (event) => {
   const { user } = await requireUser(event);
 
-  const verdict = await useMediaUploadRatelimit().limit(user.id);
-  if (!verdict.success) {
+  const allowed = await checkMediaUploadRateLimit(user.id);
+  if (!allowed) {
     throw createError({ statusCode: 429, statusMessage: 'too many uploads' });
   }
 

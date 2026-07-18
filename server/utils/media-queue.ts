@@ -1,4 +1,5 @@
 import { Client } from '@upstash/qstash';
+import { getAppUrl } from './app-url';
 import { processMedia } from './media-process';
 
 // Async trigger for media processing (VKB-63 spike; final choice pending
@@ -13,10 +14,23 @@ import { processMedia } from './media-process';
 
 let cachedClient: Client | null | undefined;
 
+// QStash mode requires the WHOLE triplet: the publish token AND both
+// worker signing keys. Enqueue and worker live in the same deployment, so
+// a token without signing keys would publish jobs the worker rejects
+// (404) — every upload would die silently. Half-configured → treat as
+// unconfigured, loudly.
 const getClient = () => {
   if (cachedClient !== undefined) return cachedClient;
   const token = process.env.QSTASH_TOKEN;
-  cachedClient = token ? new Client({ token }) : null;
+  const hasSigningKeys =
+    !!process.env.QSTASH_CURRENT_SIGNING_KEY &&
+    !!process.env.QSTASH_NEXT_SIGNING_KEY;
+  if (token && !hasSigningKeys) {
+    console.error(
+      '[media-queue] QSTASH_TOKEN set but signing keys missing — QStash disabled, falling back to inline processing',
+    );
+  }
+  cachedClient = token && hasSigningKeys ? new Client({ token }) : null;
   return cachedClient;
 };
 
@@ -25,10 +39,9 @@ export const enqueueMediaProcessing = async (key: string, userId: string) => {
   const stage = process.env.APP_ENV ?? 'local';
 
   if (client) {
-    const appUrl = process.env.APP_URL;
-    if (!appUrl) throw new Error('[media-queue] APP_URL is required');
+    const baseUrl = getAppUrl().replace(/\/+$/, '');
     await client.publishJSON({
-      url: `${appUrl}/api/media/process`,
+      url: `${baseUrl}/api/media/process`,
       body: { key, userId },
       retries: 3,
     });

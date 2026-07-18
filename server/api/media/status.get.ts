@@ -1,16 +1,18 @@
 import { z } from 'zod';
 import { requireUser } from '~/server/utils/auth';
-import { derivedKeys } from '~/server/utils/media-key';
+import { MEDIA_ID_PATTERN, derivedKeys } from '~/server/utils/media-key';
 import { getObject, isNotFoundError, presignGet } from '~/server/utils/storage';
-import type { MediaManifest } from '~/server/utils/media-process';
+import type { MediaFailure, MediaManifest } from '~/server/utils/media-process';
 
 const Query = z.object({
-  mediaId: z.string().regex(/^[A-Za-z0-9_-]{10,32}$/),
+  mediaId: z.string().regex(MEDIA_ID_PATTERN),
 });
 
 const VIEW_TTL_SEC = 3600;
 
-const readManifest = async (key: string): Promise<MediaManifest | null> => {
+type ManifestFile = MediaManifest | MediaFailure;
+
+const readManifest = async (key: string): Promise<ManifestFile | null> => {
   try {
     const response = await getObject(key, 'media');
     const raw = await response.Body?.transformToString();
@@ -32,6 +34,9 @@ export default defineEventHandler(async (event) => {
 
   const manifest = await readManifest(keys.manifest);
   if (!manifest) return { status: 'processing' };
+  if (manifest.status === 'failed') {
+    return { status: 'failed', error: manifest.error };
+  }
 
   if (manifest.kind === 'video') {
     const [videoUrl, posterUrl] = await Promise.all([

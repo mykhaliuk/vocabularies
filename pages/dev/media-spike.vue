@@ -6,17 +6,16 @@
 const file = ref(null);
 const phase = ref('idle'); // idle | uploading | processing | ready | error
 const progress = ref(0);
-const error = ref('');
+const errorMessage = ref('');
 /** @type {import('vue').Ref<any>} */
 const result = ref(null);
-const mediaId = ref('');
 
-/** @param {Event} event */
-const onPick = (event) => {
-  const input = /** @type {HTMLInputElement} */ (event.target);
+/** @param {Event} pickEvent */
+const onPick = (pickEvent) => {
+  const input = /** @type {HTMLInputElement} */ (pickEvent.target);
   file.value = input.files?.[0] ?? null;
   phase.value = 'idle';
-  error.value = '';
+  errorMessage.value = '';
   result.value = null;
 };
 
@@ -31,9 +30,10 @@ const putWithProgress = (url, blob, contentType) =>
     const xhr = new XMLHttpRequest();
     xhr.open('PUT', url);
     xhr.setRequestHeader('Content-Type', contentType);
-    xhr.upload.addEventListener('progress', (e) => {
-      if (e.lengthComputable)
-        progress.value = Math.round((e.loaded / e.total) * 100);
+    xhr.upload.addEventListener('progress', (event) => {
+      if (event.lengthComputable) {
+        progress.value = Math.round((event.loaded / event.total) * 100);
+      }
     });
     xhr.addEventListener('load', () => {
       if (xhr.status < 300) resolve();
@@ -43,24 +43,33 @@ const putWithProgress = (url, blob, contentType) =>
     xhr.send(blob);
   });
 
-const poll = async () => {
-  for (let i = 0; i < 150; i++) {
-    const status = await $fetch('/api/media/status', {
-      query: { mediaId: mediaId.value },
-    });
+const POLL_MAX_MS = 5 * 60 * 1000;
+const POLL_CAP_MS = 5000;
+
+/** @param {string} mediaId */
+const poll = async (mediaId) => {
+  const deadline = Date.now() + POLL_MAX_MS;
+  let delayMs = 1000;
+  while (Date.now() < deadline) {
+    const status = await $fetch('/api/media/status', { query: { mediaId } });
     if (status.status === 'ready') {
       result.value = status;
       phase.value = 'ready';
       return;
     }
-    await new Promise((r) => setTimeout(r, 2000));
+    if (status.status === 'failed') {
+      const failed = /** @type {{ error?: string }} */ (status);
+      throw new Error(failed.error ?? 'processing failed');
+    }
+    await new Promise((r) => setTimeout(r, delayMs));
+    delayMs = Math.min(delayMs * 1.5, POLL_CAP_MS);
   }
   throw new Error('processing timed out (5 min)');
 };
 
 const run = async () => {
   if (!file.value) return;
-  error.value = '';
+  errorMessage.value = '';
   result.value = null;
   progress.value = 0;
   try {
@@ -70,7 +79,6 @@ const run = async () => {
       method: 'POST',
       body: { contentType, sizeBytes: file.value.size },
     });
-    mediaId.value = slot.mediaId;
     await putWithProgress(slot.uploadUrl, file.value, contentType);
     phase.value = 'processing';
     const confirmed = await $fetch('/api/media/confirm', {
@@ -78,10 +86,10 @@ const run = async () => {
       body: { key: slot.key },
     });
     console.log('[spike] transport:', confirmed.transport);
-    await poll();
-  } catch (caught) {
-    const data = /** @type {{ data?: { statusMessage?: string } }} */ (caught);
-    error.value = data?.data?.statusMessage ?? String(caught);
+    await poll(slot.mediaId);
+  } catch (error) {
+    const data = /** @type {{ data?: { statusMessage?: string } }} */ (error);
+    errorMessage.value = data?.data?.statusMessage ?? String(error);
     phase.value = 'error';
   }
 };
@@ -102,7 +110,7 @@ const run = async () => {
 
     <p v-if="phase === 'uploading'">Uploading… {{ progress }}%</p>
     <p v-if="phase === 'processing'">Processing…</p>
-    <p v-if="phase === 'error'" class="error">{{ error }}</p>
+    <p v-if="phase === 'error'" class="error">{{ errorMessage }}</p>
 
     <section v-if="result">
       <h2>
