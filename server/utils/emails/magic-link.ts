@@ -27,6 +27,7 @@ export interface EmailAttachment {
   filename: string;
   content: string;
   contentId: string;
+  contentType: string;
 }
 
 export interface RenderedEmail {
@@ -105,6 +106,7 @@ export const renderMagicLinkEmail = (
       filename: EMAIL_LOGO_FILENAME,
       content: EMAIL_LOGO_BASE64,
       contentId: EMAIL_LOGO_CONTENT_ID,
+      contentType: 'image/png',
     },
   ];
 
