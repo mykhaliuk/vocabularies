@@ -2,7 +2,7 @@
 // input: the caller resolves the locale (resolveRequestLocale) and the token
 // lifetime, so this stays testable and the emailer only forwards the result to
 // Resend. Returns an HTML body and a plain-text fallback (deliverability).
-import { getAppUrl } from '~/server/utils/app-url';
+import { getEmailAssetOrigin } from '~/server/utils/app-url';
 import type { LandingLocale } from '~/shared/landing-locales';
 import {
   EMAIL_BRAND,
@@ -36,7 +36,7 @@ export const renderMagicLinkEmail = (
   const subject = message.subject;
   const previewText = interpolate(message.preview, { minutes });
   const expiry = interpolate(message.expiry, { minutes });
-  const logoUrl = `${getAppUrl()}/icon-192.png`;
+  const logoUrl = `${getEmailAssetOrigin()}/icon-192.png`;
 
   // bodyHtml is the shell's trusted-HTML hatch, so this renderer owns escaping.
   // The copy and link are repo/operator-controlled today, but escaping keeps the
