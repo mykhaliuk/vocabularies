@@ -10,6 +10,11 @@ import {
   SquarePen,
   User,
 } from 'lucide-vue-next';
+import type { LandingCopy } from './copy.en';
+
+defineProps<{
+  copy: LandingCopy['phone'];
+}>();
 
 // Cosmetic waveform — first `filled` bars are solid, the rest faint.
 const BAR_HEIGHTS = [
@@ -23,13 +28,13 @@ const FILLED_BARS = 11;
   <div class="stage" aria-hidden="true">
     <span class="chip chip--voice">
       <span class="chip__ic chip__ic--blue"><Mic :size="15" /></span>
-      their real voice
+      {{ copy.chipVoice }}
     </span>
     <span class="chip chip--kept">
       <span class="chip__ic chip__ic--rose">
         <Heart :size="15" fill="currentColor" :stroke-width="0" />
       </span>
-      kept forever
+      {{ copy.chipKept }}
     </span>
 
     <div class="phone">
@@ -42,12 +47,13 @@ const FILLED_BARS = 11;
         <div class="feed">
           <div class="entry">
             <div class="who">
-              <b>Mira</b> <span>· my daughter · 22 mo</span>
+              <b>{{ copy.entry.name }}</b> <span>{{ copy.entry.meta }}</span>
             </div>
             <div class="word">
-              <span class="quote">“</span>nana-lella<span class="quote">”</span>
+              <span class="quote">“</span>{{ copy.entry.word
+              }}<span class="quote">”</span>
             </div>
-            <div class="gloss">watermelon</div>
+            <div class="gloss">{{ copy.entry.gloss }}</div>
             <div class="wave">
               <span class="play"
                 ><Play :size="12" fill="currentColor" :stroke-width="0"
@@ -73,23 +79,22 @@ const FILLED_BARS = 11;
           <div class="div"></div>
 
           <div class="otd">
-            <div class="otd__ov">on this day · a year ago</div>
+            <div class="otd__ov">{{ copy.onThisDay.overline }}</div>
             <div class="word word--sm">
-              <span class="quote">“</span>don't trust a quiet dog.<span
-                class="quote"
-                >”</span
-              >
+              <span class="quote">“</span>{{ copy.onThisDay.quote
+              }}<span class="quote">”</span>
             </div>
           </div>
 
           <div class="div"></div>
 
           <div class="entry entry--peek">
-            <div class="who"><b>Theo</b> <span>· best friend</span></div>
+            <div class="who">
+              <b>{{ copy.peek.name }}</b> <span>{{ copy.peek.meta }}</span>
+            </div>
             <div class="word word--sm">
-              <span class="quote">“</span>emotionally damp<span class="quote"
-                >”</span
-              >
+              <span class="quote">“</span>{{ copy.peek.word
+              }}<span class="quote">”</span>
             </div>
           </div>
         </div>
