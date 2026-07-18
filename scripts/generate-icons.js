@@ -17,6 +17,10 @@ import { writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { chromium } from 'playwright';
 import { DARK_SCOPE } from './lib/ds-css.js';
+import {
+  EMAIL_LOGO_MODULE_PATH,
+  emailLogoModuleSource,
+} from './lib/email-logo.js';
 
 const PUBLIC_DIR = resolve(import.meta.dirname, '../public');
 const MANIFEST = resolve(
@@ -134,6 +138,10 @@ const main = async () => {
       const png = await renderPng(page, svg, size);
       await writeFile(resolve(PUBLIC_DIR, file), png);
       console.log(`wrote public/${file}`);
+      if (file === 'icon-192.png') {
+        await writeFile(EMAIL_LOGO_MODULE_PATH, emailLogoModuleSource(png));
+        console.log('wrote server/utils/emails/logo.ts');
+      }
     }
 
     const icoSizes = [16, 32];

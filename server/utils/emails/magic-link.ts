@@ -2,8 +2,12 @@
 // input: the caller resolves the locale (resolveRequestLocale) and the token
 // lifetime, so this stays testable and the emailer only forwards the result to
 // Resend. Returns an HTML body and a plain-text fallback (deliverability).
-import { getEmailAssetOrigin } from '~/server/utils/app-url';
 import type { LandingLocale } from '~/shared/landing-locales';
+import {
+  EMAIL_LOGO_BASE64,
+  EMAIL_LOGO_CONTENT_ID,
+  EMAIL_LOGO_FILENAME,
+} from './logo';
 import {
   EMAIL_BRAND,
   FONT_STACK,
@@ -19,10 +23,17 @@ export interface MagicLinkEmailInput {
   expiryMinutes: number;
 }
 
+export interface EmailAttachment {
+  filename: string;
+  content: string;
+  contentId: string;
+}
+
 export interface RenderedEmail {
   subject: string;
   html: string;
   text: string;
+  attachments: EmailAttachment[];
 }
 
 export const renderMagicLinkEmail = (
@@ -36,7 +47,11 @@ export const renderMagicLinkEmail = (
   const subject = message.subject;
   const previewText = interpolate(message.preview, { minutes });
   const expiry = interpolate(message.expiry, { minutes });
-  const logoUrl = `${getEmailAssetOrigin()}/icon-192.png`;
+  // The logo travels with the message as a CID attachment: mail image proxies
+  // never fetch it over HTTP, so it cannot break on protected or stale origins
+  // (VKB-69 — dev sits behind Vercel SSO and prod may run a release that does
+  // not ship the asset yet).
+  const logoUrl = `cid:${EMAIL_LOGO_CONTENT_ID}`;
 
   // bodyHtml is the shell's trusted-HTML hatch, so this renderer owns escaping.
   // The copy and link are repo/operator-controlled today, but escaping keeps the
@@ -85,5 +100,13 @@ export const renderMagicLinkEmail = (
     message.ignore,
   ].join('\n');
 
-  return { subject, html, text };
+  const attachments = [
+    {
+      filename: EMAIL_LOGO_FILENAME,
+      content: EMAIL_LOGO_BASE64,
+      contentId: EMAIL_LOGO_CONTENT_ID,
+    },
+  ];
+
+  return { subject, html, text, attachments };
 };
