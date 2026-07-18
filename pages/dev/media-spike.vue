@@ -45,19 +45,32 @@ const putWithProgress = (url, blob, contentType) =>
 
 const POLL_MAX_MS = 5 * 60 * 1000;
 const POLL_CAP_MS = 5000;
+const POLL_MAX_CONSECUTIVE_FAILURES = 3;
 
 /** @param {string} mediaId */
 const poll = async (mediaId) => {
   const deadline = Date.now() + POLL_MAX_MS;
   let delayMs = 1000;
+  let consecutiveFailures = 0;
   while (Date.now() < deadline) {
-    const status = await $fetch('/api/media/status', { query: { mediaId } });
-    if (status.status === 'ready') {
+    // A single transient status hiccup must not kill a healthy poll —
+    // only give up after several failures in a row.
+    let status = null;
+    try {
+      status = await $fetch('/api/media/status', { query: { mediaId } });
+      consecutiveFailures = 0;
+    } catch (fetchError) {
+      consecutiveFailures += 1;
+      if (consecutiveFailures >= POLL_MAX_CONSECUTIVE_FAILURES) {
+        throw fetchError;
+      }
+    }
+    if (status?.status === 'ready') {
       result.value = status;
       phase.value = 'ready';
       return;
     }
-    if (status.status === 'failed') {
+    if (status?.status === 'failed') {
       const failed = /** @type {{ error?: string }} */ (status);
       throw new Error(failed.error ?? 'processing failed');
     }

@@ -34,7 +34,10 @@ if (!stage || stage === 'local') {
   process.exit(2);
 }
 
-const allowedOrigins = ['http://localhost:3000', appUrl];
+// Browsers send the Origin header without a trailing slash — an origin
+// stored as 'https://host/' would never match and every preflight would
+// fail, which is exactly what this script exists to prevent.
+const allowedOrigins = ['http://localhost:3000', appUrl.replace(/\/+$/, '')];
 
 const profiles = [
   {

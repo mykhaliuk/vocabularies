@@ -21,8 +21,10 @@ const PEAK_COUNT = 96;
 const PEAKS_SAMPLE_RATE_HZ = 8000;
 const VIDEO_TARGET_EDGE_PX = 720;
 const EXEC_MAX_BUFFER_BYTES = 64 * 1024 * 1024;
-// A -t capped derivative that lands this close to the cap means the source
-// was longer and got truncated — treat as over-limit.
+// Unknown-duration sources are transcoded with -t set to cap + epsilon;
+// a derivative longer than the cap therefore proves the source exceeded
+// the limit, while clips inside the tolerance band survive untouched —
+// the same acceptance threshold the known-duration path uses.
 const CAP_DETECT_EPSILON_SEC = 0.1;
 
 export interface MediaTimings {
@@ -237,7 +239,9 @@ const runPipeline = async (
     );
   }
   const capArgs =
-    sourceDurationSec === null ? ['-t', String(DURATION_CAP_SEC)] : [];
+    sourceDurationSec === null
+      ? ['-t', String(DURATION_CAP_SEC + CAP_DETECT_EPSILON_SEC)]
+      : [];
 
   const kind = probe.hasVideo ? 'video' : 'audio';
   const sourceCodecs = probe.codecs;
@@ -349,7 +353,7 @@ const runPipeline = async (
     if (durationSec === null) {
       throw new Error('[media-process] could not determine duration');
     }
-    if (durationSec >= DURATION_CAP_SEC - CAP_DETECT_EPSILON_SEC) {
+    if (durationSec > DURATION_CAP_SEC) {
       throw new Error(
         `[media-process] duration exceeds ${MAX_DURATION_SEC}s limit (capped derivative)`,
       );
@@ -391,6 +395,48 @@ const runPipeline = async (
   return manifest;
 };
 
+// QStash delivers at-least-once: a retry of an already-completed job can
+// fail on a transient and must NOT clobber the ready manifest a previous
+// run wrote — failed→ready self-heals on retry, ready→failed would be
+// permanent. Only write the failure when no ready manifest exists.
+const writeFailureManifest = async (
+  userId: string,
+  mediaId: string,
+  key: string,
+  error: unknown,
+) => {
+  const { manifest } = derivedKeys(userId, mediaId);
+  try {
+    const existing = await getObject(manifest, 'media');
+    const raw = await existing.Body?.transformToString();
+    if (raw && JSON.parse(raw).status === 'ready') {
+      console.warn(
+        '[media-process] retry failed but ready manifest exists — keeping it',
+        { key },
+      );
+      return;
+    }
+  } catch {
+    // Not found (the normal case) or unreadable — proceed to write.
+  }
+
+  const failure: MediaFailure = {
+    status: 'failed',
+    error: error instanceof Error ? error.message : String(error),
+    processedAt: new Date().toISOString(),
+  };
+  await putObject(
+    manifest,
+    Buffer.from(JSON.stringify(failure)),
+    'application/json',
+  ).catch((writeError) => {
+    console.error('[media-process] failed to write failure manifest', {
+      key,
+      writeError,
+    });
+  });
+};
+
 export const processMedia = async (
   rawKey: string,
   userId: string,
@@ -404,22 +450,7 @@ export const processMedia = async (
   } catch (error) {
     // Record the failure where status looks for the result, so clients see
     // a terminal 'failed' instead of polling 'processing' forever.
-    const failure: MediaFailure = {
-      status: 'failed',
-      error: error instanceof Error ? error.message : String(error),
-      processedAt: new Date().toISOString(),
-    };
-    const { manifest } = derivedKeys(userId, mediaId);
-    await putObject(
-      manifest,
-      Buffer.from(JSON.stringify(failure)),
-      'application/json',
-    ).catch((writeError) => {
-      console.error('[media-process] failed to write failure manifest', {
-        key,
-        writeError,
-      });
-    });
+    await writeFailureManifest(userId, mediaId, key, error);
     throw error;
   } finally {
     await rm(workDir, { recursive: true, force: true });
