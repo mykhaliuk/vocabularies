@@ -72,6 +72,17 @@ export interface LandingCopy {
     tag: string;
     why: string;
   };
+  // Decorative hero mockup (aria-hidden). Examples are locale-native, not
+  // translations: each locale shows its own child name, toddler-speak word,
+  // and quotes. Keep words short — the mockup renders them nowrap in a
+  // 310px frame.
+  phone: {
+    chipVoice: string;
+    chipKept: string;
+    entry: { name: string; meta: string; word: string; gloss: string };
+    onThisDay: { overline: string; quote: string };
+    peek: { name: string; meta: string; word: string };
+  };
 }
 
 export const landingCopyEn: LandingCopy = {
@@ -182,5 +193,24 @@ export const landingCopyEn: LandingCopy = {
   footer: {
     tag: 'never lose your sweet moments.',
     why: 'why vocabu',
+  },
+  phone: {
+    chipVoice: 'their real voice',
+    chipKept: 'kept forever',
+    entry: {
+      name: 'Mira',
+      meta: '· my daughter · 22 mo',
+      word: 'nana-lella',
+      gloss: 'watermelon',
+    },
+    onThisDay: {
+      overline: 'on this day · a year ago',
+      quote: "don't trust a quiet dog.",
+    },
+    peek: {
+      name: 'Theo',
+      meta: '· best friend',
+      word: 'emotionally damp',
+    },
   },
 };

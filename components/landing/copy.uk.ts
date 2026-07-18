@@ -113,4 +113,23 @@ export const landingCopyUk: LandingCopy = {
     tag: 'не втрачайте свої найтепліші моменти.',
     why: 'чому vocabu',
   },
+  phone: {
+    chipVoice: 'їхній справжній голос',
+    chipKept: 'збережено назавжди',
+    entry: {
+      name: 'Міла',
+      meta: '· моя донечка · 22 міс',
+      word: 'каюн',
+      gloss: 'кавун',
+    },
+    onThisDay: {
+      overline: 'цього дня · рік тому',
+      quote: 'не вір тихому собаці.',
+    },
+    peek: {
+      name: 'Тарас',
+      meta: '· найкращий друг',
+      word: 'морально зім’ятий',
+    },
+  },
 };

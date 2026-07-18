@@ -115,4 +115,23 @@ export const landingCopyFr: LandingCopy = {
     tag: 'ne perdez jamais vos instants les plus doux.',
     why: 'pourquoi vocabu',
   },
+  phone: {
+    chipVoice: 'leur vraie voix',
+    chipKept: 'gardé pour toujours',
+    entry: {
+      name: 'Léa',
+      meta: '· ma fille · 22 mois',
+      word: 'pestacle',
+      gloss: 'spectacle',
+    },
+    onThisDay: {
+      overline: 'ce jour-là · il y a un an',
+      quote: "méfie-toi d'un chien calme.",
+    },
+    peek: {
+      name: 'Théo',
+      meta: '· meilleur ami',
+      word: 'moralement froissé',
+    },
+  },
 };

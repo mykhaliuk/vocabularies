@@ -256,7 +256,7 @@ onMounted(() => {
           </div>
 
           <div class="hero__phone">
-            <LandingPhoneMock />
+            <LandingPhoneMock :copy="copy.phone" />
           </div>
         </div>
       </section>
