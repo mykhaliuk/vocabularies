@@ -87,7 +87,7 @@ const isExecError = (error: unknown): error is { stderr: string } =>
   'stderr' in error &&
   typeof (error as { stderr: unknown }).stderr === 'string';
 
-const runFfprobe = async (path: string): Promise<ProbeResult> => {
+const probeBanner = async (path: string): Promise<ProbeResult> => {
   // `ffmpeg -i <file>` with no output exits non-zero by design; the banner
   // we need is on stderr either way.
   let banner = '';
@@ -223,7 +223,7 @@ const runPipeline = async (
   const downloadMs = Date.now() - downloadStart;
 
   const probeStart = Date.now();
-  const probe = await runFfprobe(originalPath);
+  const probe = await probeBanner(originalPath);
   const probeMs = Date.now() - probeStart;
 
   // Some valid containers (browser MediaRecorder WebM) report no duration
@@ -231,10 +231,7 @@ const runPipeline = async (
   // and the real duration is read back from the derivative, which always
   // carries one (mp4/m4a moov box).
   const sourceDurationSec = probe.durationSec;
-  if (
-    sourceDurationSec !== null &&
-    sourceDurationSec > MAX_DURATION_SEC + DURATION_TOLERANCE_SEC
-  ) {
+  if (sourceDurationSec !== null && sourceDurationSec > DURATION_CAP_SEC) {
     throw new Error(
       `[media-process] duration ${sourceDurationSec.toFixed(1)}s exceeds ${MAX_DURATION_SEC}s limit`,
     );
@@ -303,7 +300,7 @@ const runPipeline = async (
     ]);
     posterMs = Date.now() - posterStart;
 
-    const derivedProbe = await runFfprobe(videoPath);
+    const derivedProbe = await probeBanner(videoPath);
     width = derivedProbe.width;
     height = derivedProbe.height;
     derivedDurationSec = derivedProbe.durationSec;
@@ -335,7 +332,7 @@ const runPipeline = async (
     transcodeMs = Date.now() - transcodeStart;
 
     if (sourceDurationSec === null) {
-      const derivedProbe = await runFfprobe(audioPath);
+      const derivedProbe = await probeBanner(audioPath);
       derivedDurationSec = derivedProbe.durationSec;
     }
 

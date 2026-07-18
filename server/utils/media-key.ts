@@ -42,9 +42,6 @@ const ALLOWED_EXTENSIONS: ReadonlySet<string> = new Set(
 const MAX_KEY_LENGTH = 512;
 export const MEDIA_ID_PATTERN = /^[A-Za-z0-9_-]{10,32}$/;
 
-export const isVideoContentType = (contentType: string) =>
-  contentType.startsWith('video/');
-
 export const mintMediaId = () => nanoid();
 
 const extensionOfKey = (key: string) => {

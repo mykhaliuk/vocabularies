@@ -107,8 +107,8 @@ for (const profile of profiles) {
     );
     console.log('[r2-cors-set] readback:');
     console.log(JSON.stringify(verify.CORSRules, null, 2));
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
     console.error(`[r2-cors-set] ${profile.bucket} failed: ${message}`);
     failed = true;
   }
