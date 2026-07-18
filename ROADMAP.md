@@ -74,15 +74,17 @@ settled 2026-07-17 (details in the M12 ADR once the spike lands):
   candidate vs R2 events → CF Queues; QStash to be discussed with the owner
   before it's final).
 
-- **Entitlements, not feature flags** (decided 2026-07-18): video upload is
-  a paid capability (free = audio only). `users.plan` (default `free`) +
-  one policy module `can(user, capability)`; single server-side enforcement
-  point in the media upload endpoint; UI shows the video affordance with a
-  "Plus" upsell. One-door rule: nothing reads `user.plan` except `can()` —
-  that keeps future beta cohorts (per-user override table inside `can()`)
-  and percentage rollouts (hash inside `can()`) consumer-transparent.
-  A feature-flags table is deliberately NOT created until a real cohort
-  need exists.
+- **Entitlements as capability→roles RBAC** (decided 2026-07-18): each
+  capability maps to the roles that receive it (e.g. `videoUpload: [vip,
+admin, premium]`); a user's roles = plan (`free | essentials | premium`,
+  written by billing) + hand-granted `grants[]` (`vip`, `admin`). One
+  policy module `can(user, capability)`; single server-side enforcement
+  point in the media upload endpoint; UI keeps the video affordance
+  visible with an upsell. One-door rule: nothing reads `user.plan` /
+  `user.grants` except `can()`. The capability→roles map lives in CODE;
+  recorded exit: it moves to a `capability_roles` table (edits without
+  deploy) when that need is real — consumers untouched either way. Beta
+  cohorts / percentage rollouts also land inside `can()` later.
 
 Linear: VKB-63 (spike) → VKB-64 (schema/API + entitlements) → VKB-65
 (shell) → VKB-66 (feed) → VKB-67 (compose, incl. Plus upsell).
