@@ -124,14 +124,26 @@ The root cause is an **entry-point mismatch**, not iOS and not caching.
 Two client-only changes close it, with **no change to the server claim/confirm
 logic and no manifest change** (`start_url` stays `/`):
 
-- **Route standalone PWAs to `/login`.** The landing detects an installed
-  standalone launch on mount and redirects to `/login` (the flow's home), so an
-  installed PWA never signs in from the codeless hero. Client-only + `onMounted`
-  so the prerendered landing is untouched during SSR/prerender; non-standalone
-  desktop/web visitors fall straight through and see the landing exactly as
-  before. `/login` resolves locale via cookie/Accept-Language (no_prefix), so
-  `/`, `/fr`, `/uk` all hand off cleanly, and there is no loop — `/login` never
-  redirects back to `/`.
+- **Resolve the standalone entry, session-aware.** The landing detects an
+  installed standalone launch on mount and resolves where that launch belongs:
+  it probes `/api/me` and goes to `/me` when a session already exists, else to
+  `/login` (the flow's home). So an installed PWA never signs in from the
+  codeless hero — and, just as importantly, a **returning** user (the primary
+  case) is never shown the sign-in form on a cold launch while holding a valid
+  cookie. Without the session check that user would have no way back into the
+  app but a full redundant magic-link round-trip, burning a rate-limit slot per
+  launch, because standalone has no address bar to navigate out of `/login`
+  with. `/login` carries the same guard for every other route in (bookmark,
+  back button, shared link): an authenticated visitor goes to `/me`. The two
+  guards cannot loop — `/me` bounces only _unauthenticated_ visitors back to
+  `/login`, so the conditions are complementary. The probe is advisory only
+  (the server remains the sole authority) and resolves "no session" on 401,
+  offline, timeout or error, so a dead probe degrades to the sign-in screen
+  rather than stranding the launch. It is issued **only** in the standalone
+  branch, so the public landing makes no extra request and stays byte-identical
+  for web visitors. Client-only + `onMounted` keeps the prerendered landing
+  untouched during SSR/prerender, and `/login` resolves locale via
+  cookie/Accept-Language (no_prefix), so `/`, `/fr`, `/uk` all hand off cleanly.
 - **Show the code field immediately for standalone.** On `/login`, an installed
   PWA renders the confirmation-code input together with the "open the link"
   message the moment the link is sent, instead of waiting for the poll to
@@ -145,6 +157,23 @@ logic and no manifest change** (`start_url` stays `/`):
   reserving the request-a-new-link message for a genuine post-arm expiry/lock.
   A correct code always mints regardless of the observed-armed flag, because
   `confirm.post` checks the DB directly.
+- **Classifying that `expired` cannot lean on the poll alone.** The server
+  answers `expired` both for "not armed yet" and for "armed, then dead" (window
+  closed / attempt cap / claimed), and the two need opposite UI. The obvious
+  discriminator — "did the poll observe the arm?" — is **not** sound: iOS
+  suspends the poll timer while the PWA sits in the background during the Mail →
+  Safari detour, so the normal cross-jar path can miss the arm entirely. Keying
+  on it alone mislabels a real expiry as "not armed" and tells the user to open
+  a link whose token was already consumed — an impossible instruction with no
+  way forward, every retry repeating it. The client therefore treats the claim
+  as possibly-armed on **any** of three signals: the poll observed the arm; the
+  server once answered `invalid` (which only a live armed claim does, so a burnt
+  attempt cap is caught even with no poll observation); or more than a confirm
+  window has elapsed since the send (a post-arm expiry is impossible before
+  then, since the window opens at the click). The gentle hint is thus shown only
+  when the claim provably cannot have been armed yet, and **every ambiguous case
+  resolves to "ask for a new link"** — always actionable. The invariant is that
+  the user is never told to do something impossible.
 
 `isStandalone()` — the single detector both the poll client (`useSigninPoll`)
 and the landing redirect use — lives in `composables/usePwa.ts`, so the two can
@@ -190,11 +219,17 @@ are **not** part of the `bun run test:e2e` CI gate:
   unknown/malformed → expired/400; desktop path unchanged), the Playwright
   cross-jar UX (code page → code input → `/me`, wrong-code retry, cold-start
   resume into the confirm step), and the entry-routing + code-field UX
-  (`poll-entry.client.mjs`: a forced-standalone context redirects `/` and `/fr`
-  to `/login`; `/login` shows the code field immediately on send; a premature
+  (`poll-entry.client.mjs`: a signed-OUT forced-standalone context redirects `/`
+  and `/fr` to `/login`, while a signed-IN one resolves `/` to `/me` and is
+  never shown the email form, and an authenticated visitor on `/login` is sent
+  to `/me`; `/login` shows the code field immediately on send; a premature
   submit before arming shows the gentle "open the link first" hint and does not
-  strand — the real code still signs in; a non-standalone `/login` and the
-  landing show the plain message with no code field and no redirect).
+  strand — the real code still signs in; **both directions of the expiry split**
+  — burning the 3-attempt cap after the poll observed the arm bounces back to
+  the send form with "ask for a new link" and _not_ the not-armed hint, the case
+  that fails if the classification is collapsed to an unconditional
+  `not-armed`; a non-standalone `/login` and the landing show the plain message
+  with no code field and no redirect).
 - **Needs a real iPhone (not automatable):** the actual iOS standalone-jar
   isolation and the on-device `navigator.standalone` launch that triggers the
   landing → `/login` redirect — confirmed only with the app added to the Home

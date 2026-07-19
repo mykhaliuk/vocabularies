@@ -33,6 +33,16 @@ async function onConfirm() {
   await confirmCode(code.value);
 }
 
+// An authenticated visitor has no business on the sign-in screen — send them to
+// the app. This covers every route in (the installed-PWA launch hands off here,
+// plus bookmarks, the back button, a shared link), not just the PWA case. The
+// probe is advisory only: `hasSession()` resolves false on 401 / offline /
+// timeout, so a failed probe simply leaves the form in place rather than
+// blocking. No loop — /me sends only *unauthenticated* visitors back here.
+onMounted(async () => {
+  if (await hasSession()) await navigateTo('/me', { replace: true });
+});
+
 // Surface auth-callback failures (expired / invalid link) routed here as
 // ?error=... by server/api/auth/callback.get.js.
 errorMessage.value = getErrorMessage(route.query.error);

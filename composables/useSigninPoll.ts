@@ -1,4 +1,8 @@
-import { MAGIC_LINK_TTL_MS, POLL_KEY_PATTERN } from '~/shared/magic-link';
+import {
+  CONFIRM_TTL_MS,
+  MAGIC_LINK_TTL_MS,
+  POLL_KEY_PATTERN,
+} from '~/shared/magic-link';
 
 // Cross-jar sign-in poll/claim client (VKB-70). An installed standalone PWA
 // has its own cookie/storage jar, so the emailed magic link — which opens in
@@ -120,9 +124,16 @@ export const useSigninPoll = () => {
   // flap must not launch a second concurrent chain (would multiply the request
   // rate and can trip the server's per-IP bucket on shared egress).
   let inFlight = false;
-  // Reactive: flips true once the link is clicked and the claim is armed, so
-  // the UI reveals the confirmation-code input on the "check your inbox" screen.
+  // Reactive: flips true once the poll OBSERVES the claim armed. Note this is
+  // "observed", not "was ever armed" — iOS suspends the poll timer while the
+  // PWA is backgrounded in Mail, so a perfectly normal cross-jar sign-in can
+  // miss the arm entirely. Anything that must know whether the claim was EVER
+  // armed uses wasEverArmed() below, not this flag alone.
   const awaitingCode = ref(false);
+  // Independent proof the claim was armed: the server only answers `invalid`
+  // for a live, armed claim. Survives a missed poll observation, so burning the
+  // attempt cap is still classified as a real expiry rather than "not armed".
+  let sawInvalidResponse = false;
 
   function clearTimer(): void {
     if (timer !== null) {
@@ -145,6 +156,7 @@ export const useSigninPoll = () => {
     activeEmail = '';
     deadline = 0;
     awaitingCode.value = false;
+    sawInvalidResponse = false;
     removeStored();
   }
 
@@ -256,22 +268,39 @@ export const useSigninPoll = () => {
     return { email: stored.email };
   }
 
+  // Could this claim have been armed already? Three independent signals, any of
+  // which rules out the "link not clicked yet" reading of a server `expired`:
+  //  1. the poll observed the arm;
+  //  2. the server once answered `invalid`, which only a live armed claim does;
+  //  3. more than a confirm window has passed since the link was sent — a
+  //     post-arm expiry is impossible before then (the window opens at the
+  //     click, which is never earlier than the send), so past that point a
+  //     missed-arm expiry is the likelier reading.
+  // Signal 3 is the safety net for the normal iOS path, where the PWA is
+  // suspended in the background and the poll never sees the arm at all.
+  const wasEverArmed = (): boolean => {
+    if (awaitingCode.value || sawInvalidResponse) return true;
+    const sentAt = deadline - MAGIC_LINK_TTL_MS;
+    return Date.now() - sentAt > CONFIRM_TTL_MS;
+  };
+
   // Submit the confirmation code typed on this (the initiating) device. On a
   // match the server mints the session into THIS jar and we navigate signed-in;
   // `invalid` keeps the input for a retry. A server `expired` splits two ways:
-  // if we have NOT yet observed the claim armed (the standalone code field is
-  // shown up front, so a code can be typed before the link is clicked), the
+  // when the claim provably cannot have been armed yet (see wasEverArmed), the
   // guarded UPDATE simply matched no live-armed row — nothing died, no attempt
   // was spent — so return `not-armed`, keep the key and the poll alive, and let
-  // the caller nudge the user to open the link. Only a post-arm `expired`
-  // (window closed / locked / claimed) is a dead claim we drop so the caller can
-  // prompt for a new link. Read the observed-armed flag BEFORE the request so a
-  // poll tick that arms mid-flight can never mislabel a premature submit as a
-  // genuine expiry.
+  // the caller nudge the user to open the link. Otherwise it is a dead claim
+  // (window closed / locked / claimed): drop it and let the caller prompt for a
+  // new link. Getting this split wrong in the `not-armed` direction is the
+  // dangerous one — it tells the user to open a link whose token was already
+  // consumed, an impossible instruction with no way forward — so the evidence
+  // is read BEFORE the request (a poll tick arming mid-flight must not relabel
+  // a premature submit) and every ambiguous case resolves to `expired`.
   async function submitCode(code: string): Promise<ConfirmResult> {
     const key = activeKey;
     if (!key) return 'expired';
-    const wasArmed = awaitingCode.value;
+    const armedEvidence = wasEverArmed();
     try {
       const res = await $fetch<ConfirmResponse>('/api/auth/confirm', {
         method: 'POST',
@@ -282,8 +311,11 @@ export const useSigninPoll = () => {
         await navigateTo('/me');
         return 'ready';
       }
-      if (res.status === 'invalid') return 'invalid';
-      if (!wasArmed) return 'not-armed';
+      if (res.status === 'invalid') {
+        sawInvalidResponse = true;
+        return 'invalid';
+      }
+      if (!armedEvidence) return 'not-armed';
       clear();
       return 'expired';
     } catch (error) {

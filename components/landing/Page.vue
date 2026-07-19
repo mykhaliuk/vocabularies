@@ -87,17 +87,27 @@ useHead({
 // Installed standalone PWAs open at the manifest start_url `/`, which renders
 // this marketing landing — whose hero form uses the plain magic-link flow with
 // NO poll/claim code path, so an installed PWA that signs in here can never
-// finish the cross-jar sign-in. Route it to /login (the poll/claim flow's home)
-// instead (VKB-70 FIX 1). Client-only + onMounted so the prerendered landing is
-// never redirected during SSR/prerender; non-standalone desktop/web visitors
-// fall straight through and see the landing exactly as before. No loop: /login
-// never redirects back to `/`. `replace` so the codeless landing is not left in
-// the PWA's history.
+// finish the cross-jar sign-in (VKB-70). Resolve the real entry instead: a
+// launch that already holds a session goes straight to the app, otherwise to
+// /login (the poll/claim flow's home). The session check is what keeps the
+// RETURNING user — the primary case — out of the sign-in form on every cold
+// launch, and standalone has no address bar to escape it with. Client-only +
+// onMounted so the prerendered landing is never redirected during SSR, and the
+// probe is standalone-only so the public landing issues no extra request and
+// stays byte-identical for web visitors. `replace` so the codeless landing is
+// not left in the PWA's history.
+const resolveStandaloneEntry = async () => {
+  // hasSession() resolves false on 401 / offline / timeout, so a failed probe
+  // falls back to /login instead of blocking the launch.
+  const target = (await hasSession()) ? '/me' : '/login';
+  await navigateTo(target, { replace: true });
+};
+
 onMounted(() => {
-  // Standalone PWA → hand off to /login before doing anything else; the reveal
+  // Standalone PWA → resolve the entry before doing anything else; the reveal
   // animation on a page we're leaving would be wasted work.
   if (isStandalone()) {
-    navigateTo('/login', { replace: true });
+    void resolveStandaloneEntry();
     return;
   }
 
