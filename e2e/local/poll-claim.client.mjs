@@ -1,29 +1,10 @@
 import { chromium } from '@playwright/test';
+import { STANDALONE_INIT, clickAndReadCode } from './helpers.mjs';
 
 // Local-only integration test for the poll/claim + confirmation-code client
 // (VKB-70): the full cross-jar scenario the ticket describes. NOT part of the
 // CI e2e suite (needs a DB + console email) — see e2e/local/README. Invoked by
 // e2e/local/run.mjs with { base, findLink }.
-
-// Force the "installed standalone PWA" signal so the client mints a poll key.
-const STANDALONE_INIT = `
-  const realMatchMedia = window.matchMedia.bind(window);
-  window.matchMedia = (q) =>
-    q.includes('display-mode: standalone')
-      ? { matches: true, media: q, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {}, onchange: null, dispatchEvent() { return false; } }
-      : realMatchMedia(q);
-`;
-
-// Open the emailed link in a separate jar (Safari) and read the code it reveals.
-const clickAndReadCode = async (browser, link) => {
-  const safari = await browser.newContext();
-  const page = await safari.newPage();
-  await page.goto(link);
-  await page.waitForLoadState('networkidle');
-  const path = new URL(page.url()).pathname;
-  const code = (await page.getByRole('status').innerText()).trim();
-  return { safari, path, code };
-};
 
 export const run = async ({ base, findLink }) => {
   let passed = 0;
@@ -61,7 +42,10 @@ export const run = async ({ base, findLink }) => {
       .getByLabel(/your email/i)
       .pressSequentially(email, { delay: 10 });
     await pwaPage.getByRole('button', { name: /send me a link/i }).click();
-    await pwaPage.getByText(/check your inbox/i).waitFor({ timeout: 10000 });
+    // Standalone shows the code input immediately on send (FIX 2), so wait on
+    // that rather than a "check your inbox" screen the PWA never renders.
+    const codeInput = pwaPage.getByLabel(/confirmation code/i);
+    await codeInput.waitFor({ timeout: 10000 });
     check(
       'standalone PWA sends a poll key with the magic-link request',
       typeof sentPollKey === 'string' &&
@@ -75,11 +59,6 @@ export const run = async ({ base, findLink }) => {
       clicked.path !== '/me' && /^\d{4}$/.test(clicked.code),
       `code=${clicked.code}`,
     );
-
-    // The PWA poll flips to "confirm" -> the code input appears.
-    const codeInput = pwaPage.getByLabel(/confirmation code/i);
-    await codeInput.waitFor({ timeout: 20000 });
-    check('PWA reveals the code input after the click', true);
 
     await codeInput.click();
     await codeInput.pressSequentially(clicked.code, { delay: 10 });
@@ -134,11 +113,12 @@ export const run = async ({ base, findLink }) => {
     await p2.getByLabel(/your email/i).click();
     await p2.getByLabel(/your email/i).pressSequentially(email2, { delay: 10 });
     await p2.getByRole('button', { name: /send me a link/i }).click();
-    await p2.getByText(/check your inbox/i).waitFor({ timeout: 10000 });
+    const codeInput2 = p2.getByLabel(/confirmation code/i);
+    await codeInput2.waitFor({ timeout: 10000 });
     const link2 = await findLink(email2);
     const clicked2 = await clickAndReadCode(browser, link2);
     const wrong = String((Number(clicked2.code) + 1) % 10000).padStart(4, '0');
-    const codeInput2 = p2.getByLabel(/confirmation code/i);
+    // Click has armed the claim; the code input was already visible from send.
     await codeInput2.waitFor({ timeout: 20000 });
     await codeInput2.click();
     await codeInput2.pressSequentially(wrong, { delay: 10 });
@@ -175,7 +155,7 @@ export const run = async ({ base, findLink }) => {
     await r1.getByLabel(/your email/i).click();
     await r1.getByLabel(/your email/i).pressSequentially(email3, { delay: 10 });
     await r1.getByRole('button', { name: /send me a link/i }).click();
-    await r1.getByText(/check your inbox/i).waitFor({ timeout: 10000 });
+    await r1.getByLabel(/confirmation code/i).waitFor({ timeout: 10000 });
     await r1.close(); // simulate iOS eviction (key stays in the jar)
     const link3 = await findLink(email3);
     const clicked3 = await clickAndReadCode(browser, link3);

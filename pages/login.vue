@@ -18,6 +18,7 @@ const {
   errorMessage,
   submit,
   reset,
+  pollActive,
   awaitingCode,
   confirming,
   codeError,
@@ -121,23 +122,20 @@ async function resend() {
         role="status"
         aria-live="polite"
       >
-        <template v-if="!awaitingCode">
-          <div class="auth__sent-icon" aria-hidden="true">
-            <Mail :size="32" />
-          </div>
-          <h2 class="auth__sent-title">{{ $t('login.sentTitle') }}</h2>
-          <p class="auth__sent-body">
-            {{ $t('login.sentBody') }}<br />
-            <span class="auth__sent-email">{{ trimmedEmail }}</span>
-          </p>
-        </template>
-
-        <template v-else>
+        <!-- Installed standalone PWA (poll/claim flow): the emailed link opens
+             in Safari — a separate jar that can't sign the app in — so the code
+             must be entered here. Show the "open the link" message AND the code
+             field together from the first render; don't wait for the poll to
+             observe the click (VKB-70 FIX 2). -->
+        <template v-if="pollActive">
           <div class="auth__sent-icon" aria-hidden="true">
             <KeyRound :size="32" />
           </div>
           <h2 class="auth__sent-title">{{ $t('login.confirm.title') }}</h2>
-          <p class="auth__sent-body">{{ $t('login.confirm.body') }}</p>
+          <p class="auth__sent-body">
+            {{ $t('login.confirm.standaloneBody') }}<br />
+            <span class="auth__sent-email">{{ trimmedEmail }}</span>
+          </p>
 
           <form class="auth__code-form" novalidate @submit.prevent="onConfirm">
             <label for="code" class="auth__label">
@@ -174,6 +172,20 @@ async function resend() {
               {{ codeError }}
             </p>
           </form>
+        </template>
+
+        <!-- Desktop / browser: the link opens in the same jar and just signs
+             the user in, so this screen only confirms the send. No code field;
+             byte-identical to before. -->
+        <template v-else>
+          <div class="auth__sent-icon" aria-hidden="true">
+            <Mail :size="32" />
+          </div>
+          <h2 class="auth__sent-title">{{ $t('login.sentTitle') }}</h2>
+          <p class="auth__sent-body">
+            {{ $t('login.sentBody') }}<br />
+            <span class="auth__sent-email">{{ trimmedEmail }}</span>
+          </p>
         </template>
 
         <p v-if="errorMessage" role="alert" class="auth__error">

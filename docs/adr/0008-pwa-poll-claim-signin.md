@@ -112,6 +112,44 @@ expires_at < now()`, not scoped to one key), it would delete a still-confirmable
   tap; desktop/browser sign-in is unchanged; only the installed PWA sees the
   extra step, which is the only client that needs the cross-jar handoff.
 
+## Follow-up: routing the installed PWA into the flow (VKB-70 QA)
+
+The first cut scoped the whole poll/claim flow to `/login` and left the landing
+hero on the plain magic-link path. On-device QA then found the gap: an installed
+PWA opens at the manifest `start_url` `/`, which renders the marketing landing —
+so the PWA signed in from the codeless hero (no poll key), `callback.get` saw no
+`poll_key_hash`, and it redirected to `/me` while the code screen never appeared.
+The root cause is an **entry-point mismatch**, not iOS and not caching.
+
+Two client-only changes close it, with **no change to the server claim/confirm
+logic and no manifest change** (`start_url` stays `/`):
+
+- **Route standalone PWAs to `/login`.** The landing detects an installed
+  standalone launch on mount and redirects to `/login` (the flow's home), so an
+  installed PWA never signs in from the codeless hero. Client-only + `onMounted`
+  so the prerendered landing is untouched during SSR/prerender; non-standalone
+  desktop/web visitors fall straight through and see the landing exactly as
+  before. `/login` resolves locale via cookie/Accept-Language (no_prefix), so
+  `/`, `/fr`, `/uk` all hand off cleanly, and there is no loop — `/login` never
+  redirects back to `/`.
+- **Show the code field immediately for standalone.** On `/login`, an installed
+  PWA renders the confirmation-code input together with the "open the link"
+  message the moment the link is sent, instead of waiting for the poll to
+  observe the click. The old late reveal (gated on the observed-armed flag) was
+  jank: after clicking the link in Safari and returning, the user stared at
+  "check your inbox" for seconds before the field appeared. The poll still runs;
+  only the field's _visibility_ is decoupled from it. A code typed **before** the
+  link is clicked hits an unarmed claim — the guarded UPDATE matches no row and
+  returns `expired` with **no attempt consumed** — so the client shows a gentle
+  "open the link in your email first" hint and keeps the field and poll alive,
+  reserving the request-a-new-link message for a genuine post-arm expiry/lock.
+  A correct code always mints regardless of the observed-armed flag, because
+  `confirm.post` checks the DB directly.
+
+`isStandalone()` — the single detector both the poll client (`useSigninPoll`)
+and the landing redirect use — lives in `composables/usePwa.ts`, so the two can
+never disagree about what "standalone" means.
+
 ## Duplicated-logic parity (PR-CHECKLIST)
 
 The claim lifecycle spans four handlers; this is the reference:
@@ -149,11 +187,18 @@ are **not** part of the `bun run test:e2e` CI gate:
   and mint nothing** — the atomic-gate regression, which fails on a
   read-then-increment; **a late click's confirm window survives the global
   sweep** and still confirms; confirm-window expiry → rejected;
-  unknown/malformed → expired/400; desktop path unchanged) and the Playwright
+  unknown/malformed → expired/400; desktop path unchanged), the Playwright
   cross-jar UX (code page → code input → `/me`, wrong-code retry, cold-start
-  resume into the confirm step).
+  resume into the confirm step), and the entry-routing + code-field UX
+  (`poll-entry.client.mjs`: a forced-standalone context redirects `/` and `/fr`
+  to `/login`; `/login` shows the code field immediately on send; a premature
+  submit before arming shows the gentle "open the link first" hint and does not
+  strand — the real code still signs in; a non-standalone `/login` and the
+  landing show the plain message with no code field and no redirect).
 - **Needs a real iPhone (not automatable):** the actual iOS standalone-jar
-  isolation — confirmed only with the app added to the Home Screen.
+  isolation and the on-device `navigator.standalone` launch that triggers the
+  landing → `/login` redirect — confirmed only with the app added to the Home
+  Screen.
 
 The local suite is committed under `e2e/local/` and excluded from the Playwright
 CI collection (`testIgnore`), so it never runs where there is no database.

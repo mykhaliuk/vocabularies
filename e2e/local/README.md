@@ -27,7 +27,17 @@ That runs `infra:up` (OrbStack Postgres + MinIO) and then, under the local env,
    emailed link, and the first context's poll readies, receives its own
    distinct cookie, navigates to `/me`, and clears the key; plus a cold-start
    resume case,
-4. tears the dev server down.
+4. runs `poll-entry.client.mjs` — the VKB-70 QA fix (entry routing + code-field
+   UX): a forced-standalone context redirects `/` and `/fr` to `/login`;
+   `/login` shows the confirmation-code field immediately on send; a premature
+   submit before the link is clicked shows the gentle "open the link first" hint
+   and does not strand the flow (the real code still signs in); a non-standalone
+   `/login` and the landing show the plain message with no code field and no
+   redirect,
+5. tears the dev server down.
+
+`helpers.mjs` holds the shared standalone-signal init script and the
+click-and-read-code helper used by both client suites.
 
 Exit code is non-zero if any assertion fails.
 

@@ -33,21 +33,22 @@ interface ConfirmResponse {
   status: 'ready' | 'invalid' | 'expired';
 }
 
-export type ConfirmResult = 'ready' | 'invalid' | 'expired' | 'error';
+// `not-armed`: the code was submitted before the link was clicked, so the
+// server's guarded UPDATE matched no row (claim still unarmed) and returned
+// `expired` — but nothing died, no attempt was consumed. The caller shows a
+// gentle "open the link first" hint and keeps polling, instead of the
+// request-a-new-link message reserved for a genuine post-arm expiry/lock.
+export type ConfirmResult =
+  | 'ready'
+  | 'invalid'
+  | 'not-armed'
+  | 'expired'
+  | 'error';
 
-// Only installed PWAs need the poll/claim path — a plain browser opens the
-// link in the same jar and the callback cookie just works. Gating here keeps
-// the desktop/browser flow byte-identical: no poll key, no claim row.
-const isStandalone = (): boolean => {
-  if (!import.meta.client) return false;
-  const displayStandalone = window.matchMedia?.(
-    '(display-mode: standalone)',
-  ).matches;
-  // iOS Safari signals a standalone launch via this non-standard flag.
-  const iosStandalone = (navigator as Navigator & { standalone?: boolean })
-    .standalone;
-  return Boolean(displayStandalone || iosStandalone);
-};
+// Only installed PWAs need the poll/claim path — a plain browser opens the link
+// in the same jar and the callback cookie just works. isStandalone (shared,
+// composables/usePwa) gates key minting here, so the desktop/browser flow stays
+// byte-identical: no poll key, no claim row.
 
 const removeStored = (): void => {
   if (!import.meta.client) return;
@@ -257,11 +258,20 @@ export const useSigninPoll = () => {
 
   // Submit the confirmation code typed on this (the initiating) device. On a
   // match the server mints the session into THIS jar and we navigate signed-in;
-  // `invalid` keeps the input for a retry; `expired` (window closed / locked /
-  // claimed) drops the dead claim so the caller can prompt for a new link.
+  // `invalid` keeps the input for a retry. A server `expired` splits two ways:
+  // if we have NOT yet observed the claim armed (the standalone code field is
+  // shown up front, so a code can be typed before the link is clicked), the
+  // guarded UPDATE simply matched no live-armed row — nothing died, no attempt
+  // was spent — so return `not-armed`, keep the key and the poll alive, and let
+  // the caller nudge the user to open the link. Only a post-arm `expired`
+  // (window closed / locked / claimed) is a dead claim we drop so the caller can
+  // prompt for a new link. Read the observed-armed flag BEFORE the request so a
+  // poll tick that arms mid-flight can never mislabel a premature submit as a
+  // genuine expiry.
   async function submitCode(code: string): Promise<ConfirmResult> {
     const key = activeKey;
     if (!key) return 'expired';
+    const wasArmed = awaitingCode.value;
     try {
       const res = await $fetch<ConfirmResponse>('/api/auth/confirm', {
         method: 'POST',
@@ -273,6 +283,7 @@ export const useSigninPoll = () => {
         return 'ready';
       }
       if (res.status === 'invalid') return 'invalid';
+      if (!wasArmed) return 'not-armed';
       clear();
       return 'expired';
     } catch (error) {

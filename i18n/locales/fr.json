@@ -44,11 +44,12 @@
     },
     "confirm": {
       "title": "Encore une étape",
-      "body": "Saisissez le code affiché sur la page ouverte lorsque vous avez appuyé sur le lien.",
+      "standaloneBody": "Ouvrez le lien que nous vous avons envoyé par e-mail — il affiche un code à 4 chiffres. Saisissez-le ici.",
       "codeLabel": "Code de confirmation",
       "submit": "Confirmer",
       "submitting": "Confirmation…",
       "errorInvalid": "Ce code est incorrect. Vérifiez la page ouverte et réessayez.",
+      "errorNotYet": "Ouvrez d'abord le lien dans votre e-mail, puis saisissez le code.",
       "errorExpired": "Ce code a expiré. Demandez un nouveau lien pour réessayer.",
       "errorGeneric": "Un problème est survenu. Réessayez dans un instant."
     }

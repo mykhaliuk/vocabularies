@@ -2,6 +2,7 @@ import { spawn } from 'node:child_process';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { run as runHttp } from './poll-claim.http.mjs';
 import { run as runClient } from './poll-claim.client.mjs';
+import { run as runEntry } from './poll-entry.client.mjs';
 
 // Local-only poll/claim integration runner (VKB-70). Spawns a dev server,
 // captures its console-email stdout to resolve magic links, runs the HTTP and
@@ -88,10 +89,11 @@ const main = async () => {
     const http = await runHttp({ base: BASE, findLink });
     console.log('\n### client cross-jar (Playwright) ###');
     const client = await runClient({ base: BASE, findLink });
-    failed = http.failed + client.failed;
-    console.log(
-      `\n==== TOTAL: ${http.passed + client.passed} passed, ${failed} failed ====`,
-    );
+    console.log('\n### entry routing + code-field UX (Playwright) ###');
+    const entry = await runEntry({ base: BASE, findLink });
+    failed = http.failed + client.failed + entry.failed;
+    const total = http.passed + client.passed + entry.passed;
+    console.log(`\n==== TOTAL: ${total} passed, ${failed} failed ====`);
   } finally {
     killTree(server);
   }
