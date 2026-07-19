@@ -56,15 +56,27 @@ limit — negligible.
 
 ## Consequences
 
-- **The mint is single-issue and code-gated.** `confirm.post` verifies the code
-  in constant time (`safeEqualHashes`), then claims + mints in one transaction:
-  `UPDATE signin_claims SET claimed_at = now() WHERE poll_key_hash = $1 AND
-confirm_code_hash = $2 AND claimed_at IS NULL AND confirm_expires_at > now()
-AND confirm_attempts < 3 RETURNING user_id`. Postgres row-locks the row, so a
+- **The attempt cap is an atomic gate, not a stale read.** Consuming an attempt
+  IS the gate: `confirm.post` first runs one conditional UPDATE —
+  `SET confirm_attempts = confirm_attempts + 1 WHERE poll_key_hash = $1 AND
+claimed_at IS NULL AND confirm_code_hash IS NOT NULL AND
+confirm_expires_at > now() AND confirm_attempts < 3 RETURNING confirm_code_hash,
+confirm_attempts` — and only then constant-time compares (`safeEqualHashes`) the
+  returned hash. The row lock this UPDATE takes means at most 3 requests can ever
+  obtain a hash to compare, even under N-way concurrency. A prior
+  read-then-compare-then-increment (three pooled statements, no lock held across
+  them) let N parallel requests all read `confirm_attempts = 0` and test a code
+  before any increment committed — a TOCTOU that made the 4-digit code
+  brute-forceable; the single conditional UPDATE closes it.
+- **The mint is single-issue.** On a match, `confirm.post` claims + mints in one
+  transaction: `UPDATE signin_claims SET claimed_at = now() WHERE
+poll_key_hash = $1 AND confirm_code_hash = $2 AND claimed_at IS NULL AND
+confirm_expires_at > now() RETURNING user_id`. Postgres row-locks the row, so a
   double-confirm race issues exactly one session; signing rides inside the
-  transaction so a failure rolls the claim back for retry. Wrong codes
-  atomically increment `confirm_attempts` (`= confirm_attempts + 1`); at the cap
-  the claim stops matching everywhere and the user must request a new link.
+  transaction so a failure rolls the claim back for retry. The mint UPDATE does
+  NOT re-check the cap — the request already legitimately consumed an in-cap
+  attempt and matched, so concurrent wrong guesses filling the cap must not
+  retroactively deny it.
 - **No enumeration signal.** Poll returns `pending` / `confirm`; confirm returns
   `ready` / `invalid` / `expired`. None reads email or user existence, so none
   leaks who is registered. A random-key prober only ever gets `pending` /
@@ -82,6 +94,14 @@ AND confirm_attempts < 3 RETURNING user_id`. Postgres row-locks the row, so a
   `DELETE WHERE expires_at < now()` sweep, fail-open, at the moment it mints.
   `signin_claims` gets the same lazy sweep as tokens (ADR-0002), on the
   magic-link write that creates claims.
+- **Arm extends `expires_at` to cover the confirm window.** A late click makes
+  `confirm_expires_at` (click + 5 min) outlive the outer `expires_at`
+  (send + 15 min). Because the claim sweep is global (`DELETE WHERE
+expires_at < now()`, not scoped to one key), it would delete a still-confirmable
+  claim and strand the user with the correct code. The arm sets
+  `expires_at = greatest(expires_at, confirm_expires_at)` (never shortening it),
+  so the outer bound can never precede the confirm window and the sweep can only
+  fire once the confirm window has also closed.
 - **Same recorded exit as ADR-0002/0005:** when auth state moves to a store
   with native TTL (Redis), the claim table and all three lazy sweeps go
   together.
@@ -125,9 +145,13 @@ are **not** part of the `bun run test:e2e` CI gate:
   → session in the PWA jar; **the regression that proves the fix:** an attacker
   holding the poll key but not the code gets `confirm` from poll, `invalid` then
   a lock from confirm, mints **no** session even with the correct code
-  post-lock; confirm-window expiry → rejected; unknown/malformed → expired/400;
-  desktop path unchanged) and the Playwright cross-jar UX (code page → code
-  input → `/me`, wrong-code retry, cold-start resume into the confirm step).
+  post-lock; **12 parallel wrong guesses cap `confirm_attempts` at 3, not 12,
+  and mint nothing** — the atomic-gate regression, which fails on a
+  read-then-increment; **a late click's confirm window survives the global
+  sweep** and still confirms; confirm-window expiry → rejected;
+  unknown/malformed → expired/400; desktop path unchanged) and the Playwright
+  cross-jar UX (code page → code input → `/me`, wrong-code retry, cold-start
+  resume into the confirm step).
 - **Needs a real iPhone (not automatable):** the actual iOS standalone-jar
   isolation — confirmed only with the app added to the Home Screen.
 

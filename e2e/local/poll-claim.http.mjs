@@ -236,6 +236,106 @@ export const run = async ({ base, findLink }) => {
         sessionCookieFrom(expConfirm) === null,
     );
 
+    console.log(
+      '\n== REGRESSION (BUG 1): parallel guesses cannot exceed cap ==',
+    );
+    // The attempt cap must be an atomic gate, not a stale read: N concurrent
+    // confirms with distinct WRONG codes must test at most 3 codes. On the
+    // pre-fix (read-then-compare-then-increment) all N tested a code and
+    // confirm_attempts reached N (~12); on the fix the atomic consume caps it
+    // at exactly 3. This assertion fails pre-fix and passes post-fix.
+    const parEmail = `parallel-${Date.now()}@example.com`;
+    const parKey = mintKey();
+    const parLink = await requestLink(parEmail, parKey);
+    const parCb = await fetch(parLink, { redirect: 'manual' });
+    const parRealCode = extractCode(await parCb.text());
+    const wrongGuesses = [];
+    for (let i = 1; i <= 12; i++) {
+      wrongGuesses.push(
+        String((Number(parRealCode) + i) % 10000).padStart(4, '0'),
+      );
+    }
+    const parResults = await Promise.all(
+      wrongGuesses.map((guess) =>
+        post('/api/auth/confirm', { pollKey: parKey, code: guess }),
+      ),
+    );
+    const parBodies = await Promise.all(parResults.map((r) => r.json()));
+    const parReady = parBodies.filter((b) => b.status === 'ready').length;
+    const parCookies = parResults.filter(
+      (r) => sessionCookieFrom(r) !== null,
+    ).length;
+    const parAttemptsRow = await pool.query(
+      `select confirm_attempts from signin_claims
+         where poll_key_hash = decode($1,'hex')`,
+      [sha256hex(parKey)],
+    );
+    check(
+      '12 parallel wrong guesses -> confirm_attempts capped at 3, no session',
+      parAttemptsRow.rows[0].confirm_attempts === 3 &&
+        parReady === 0 &&
+        parCookies === 0 &&
+        (await sessionsFor(parEmail)) === 1,
+      `attempts=${parAttemptsRow.rows[0].confirm_attempts} ready=${parReady} cookies=${parCookies}`,
+    );
+    const parAfter = await post('/api/auth/confirm', {
+      pollKey: parKey,
+      code: parRealCode,
+    });
+    check(
+      'correct code after the parallel lock -> expired, still no session',
+      (await parAfter.json()).status === 'expired' &&
+        (await sessionsFor(parEmail)) === 1,
+    );
+
+    console.log(
+      '\n== REGRESSION (BUG 2): late-click window survives the sweep ==',
+    );
+    // A late click makes confirm_expires_at (click+5min) outlive expires_at
+    // (send+15min). The arm must extend expires_at so the GLOBAL claim sweep
+    // cannot delete a still-confirmable claim. Fast-forward the outer window to
+    // the past (token untouched, so the click stays valid) to simulate it.
+    const lateEmail = `late-${Date.now()}@example.com`;
+    const lateKey = mintKey();
+    const lateLink = await requestLink(lateEmail, lateKey);
+    await pool.query(
+      `update signin_claims set expires_at = now() - interval '1 minute'
+         where poll_key_hash = decode($1,'hex')`,
+      [sha256hex(lateKey)],
+    );
+    const lateCb = await fetch(lateLink, { redirect: 'manual' });
+    const lateCode = extractCode(await lateCb.text());
+    const lateRow = await pool.query(
+      `select expires_at, confirm_expires_at from signin_claims
+         where poll_key_hash = decode($1,'hex')`,
+      [sha256hex(lateKey)],
+    );
+    const outerMs = new Date(lateRow.rows[0].expires_at).getTime();
+    const confirmMs = new Date(lateRow.rows[0].confirm_expires_at).getTime();
+    check(
+      'arm extends expires_at to cover the confirm window',
+      outerMs >= confirmMs,
+      `expires_at ${outerMs >= confirmMs ? '>=' : '<'} confirm_expires_at`,
+    );
+    await pool.query(`delete from signin_claims where expires_at < now()`);
+    const survived = await pool.query(
+      `select 1 from signin_claims where poll_key_hash = decode($1,'hex')`,
+      [sha256hex(lateKey)],
+    );
+    check(
+      'claim survives the global sweep after a late click',
+      survived.rowCount === 1,
+    );
+    const lateConfirm = await post('/api/auth/confirm', {
+      pollKey: lateKey,
+      code: lateCode,
+    });
+    check(
+      'confirm still succeeds inside the shown window (not stranded)',
+      (await lateConfirm.json()).status === 'ready' &&
+        sessionCookieFrom(lateConfirm) !== null,
+    );
+
     console.log('\n== Regression: desktop path (no pollKey) unchanged ==');
     const deskEmail = `desk-${Date.now()}@example.com`;
     const deskLink = await requestLink(deskEmail, undefined);

@@ -136,13 +136,20 @@ export default defineEventHandler(async (event) => {
     // input).
     try {
       const code = generateConfirmCode();
+      const confirmExpiresAt = new Date(Date.now() + CONFIRM_TTL_MS);
       const [armed] = await db
         .update(signinClaims)
         .set({
           userId: clickerUserId,
           confirmCodeHash: hashToken(code),
-          confirmExpiresAt: new Date(Date.now() + CONFIRM_TTL_MS),
+          confirmExpiresAt,
           confirmAttempts: 0,
+          // A late click can push confirm_expires_at (click + 5 min) past the
+          // outer expires_at (send + 15 min). Extend the outer bound so the
+          // GLOBAL claim sweep in magic-link.post (delete WHERE expires_at <
+          // now, not scoped to one key) can never delete a claim while its
+          // confirm window is still open. greatest() never shortens it.
+          expiresAt: sql`greatest(${signinClaims.expiresAt}, ${confirmExpiresAt.toISOString()}::timestamptz)`,
         })
         .where(
           and(

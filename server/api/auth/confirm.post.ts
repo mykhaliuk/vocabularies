@@ -78,47 +78,52 @@ export default defineEventHandler(async (event) => {
   const db = useDb();
   const now = new Date();
 
-  // The armed, unclaimed, unexpired, unlocked claim for this key — or nothing.
-  const [claim] = await db
-    .select({ confirmCodeHash: signinClaims.confirmCodeHash })
-    .from(signinClaims)
+  // Atomically CONSUME one attempt and read the armed code hash — but only while
+  // the claim is unclaimed, armed, within its confirm window, and under the cap.
+  // The row lock this single UPDATE takes is the brute-force gate: at most
+  // CONFIRM_MAX_ATTEMPTS requests can ever obtain a hash to compare, no matter
+  // how many fire in parallel. A read-then-compare-then-increment (three pooled
+  // statements, no lock held across them) let N concurrent requests all read
+  // attempts=0 and test a code before any increment committed — the TOCTOU that
+  // made the 4-digit code brute-forceable.
+  const [attempt] = await db
+    .update(signinClaims)
+    .set({ confirmAttempts: sql`${signinClaims.confirmAttempts} + 1` })
     .where(
       and(
         eq(signinClaims.pollKeyHash, pollKeyHash),
+        isNull(signinClaims.claimedAt),
         isNotNull(signinClaims.userId),
         isNotNull(signinClaims.confirmCodeHash),
-        isNull(signinClaims.claimedAt),
         gt(signinClaims.confirmExpiresAt, now),
         lt(signinClaims.confirmAttempts, CONFIRM_MAX_ATTEMPTS),
       ),
     )
-    .limit(1);
+    .returning({
+      confirmCodeHash: signinClaims.confirmCodeHash,
+      attempts: signinClaims.confirmAttempts,
+    });
 
-  if (!claim?.confirmCodeHash) return EXPIRED;
+  // No row: unknown key / over cap / expired / already claimed — uniform, no
+  // leak (a random-key prober only ever reaches here).
+  if (!attempt?.confirmCodeHash) return EXPIRED;
 
-  // Constant-time compare. On mismatch, atomically burn one attempt; once the
-  // cap is reached the claim stops matching everywhere and the user must
-  // request a new link.
-  if (!safeEqualHashes(codeHash, claim.confirmCodeHash)) {
-    const [bumped] = await db
-      .update(signinClaims)
-      .set({ confirmAttempts: sql`${signinClaims.confirmAttempts} + 1` })
-      .where(
-        and(
-          eq(signinClaims.pollKeyHash, pollKeyHash),
-          isNull(signinClaims.claimedAt),
-        ),
-      )
-      .returning({ attempts: signinClaims.confirmAttempts });
-    const attempts = bumped?.attempts ?? CONFIRM_MAX_ATTEMPTS;
-    return attempts >= CONFIRM_MAX_ATTEMPTS ? EXPIRED : INVALID;
+  // Constant-time compare of the returned hash. The attempt is already spent
+  // above, so a wrong guess counts toward the cap; when it was the LAST allowed
+  // one (post-increment == cap) the claim is now locked → tell the user to
+  // request a new link, else let them retry.
+  if (!safeEqualHashes(codeHash, attempt.confirmCodeHash)) {
+    return attempt.attempts >= CONFIRM_MAX_ATTEMPTS ? EXPIRED : INVALID;
   }
 
   // Correct code: claim exactly once + mint the session, atomically, signing
   // inside the transaction so a signing failure rolls the claim back (mirrors
   // the old poll mint). The guarded UPDATE re-checks the code hash so a
   // concurrent re-arm (another link click mid-confirm) cannot let a stale code
-  // through, and re-checks claimed_at so the session issues exactly once.
+  // through, and re-checks claimed_at so the session issues exactly once. It
+  // does NOT re-check the attempt cap: this request already legitimately
+  // consumed an in-cap attempt and matched, so concurrent wrong guesses filling
+  // the cap must not retroactively deny it.
   const sessionExpiresAt = new Date(now.getTime() + getSessionTtlMs());
   const userAgent = getRequestHeader(event, 'user-agent') ?? null;
 
@@ -135,7 +140,6 @@ export default defineEventHandler(async (event) => {
             isNull(signinClaims.claimedAt),
             isNotNull(signinClaims.userId),
             gt(signinClaims.confirmExpiresAt, now),
-            lt(signinClaims.confirmAttempts, CONFIRM_MAX_ATTEMPTS),
           ),
         )
         .returning({ userId: signinClaims.userId });
