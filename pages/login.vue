@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { LocationQueryValue } from 'vue-router';
-import { ArrowRight, Mail } from 'lucide-vue-next';
+import { ArrowRight, KeyRound, Mail } from 'lucide-vue-next';
+import { CONFIRM_CODE_LENGTH, CONFIRM_CODE_PATTERN } from '~/shared/magic-link';
 
 definePageMeta({ layout: false });
 
@@ -17,8 +18,19 @@ const {
   errorMessage,
   submit,
   reset,
-} = useMagicLink();
+  awaitingCode,
+  confirming,
+  codeError,
+  confirmCode,
+} = useMagicLink({ pollClaim: true });
 const inputRef = ref<HTMLInputElement | null>(null);
+const code = ref('');
+const validCode = computed(() => CONFIRM_CODE_PATTERN.test(code.value));
+
+async function onConfirm() {
+  if (!validCode.value || confirming.value) return;
+  await confirmCode(code.value);
+}
 
 // Surface auth-callback failures (expired / invalid link) routed here as
 // ?error=... by server/api/auth/callback.get.js.
@@ -36,6 +48,7 @@ function getErrorMessage(
 
 function useDifferentEmail() {
   reset();
+  code.value = '';
   nextTick(() => inputRef.value?.focus());
 }
 
@@ -108,14 +121,60 @@ async function resend() {
         role="status"
         aria-live="polite"
       >
-        <div class="auth__sent-icon" aria-hidden="true">
-          <Mail :size="32" />
-        </div>
-        <h2 class="auth__sent-title">{{ $t('login.sentTitle') }}</h2>
-        <p class="auth__sent-body">
-          {{ $t('login.sentBody') }}<br />
-          <span class="auth__sent-email">{{ trimmedEmail }}</span>
-        </p>
+        <template v-if="!awaitingCode">
+          <div class="auth__sent-icon" aria-hidden="true">
+            <Mail :size="32" />
+          </div>
+          <h2 class="auth__sent-title">{{ $t('login.sentTitle') }}</h2>
+          <p class="auth__sent-body">
+            {{ $t('login.sentBody') }}<br />
+            <span class="auth__sent-email">{{ trimmedEmail }}</span>
+          </p>
+        </template>
+
+        <template v-else>
+          <div class="auth__sent-icon" aria-hidden="true">
+            <KeyRound :size="32" />
+          </div>
+          <h2 class="auth__sent-title">{{ $t('login.confirm.title') }}</h2>
+          <p class="auth__sent-body">{{ $t('login.confirm.body') }}</p>
+
+          <form class="auth__code-form" novalidate @submit.prevent="onConfirm">
+            <label for="code" class="auth__label">
+              {{ $t('login.confirm.codeLabel') }}
+            </label>
+            <input
+              id="code"
+              v-model="code"
+              class="auth__input auth__code-input"
+              type="text"
+              inputmode="numeric"
+              autocomplete="one-time-code"
+              :maxlength="CONFIRM_CODE_LENGTH"
+              placeholder="0000"
+              :readonly="confirming"
+            />
+
+            <VButton
+              type="submit"
+              variant="primary"
+              size="lg"
+              full
+              :loading="confirming"
+              :disabled="!validCode"
+            >
+              {{
+                confirming
+                  ? $t('login.confirm.submitting')
+                  : $t('login.confirm.submit')
+              }}
+            </VButton>
+
+            <p v-if="codeError" role="alert" class="auth__error">
+              {{ codeError }}
+            </p>
+          </form>
+        </template>
 
         <p v-if="errorMessage" role="alert" class="auth__error">
           {{ errorMessage }}
@@ -129,7 +188,7 @@ async function resend() {
           >
             {{ $t('login.useDifferentEmail') }}
           </button>
-          <p class="auth__sent-resend">
+          <p v-if="!awaitingCode" class="auth__sent-resend">
             {{ $t('login.resendPrompt') }}
             <button
               class="auth__sent-resend-btn"
@@ -275,6 +334,25 @@ async function resend() {
   font-size: 13.5px;
   color: var(--text-faint);
   line-height: var(--leading-normal);
+}
+
+/* --- confirmation code --- */
+.auth__code-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin-top: var(--space-6);
+  text-align: start;
+}
+
+.auth__code-input {
+  text-align: center;
+  font-size: var(--text-xl);
+  font-weight: var(--w-bold);
+  /* Letter-spacing pushes the text right; pad the start back so it reads
+     centered rather than shifted. */
+  letter-spacing: 0.4em;
+  padding-inline-start: calc(15px + 0.4em);
 }
 
 /* --- sent phase --- */

@@ -14,6 +14,15 @@
       "tagline": "Never lose your sweet moments."
     }
   },
+  "auth": {
+    "confirmPage": {
+      "title": "Confirm sign-in · Vocabu",
+      "heading": "You're signed in on this device",
+      "body": "To finish signing in on your app, type this code there:",
+      "expiry": "This code expires in {minutes} minutes.",
+      "continue": "Continue in this browser"
+    }
+  },
   "login": {
     "pageTitle": "Sign in · Vocabu",
     "brand": "Vocabu",
@@ -32,6 +41,16 @@
       "tokenExpired": "That link expired. Ask for a new one and you're in.",
       "signinFailed": "Something got tangled signing you in. Try again.",
       "tooMany": "Too many attempts from your network. Wait a moment and try again."
+    },
+    "confirm": {
+      "title": "One more step",
+      "body": "Type the code shown on the page that opened when you tapped the link.",
+      "codeLabel": "Confirmation code",
+      "submit": "Confirm",
+      "submitting": "Confirming…",
+      "errorInvalid": "That code isn't right. Check the page that opened and try again.",
+      "errorExpired": "That code expired. Ask for a new link to try again.",
+      "errorGeneric": "Something went wrong. Try again in a moment."
     }
   },
   "magicLink": {

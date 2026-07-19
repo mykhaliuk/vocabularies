@@ -22,6 +22,7 @@
     "fmt:check": "oxfmt --check .",
     "typecheck": "nuxt typecheck",
     "test:e2e": "playwright test",
+    "test:poll-claim": "bun run infra:up && node scripts/with-env.js local node e2e/local/run.mjs",
     "icons:gen": "node scripts/generate-icons.js",
     "ds:check": "node scripts/ds-check.js",
     "i18n:check": "node scripts/i18n-check.js",

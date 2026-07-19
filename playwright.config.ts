@@ -8,6 +8,10 @@ const baseURL = `http://localhost:${PORT}`;
 
 export default defineConfig({
   testDir: './e2e',
+  // e2e/local/* are DB-backed poll/claim integration tests run by their own
+  // runner (`bun run test:poll-claim`), never by this CI suite — CI has no
+  // database. Ignore them so `playwright test` cannot collect them.
+  testIgnore: '**/local/**',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,

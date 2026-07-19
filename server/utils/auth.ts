@@ -1,4 +1,9 @@
-import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
+import {
+  createHash,
+  randomBytes,
+  randomInt,
+  timingSafeEqual,
+} from 'node:crypto';
 import { eq } from 'drizzle-orm';
 import { jwtVerify, SignJWT } from 'jose';
 import { sessions } from '~/db/schema/sessions';
@@ -41,15 +46,20 @@ export const normalizeEmail = (raw: string) =>
 
 export const generateRawToken = () => randomBytes(32).toString('base64url');
 
+// Device-flow confirmation code (VKB-70): a uniformly random 4-digit code,
+// zero-padded. randomInt is rejection-sampled and unbiased over [0, 10000).
+export const generateConfirmCode = () =>
+  String(randomInt(0, 10000)).padStart(4, '0');
+
 export const hashToken = (raw: string) =>
   createHash('sha256').update(raw).digest();
 
 // Constant-time hash equality for callers that fetch a candidate hash and need
-// to compare it against an expected one in memory. The current callback flow
-// looks up by hash via a DB unique index (`magic_link_tokens_token_hash_unique`)
-// — the lookup IS the comparison, so this helper is unused there. Kept for
-// future paths (e.g. token rotation, password-reset) where in-process compare
-// is the right shape.
+// to compare it against an expected one in memory. The magic-link callback
+// looks up by hash via a DB unique index (the lookup IS the comparison), so it
+// does not need this — but the confirmation-code flow does (VKB-70):
+// `confirm.post` reads the stored code hash, then compares the submitted code's
+// hash here without timing leaks.
 export const safeEqualHashes = (a: Buffer, b: Buffer) => {
   if (!Buffer.isBuffer(a) || !Buffer.isBuffer(b)) return false;
   if (a.length !== 32 || b.length !== 32) return false;

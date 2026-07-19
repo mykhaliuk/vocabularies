@@ -35,3 +35,6 @@ Format: `NNNN-short-slug.md`, template in [0000-template.md](0000-template.md).
   redirect
 - [ADR-0007](0007-transactional-email-rendering.md) — transactional emails are
   hand-rolled inline-styled HTML, localized server-side (magic-link first)
+- [ADR-0008](0008-pwa-poll-claim-signin.md) — installed PWAs sign in via a
+  poll/claim handoff gated by a click-revealed confirmation code (closes a
+  session-fixation hole), not the Safari link cookie
