@@ -18,6 +18,15 @@ crystallizes during planning, add it here in the same PR.
 - **collection** — a named group of words curated by a user.
 - **magic link** — the emailed one-time sign-in link; the only way in, there
   are no passwords.
+- **poll/claim** — the sign-in handoff that lets an installed PWA finish a
+  magic-link sign-in whose link opened in a different browser (Safari, a
+  separate jar). The PWA waits for the click, then takes the session over.
+- **poll key** — the high-entropy, single-use secret an installed PWA mints
+  and keeps in its own storage to name the sign-in it is waiting on. A bearer
+  secret: never shown, never emailed, kept only as a hash on the server.
+- **claim** — the pending cross-jar sign-in a poll key names. **Armed** when
+  the magic link is opened, then **claimed** exactly once by the PWA, which
+  then receives its own session.
 - **moment** — the captured piece of the speaker actually saying it: a video
   clip of up to 20 seconds or an audio clip of up to 3 minutes attached to
   an entry.

@@ -1,6 +1,7 @@
-import { eq, lt, sql } from 'drizzle-orm';
+import { and, eq, isNull, lt, sql } from 'drizzle-orm';
 import { magicLinkTokens } from '~/db/schema/magic-link-tokens';
 import { sessions } from '~/db/schema/sessions';
+import { signinClaims } from '~/db/schema/signin-claims';
 import { users } from '~/db/schema/users';
 import {
   getSessionTtlMs,
@@ -46,6 +47,7 @@ export default defineEventHandler(async (event) => {
     .returning({
       email: magicLinkTokens.email,
       expiresAt: magicLinkTokens.expiresAt,
+      pollKeyHash: magicLinkTokens.pollKeyHash,
     });
 
   if (!consumed) return noStoreRedirect(event, '/login?error=token-invalid');
@@ -102,6 +104,31 @@ export default defineEventHandler(async (event) => {
 
     const jwt = await signSession(session.id);
     setSessionCookie(event, jwt);
+
+    // Arm the cross-jar poll claim (VKB-70) so an installed PWA polling on its
+    // own jar can pick this sign-in up. Only present when a pollKey rode with
+    // the original request. Fail-open in its own try/catch: the interactive
+    // sign-in has already succeeded (cookie set), and this hygiene step must
+    // never turn a completed sign-in into the signin-failed path. A miss here
+    // only means the PWA won't auto-sign-in — the link still worked in Safari.
+    if (consumed.pollKeyHash) {
+      try {
+        await db
+          .update(signinClaims)
+          .set({ userId: session.userId })
+          .where(
+            and(
+              eq(signinClaims.pollKeyHash, consumed.pollKeyHash),
+              isNull(signinClaims.userId),
+            ),
+          );
+      } catch (error) {
+        console.error(
+          '[auth.callback] poll claim arm failure (failing open)',
+          error,
+        );
+      }
+    }
   } catch (error) {
     console.error('[auth.callback] sign-in failed', {
       email: consumed.email,

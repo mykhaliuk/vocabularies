@@ -1,3 +1,5 @@
+import { MAGIC_LINK_TTL_MS } from '~/shared/magic-link';
+
 type FetchErrorLike = {
   statusCode?: number;
   statusMessage?: string;
@@ -44,6 +46,7 @@ const translateError = (error: unknown, t: Translate): string => {
 // POST + error handling live in exactly one place.
 export const useMagicLink = () => {
   const { t } = useI18n();
+  const poll = useSigninPoll();
   const email = ref('');
   const submitting = ref(false);
   const sent = ref(false);
@@ -56,12 +59,16 @@ export const useMagicLink = () => {
     if (!validEmail.value || submitting.value) return;
     submitting.value = true;
     errorMessage.value = '';
+    // Installed PWAs get a poll key bound to this sign-in so they can claim the
+    // session on their own jar (VKB-70); undefined for every other client.
+    const pollKey = poll.prepareKey(trimmedEmail.value);
     try {
       await $fetch('/api/auth/magic-link', {
         method: 'POST',
-        body: { email: trimmedEmail.value },
+        body: { email: trimmedEmail.value, pollKey },
       });
       sent.value = true;
+      if (pollKey) poll.beginPolling(Date.now() + MAGIC_LINK_TTL_MS);
     } catch (error) {
       errorMessage.value = translateError(error, t);
     } finally {
@@ -72,6 +79,9 @@ export const useMagicLink = () => {
   const reset = () => {
     sent.value = false;
     errorMessage.value = '';
+    // "Use a different email" discards the pending sign-in: stop polling and
+    // drop the stored key so a new send mints a fresh one.
+    poll.clear();
   };
 
   return {

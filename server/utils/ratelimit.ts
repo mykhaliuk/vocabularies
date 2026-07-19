@@ -22,6 +22,7 @@ let cachedRedis: Redis | null | undefined;
 let cachedEmail: RatelimitLike | undefined;
 let cachedIp: RatelimitLike | undefined;
 let cachedCallbackIp: RatelimitLike | undefined;
+let cachedAuthPollIp: RatelimitLike | undefined;
 let cachedMediaUpload: RatelimitLike | undefined;
 
 const getRedis = () => {
@@ -84,6 +85,20 @@ export const useIpRatelimit = () => {
 export const useCallbackIpRatelimit = () => {
   if (!cachedCallbackIp) cachedCallbackIp = createLimiter('callback', 'ip');
   return cachedCallbackIp;
+};
+
+// Poll/claim endpoint (VKB-70). A PWA polls with backoff while waiting for the
+// link click, so the cap is far higher than the send/callback buckets: a lone
+// poller runs a handful of requests a minute, and this only guards against a
+// client hammering the endpoint. Per-IP, same fail-open policy as the rest.
+export const useAuthPollRatelimit = () => {
+  if (!cachedAuthPollIp) {
+    cachedAuthPollIp = createLimiter('auth-poll', 'ip', {
+      max: 60,
+      window: '1 m',
+    });
+  }
+  return cachedAuthPollIp;
 };
 
 // Per-user cap on presigned upload slots: generous enough for a burst of

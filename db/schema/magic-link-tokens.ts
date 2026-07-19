@@ -15,6 +15,11 @@ export const magicLinkTokens = pgTable(
     email: text('email').notNull(),
     tokenHash: bytea('token_hash').notNull(),
     expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    // Bridges the emailed token to a poll/claim record (VKB-70): set only when
+    // an installed PWA sends a pollKey with the request. The callback reads it
+    // back from the token it consumes and arms the matching signin_claims row.
+    // Null for every desktop/browser sign-in — that path is unchanged.
+    pollKeyHash: bytea('poll_key_hash'),
   },
   (table) => [
     uniqueIndex('magic_link_tokens_token_hash_unique').on(table.tokenHash),
