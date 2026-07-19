@@ -14,6 +14,15 @@
       "tagline": "Ne perdez plus jamais vos doux instants."
     }
   },
+  "auth": {
+    "confirmPage": {
+      "title": "Confirmer la connexion · Vocabu",
+      "heading": "Vous êtes connecté sur cet appareil",
+      "body": "Pour finaliser la connexion dans votre application, saisissez-y ce code :",
+      "expiry": "Ce code expire dans {minutes} minutes.",
+      "continue": "Continuer dans ce navigateur"
+    }
+  },
   "login": {
     "pageTitle": "Connexion · Vocabu",
     "brand": "Vocabu",
@@ -32,6 +41,16 @@
       "tokenExpired": "Ce lien a expiré. Demandez-en un nouveau, et vous y êtes.",
       "signinFailed": "Un problème est survenu lors de la connexion. Réessayez.",
       "tooMany": "Trop de tentatives depuis votre réseau. Patientez un instant et réessayez."
+    },
+    "confirm": {
+      "title": "Encore une étape",
+      "body": "Saisissez le code affiché sur la page ouverte lorsque vous avez appuyé sur le lien.",
+      "codeLabel": "Code de confirmation",
+      "submit": "Confirmer",
+      "submitting": "Confirmation…",
+      "errorInvalid": "Ce code est incorrect. Vérifiez la page ouverte et réessayez.",
+      "errorExpired": "Ce code a expiré. Demandez un nouveau lien pour réessayer.",
+      "errorGeneric": "Un problème est survenu. Réessayez dans un instant."
     }
   },
   "magicLink": {

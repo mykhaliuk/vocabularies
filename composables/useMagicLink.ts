@@ -41,14 +41,22 @@ const translateError = (error: unknown, t: Translate): string => {
 
 // Shared passwordless sign-in flow: holds the email field, validity, request
 // state and a friendly error. Used by both the landing hero and /login so the
-// POST + error handling live in exactly one place.
-export const useMagicLink = () => {
+// POST + error handling live in exactly one place. The cross-jar poll/claim
+// flow (VKB-70) is opt-in via `pollClaim` — only /login carries the
+// confirmation-code UI, so the landing hero sends a plain link (desktop
+// behavior) rather than stranding a standalone PWA on a screen with no code
+// input.
+export const useMagicLink = (options: { pollClaim?: boolean } = {}) => {
+  const { pollClaim = false } = options;
   const { t } = useI18n();
   const poll = useSigninPoll();
   const email = ref('');
   const submitting = ref(false);
   const sent = ref(false);
   const errorMessage = ref('');
+  const awaitingCode = poll.awaitingCode;
+  const confirming = ref(false);
+  const codeError = ref('');
 
   const trimmedEmail = computed(() => email.value.trim());
   const validEmail = computed(() => EMAIL_RE.test(trimmedEmail.value));
@@ -57,9 +65,9 @@ export const useMagicLink = () => {
     if (!validEmail.value || submitting.value) return;
     submitting.value = true;
     errorMessage.value = '';
-    // Installed PWAs get a poll key bound to this sign-in so they can claim the
-    // session on their own jar (VKB-70); undefined for every other client.
-    const pollKey = poll.prepareKey(trimmedEmail.value);
+    // Installed PWAs (on /login) get a poll key bound to this sign-in so they
+    // can claim the session on their own jar (VKB-70); undefined otherwise.
+    const pollKey = pollClaim ? poll.prepareKey(trimmedEmail.value) : undefined;
     try {
       await $fetch('/api/auth/magic-link', {
         method: 'POST',
@@ -77,17 +85,37 @@ export const useMagicLink = () => {
   const reset = () => {
     sent.value = false;
     errorMessage.value = '';
+    codeError.value = '';
     // "Use a different email" discards the pending sign-in: stop polling and
     // drop the stored key so a new send mints a fresh one.
     poll.clear();
   };
 
+  // Submit the confirmation code shown on the click page. On success the poll
+  // composable navigates to /me. `invalid` keeps the input for a retry;
+  // `expired` (window closed / attempt cap) returns the user to the email form
+  // with a message to request a new link.
+  const confirmCode = async (code: string) => {
+    if (confirming.value) return;
+    confirming.value = true;
+    codeError.value = '';
+    const result = await poll.submitCode(code);
+    confirming.value = false;
+    if (result === 'ready') return;
+    if (result === 'invalid') codeError.value = t('login.confirm.errorInvalid');
+    else if (result === 'expired') {
+      sent.value = false;
+      errorMessage.value = t('login.confirm.errorExpired');
+    } else codeError.value = t('login.confirm.errorGeneric');
+  };
+
   // Cold-start resume (VKB-70): iOS evicts a backgrounded PWA while the user is
   // in Mail clicking the link; on relaunch the component mounts fresh with no
   // visibilitychange and sent=false. If a still-valid poll survived in storage,
-  // re-attach to it and restore the "check your inbox" state so the armed claim
-  // is collected instead of silently showing the empty form.
+  // re-attach to it and restore the "check your inbox" state so the claim is
+  // collected instead of silently showing the empty form.
   onMounted(() => {
+    if (!pollClaim) return;
     const resumed = poll.resume();
     if (!resumed) return;
     email.value = resumed.email;
@@ -103,5 +131,9 @@ export const useMagicLink = () => {
     errorMessage,
     submit,
     reset,
+    awaitingCode,
+    confirming,
+    codeError,
+    confirmCode,
   };
 };

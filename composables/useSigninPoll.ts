@@ -26,8 +26,14 @@ interface StoredPoll {
 }
 
 interface PollResponse {
-  status: 'pending' | 'ready';
+  status: 'pending' | 'confirm';
 }
+
+interface ConfirmResponse {
+  status: 'ready' | 'invalid' | 'expired';
+}
+
+export type ConfirmResult = 'ready' | 'invalid' | 'expired' | 'error';
 
 // Only installed PWAs need the poll/claim path — a plain browser opens the
 // link in the same jar and the callback cookie just works. Gating here keeps
@@ -113,6 +119,9 @@ export const useSigninPoll = () => {
   // flap must not launch a second concurrent chain (would multiply the request
   // rate and can trip the server's per-IP bucket on shared egress).
   let inFlight = false;
+  // Reactive: flips true once the link is clicked and the claim is armed, so
+  // the UI reveals the confirmation-code input on the "check your inbox" screen.
+  const awaitingCode = ref(false);
 
   function clearTimer(): void {
     if (timer !== null) {
@@ -134,6 +143,7 @@ export const useSigninPoll = () => {
     activeKey = null;
     activeEmail = '';
     deadline = 0;
+    awaitingCode.value = false;
     removeStored();
   }
 
@@ -167,13 +177,16 @@ export const useSigninPoll = () => {
         method: 'POST',
         body: { pollKey: key },
       });
-      if (res.status === 'ready') {
-        clear();
-        await navigateTo('/me');
+      if (res.status === 'confirm') {
+        // The link was clicked and the claim is armed. Stop polling and hand
+        // off to the code input; the session is minted by submitCode, never by
+        // the poll — that is what closes the session-fixation hole (ADR-0008).
+        awaitingCode.value = true;
+        stopPolling();
         return;
       }
     } catch (error) {
-      // Transient (429 / 5xx / network): only a ready response ends the loop;
+      // Transient (429 / 5xx / network): only a confirm response ends the loop;
       // everything else retries with backoff until the deadline.
       console.error('[signin-poll] poll attempt failed', error);
     } finally {
@@ -242,7 +255,41 @@ export const useSigninPoll = () => {
     return { email: stored.email };
   }
 
+  // Submit the confirmation code typed on this (the initiating) device. On a
+  // match the server mints the session into THIS jar and we navigate signed-in;
+  // `invalid` keeps the input for a retry; `expired` (window closed / locked /
+  // claimed) drops the dead claim so the caller can prompt for a new link.
+  async function submitCode(code: string): Promise<ConfirmResult> {
+    const key = activeKey;
+    if (!key) return 'expired';
+    try {
+      const res = await $fetch<ConfirmResponse>('/api/auth/confirm', {
+        method: 'POST',
+        body: { pollKey: key, code },
+      });
+      if (res.status === 'ready') {
+        clear();
+        await navigateTo('/me');
+        return 'ready';
+      }
+      if (res.status === 'invalid') return 'invalid';
+      clear();
+      return 'expired';
+    } catch (error) {
+      console.error('[signin-poll] confirm failed', error);
+      return 'error';
+    }
+  }
+
   onScopeDispose(stopPolling);
 
-  return { prepareKey, beginPolling, resume, stopPolling, clear };
+  return {
+    prepareKey,
+    beginPolling,
+    resume,
+    submitCode,
+    awaitingCode,
+    stopPolling,
+    clear,
+  };
 };

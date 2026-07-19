@@ -23,6 +23,7 @@ let cachedEmail: RatelimitLike | undefined;
 let cachedIp: RatelimitLike | undefined;
 let cachedCallbackIp: RatelimitLike | undefined;
 let cachedAuthPollIp: RatelimitLike | undefined;
+let cachedAuthConfirmIp: RatelimitLike | undefined;
 let cachedMediaUpload: RatelimitLike | undefined;
 
 const getRedis = () => {
@@ -99,6 +100,19 @@ export const useAuthPollRatelimit = () => {
     });
   }
   return cachedAuthPollIp;
+};
+
+// Confirmation-code endpoint (VKB-70). The per-claim 3-attempt cap is the real
+// brute-force defense; this per-IP limit is DoS defense, generous enough for a
+// user's legitimate mistypes across a couple of links. Fail-open like the rest.
+export const useAuthConfirmRatelimit = () => {
+  if (!cachedAuthConfirmIp) {
+    cachedAuthConfirmIp = createLimiter('auth-confirm', 'ip', {
+      max: 20,
+      window: '5 m',
+    });
+  }
+  return cachedAuthConfirmIp;
 };
 
 // Per-user cap on presigned upload slots: generous enough for a burst of

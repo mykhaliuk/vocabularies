@@ -4,14 +4,18 @@ import { sessions } from '~/db/schema/sessions';
 import { signinClaims } from '~/db/schema/signin-claims';
 import { users } from '~/db/schema/users';
 import {
+  generateConfirmCode,
   getSessionTtlMs,
   hashToken,
   setSessionCookie,
   signSession,
 } from '~/server/utils/auth';
+import { renderConfirmPage } from '~/server/utils/confirm-page';
 import { useDb } from '~/server/utils/db';
 import { useCallbackIpRatelimit } from '~/server/utils/ratelimit';
 import { noStoreRedirect } from '~/server/utils/redirect';
+import { resolveRequestLocale } from '~/server/utils/request-locale';
+import { CONFIRM_TTL_MINUTES, CONFIRM_TTL_MS } from '~/shared/magic-link';
 
 export default defineEventHandler(async (event) => {
   const query = getQuery(event);
@@ -70,6 +74,7 @@ export default defineEventHandler(async (event) => {
     );
   }
 
+  let clickerUserId: string | null = null;
   try {
     const session = await db.transaction(async (tx) => {
       const [existing] = await tx
@@ -104,37 +109,65 @@ export default defineEventHandler(async (event) => {
 
     const jwt = await signSession(session.id);
     setSessionCookie(event, jwt);
-
-    // Arm the cross-jar poll claim (VKB-70) so an installed PWA polling on its
-    // own jar can pick this sign-in up. Only present when a pollKey rode with
-    // the original request. Fail-open in its own try/catch: the interactive
-    // sign-in has already succeeded (cookie set), and this hygiene step must
-    // never turn a completed sign-in into the signin-failed path. A miss here
-    // only means the PWA won't auto-sign-in — the link still worked in Safari.
-    if (consumed.pollKeyHash) {
-      try {
-        await db
-          .update(signinClaims)
-          .set({ userId: session.userId })
-          .where(
-            and(
-              eq(signinClaims.pollKeyHash, consumed.pollKeyHash),
-              isNull(signinClaims.userId),
-            ),
-          );
-      } catch (error) {
-        console.error(
-          '[auth.callback] poll claim arm failure (failing open)',
-          error,
-        );
-      }
-    }
+    clickerUserId = session.userId;
   } catch (error) {
     console.error('[auth.callback] sign-in failed', {
       email: consumed.email,
       error,
     });
     return noStoreRedirect(event, '/login?error=signin-failed');
+  }
+
+  // Cross-jar poll/claim (VKB-70): the clicker is now signed into THIS browser,
+  // but an installed PWA that started the sign-in lives in a separate jar. Arm
+  // the claim with a fresh confirmation code and reveal it on this page — the
+  // PWA cannot receive the session until that code is entered on it. This is
+  // what closes the session-fixation hole (ADR-0008): an attacker who holds the
+  // poll key never sees this page, so cannot confirm. Re-arm (overwrite) on
+  // WHERE claimed_at IS NULL so clicking the latest of several resent links
+  // shows a fresh, usable code. Fail-open: the browser sign-in already
+  // succeeded, so on any failure fall through to /me — never block it.
+  let armedCode: string | null = null;
+  if (consumed.pollKeyHash && clickerUserId) {
+    // Only the DB arm is fail-open (a failure here must not block the Safari
+    // sign-in). Rendering the page is pure and lives OUTSIDE this try, so a
+    // render fault can never be mislabeled as an arm failure or silently drop a
+    // successfully-armed claim (which would strand the PWA on a codeless code
+    // input).
+    try {
+      const code = generateConfirmCode();
+      const [armed] = await db
+        .update(signinClaims)
+        .set({
+          userId: clickerUserId,
+          confirmCodeHash: hashToken(code),
+          confirmExpiresAt: new Date(Date.now() + CONFIRM_TTL_MS),
+          confirmAttempts: 0,
+        })
+        .where(
+          and(
+            eq(signinClaims.pollKeyHash, consumed.pollKeyHash),
+            isNull(signinClaims.claimedAt),
+          ),
+        )
+        .returning({ id: signinClaims.id });
+      if (armed) armedCode = code;
+    } catch (error) {
+      console.error(
+        '[auth.callback] confirm-code arm failed (falling back to /me)',
+        error,
+      );
+    }
+  }
+
+  if (armedCode) {
+    setResponseHeader(event, 'Cache-Control', 'no-store');
+    setResponseHeader(event, 'Content-Type', 'text/html; charset=utf-8');
+    return renderConfirmPage({
+      locale: resolveRequestLocale(event),
+      code: armedCode,
+      expiryMinutes: CONFIRM_TTL_MINUTES,
+    });
   }
 
   return noStoreRedirect(event, '/me');

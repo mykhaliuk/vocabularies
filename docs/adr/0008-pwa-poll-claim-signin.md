@@ -1,9 +1,10 @@
-# ADR-0008: installed PWAs sign in via a poll/claim handoff, not the link cookie
+# ADR-0008: installed PWAs sign in via poll/claim + a click-revealed code
 
 - Status: Accepted
 - Date: 2026-07-19
 - Refs: VKB-70, VKB-55, ADR-0002, ADR-0005,
-  `server/api/auth/poll.post.ts`, `db/schema/signin-claims.ts`
+  `server/api/auth/callback.get.ts`, `server/api/auth/poll.post.ts`,
+  `server/api/auth/confirm.post.ts`, `db/schema/signin-claims.ts`
 
 ## Context
 
@@ -16,88 +17,117 @@ intercept the click. The magic link is the only way in (GLOSSARY), and it must
 stay one-tap for desktop and browser, so the fix has to add a path for the PWA
 without changing the existing link flow.
 
+**The naive handoff opens a session-fixation / login-CSRF hole.** If the PWA
+just mints a poll key, the server arms the claim on any click, and the PWA's
+poll then mints the session, then whoever holds the poll key collects the
+session of whoever clicks. An attacker can pick a poll key, get a victim to
+open an attacker-initiated magic link (or open the attacker's own link and
+hand the key to the victim's session), and the attacker's PWA — polling that
+key — receives the **victim's** authenticated session. The click authorizes a
+sign-in, but nothing binds _who clicked_ to _who receives the session_.
+
 ## Decision
 
-Keep the link exactly as-is and add a **poll/claim** handoff for the PWA. The
-PWA mints a 256-bit **poll key**, persists it in its own localStorage, and
-sends its hash with the magic-link request; the server binds the hash to a
-pending **claim** (`signin_claims`). The Safari link click signs in as today
-_and_ **arms** the claim (writes the resolved `user_id`). The PWA polls
-`POST /api/auth/poll` with the poll key (immediately on `visibilitychange`
-when the user returns, else backoff); the first poll to find an armed,
-unexpired, unclaimed claim **claims it once** and mints a session cookie into
-the PWA's own jar. Only key _hashes_ are stored, mirroring the token hash. The
-poll key is generated only when the client is an installed standalone PWA, so
-every other client's flow is byte-identical to before — no poll key, no claim
-row.
+Keep the link one-tap and add a **poll/claim** handoff **gated by a
+confirmation code shown only on the click page**. The PWA mints a 256-bit
+**poll key**, persists it in its own localStorage, and sends its hash with the
+magic-link request; the server binds the hash to a pending **claim**
+(`signin_claims`). The Safari click signs the clicker into Safari as today
+_and_ **arms** the claim: it sets `user_id` plus a hashed **confirmation code**
+with its own short window, and renders that code — in plaintext, in the page
+body only — to the clicker. The PWA polls `POST /api/auth/poll`, which now only
+_reports_ state (`pending` / `confirm`, never the code). Once armed, the PWA
+shows a code input; the user types the code they see on the click page and
+`POST /api/auth/confirm` verifies it, claims the row exactly once, and mints
+the session cookie into the PWA's own jar. The poll key is generated only for
+an installed standalone PWA on `/login`, so every other client's flow is
+byte-identical to before — no poll key, no claim row, no code.
+
+### Why the code closes the hole
+
+The code is revealed **only on the click page** — the victim's Safari — and the
+poller must present it. An attacker who holds the poll key never sees the
+victim's click page, so cannot confirm. Security does **not** depend on user
+vigilance (unlike "tap the matching number", where a rushed victim can approve
+the attacker's prompt): the attacker simply lacks the secret. Brute force is
+bounded to at most **3 / 10000** within the window by a **4-digit** code, a
+**3-attempt** cap per claim, a **5-minute** confirm window, and a per-IP rate
+limit — negligible.
 
 ## Consequences
 
-- **Single-issue is a guarded UPDATE.** The poll does
+- **The mint is single-issue and code-gated.** `confirm.post` verifies the code
+  in constant time (`safeEqualHashes`), then claims + mints in one transaction:
   `UPDATE signin_claims SET claimed_at = now() WHERE poll_key_hash = $1 AND
-user_id IS NOT NULL AND claimed_at IS NULL AND expires_at > now()
-RETURNING user_id`; Postgres row-locks the row, so under a double-poll race
-  exactly one caller wins. Claim + session mint run in one transaction, so a
-  mint failure rolls the claim back and the next poll retries — no burned
-  claim, no double session.
-- **No enumeration signal.** Every non-success outcome (unknown key,
-  not-yet-armed, expired, already-claimed) returns the same
-  `{ status: 'pending' }`. The poll never reads email or user existence, so it
-  cannot leak who is registered; the anti-enumeration posture of the send
-  path is preserved.
-- **Bearer-secret hygiene.** The poll key is unguessable (256-bit),
-  single-use (claimed once), short-TTL (15 min, shared with the token via
-  `shared/magic-link.ts`), and rate-limited per IP. It is POSTed (never in a
-  URL/query, so it stays out of logs, history and the SW cache), the issued
-  cookie is HTTPS-only off `local` (`setSessionCookie`), and localStorage is
-  cleared on success or expiry.
-- **New sessions-growth site inherits the ADR-0005 sweep.** The poll is a
+confirm_code_hash = $2 AND claimed_at IS NULL AND confirm_expires_at > now()
+AND confirm_attempts < 3 RETURNING user_id`. Postgres row-locks the row, so a
+  double-confirm race issues exactly one session; signing rides inside the
+  transaction so a failure rolls the claim back for retry. Wrong codes
+  atomically increment `confirm_attempts` (`= confirm_attempts + 1`); at the cap
+  the claim stops matching everywhere and the user must request a new link.
+- **No enumeration signal.** Poll returns `pending` / `confirm`; confirm returns
+  `ready` / `invalid` / `expired`. None reads email or user existence, so none
+  leaks who is registered. A random-key prober only ever gets `pending` /
+  `expired`; `invalid` (wrong code, retry) is reachable only by a holder of a
+  genuinely-armed claim, and reveals nothing beyond what its own poll already
+  told it.
+- **Two bearer secrets, both hashed at rest.** The poll key (256-bit, in the
+  PWA's storage) and the code (shown once on the click page) are stored only as
+  SHA-256 hashes. The code never appears in a URL, a log, or any poll/confirm
+  response — only in the click-page body. Both endpoints are POST + `no-store`;
+  the issued cookie is HTTPS-only off `local`; localStorage is cleared on
+  success or expiry.
+- **New sessions-growth site inherits the ADR-0005 sweep.** `confirm.post` is a
   second place sessions are created, so it carries the same lazy
   `DELETE WHERE expires_at < now()` sweep, fail-open, at the moment it mints.
   `signin_claims` gets the same lazy sweep as tokens (ADR-0002), on the
   magic-link write that creates claims.
 - **Same recorded exit as ADR-0002/0005:** when auth state moves to a store
-  with native TTL (Redis), the claim table and all three lazy sweeps are
-  deleted together.
-- **The PWA session reflects the PWA.** The poll mints a fresh session with
-  the PWA's own user-agent/IP rather than sharing Safari's callback session,
-  so each jar's session carries its own audit trail and neither dangles if the
-  other logs out.
+  with native TTL (Redis), the claim table and all three lazy sweeps go
+  together.
+- **The PWA session reflects the PWA.** Confirm mints a fresh session with the
+  PWA's own user-agent/IP rather than sharing Safari's callback session, so each
+  jar's session carries its own audit trail and neither dangles on logout.
+- **UX cost.** One code entry on the initiating device. The email link stays one
+  tap; desktop/browser sign-in is unchanged; only the installed PWA sees the
+  extra step, which is the only client that needs the cross-jar handoff.
 
 ## Duplicated-logic parity (PR-CHECKLIST)
 
-The claim lifecycle spans two request handlers; this is the reference:
+The claim lifecycle spans four handlers; this is the reference:
 
-| Step  | Handler           | Effect                                                    |
-| ----- | ----------------- | --------------------------------------------------------- |
-| bind  | `magic-link.post` | upsert `signin_claims` by `poll_key_hash`, `user_id` null |
-| arm   | `callback.get`    | set `user_id` on the claim (fail-open, after sign-in)     |
-| claim | `poll.post`       | guarded UPDATE sets `claimed_at`, mints session once      |
+| Step    | Handler           | Effect                                                              |
+| ------- | ----------------- | ------------------------------------------------------------------- |
+| bind    | `magic-link.post` | upsert `signin_claims` by `poll_key_hash`, unarmed                  |
+| arm     | `callback.get`    | set `user_id` + hashed code + 5-min window; render code (fail-open) |
+| report  | `poll.post`       | `confirm` if armed+valid, else `pending` — never the code           |
+| confirm | `confirm.post`    | verify code, claim once, mint session; cap wrong attempts           |
 
 Accepted deviations: a resend reuses the same poll key, so several tokens can
 share one `poll_key_hash` (`magic_link_tokens.poll_key_hash` is non-unique);
-the claim is upserted, and clicking any resent link arms the one claim the PWA
-polls. Arming is fail-open — if it throws, Safari is still signed in and only
-the PWA auto-sign-in is lost.
+the claim is upserted and the callback **re-arms** (overwrites the code, resets
+the window) on `WHERE claimed_at IS NULL`, so clicking the latest of several
+resent links shows a fresh, usable code. Arming is fail-open — if it throws,
+the clicker is still signed into Safari and only the PWA handoff is lost.
 
-**Verification — what runs where.** The poll/claim flow needs a live Postgres
-and the console email driver, which the CI e2e suite deliberately does not
-provision (`e2e/*.spec.ts` cover only DB-free routes — landing, login form,
-offline, 404 — so CI needs no infra). So the poll/claim tests are **local-only**
-and are **not** part of the `bun run test:e2e` CI gate:
+**Verification — what runs where.** The flow needs a live Postgres and the
+console email driver, which the CI e2e suite deliberately does not provision
+(`e2e/*.spec.ts` cover only DB-free routes — landing, login form, offline, 404
+— so CI needs no infra). The poll/claim/confirm tests are **local-only** and
+are **not** part of the `bun run test:e2e` CI gate:
 
 - **CI (`bun run test:e2e`, no infra):** the login/inbox screen renders and the
-  send button gating — the only poll/claim-adjacent surface that runs without a
+  send-button gating — the only poll/claim-adjacent surface that runs without a
   DB.
 - **Local-only (`bun run test:poll-claim`, needs `infra:up` + local Postgres):**
-  `e2e/local/` drives the full flow against a spawned dev server — the server
-  invariants over HTTP (poll before armed → pending; unknown/absent/malformed
-  key → pending/400; happy path → ready + cookie in the PWA jar; double claim →
-  one session; concurrent double-poll → exactly one session; expired → pending;
-  desktop path unchanged) and the Playwright cross-jar scenario (standalone
-  context sends + persists a key; a separate context opens the link; the first
-  context's poll readies, receives its own distinct cookie, navigates to `/me`,
-  clears the key).
+  `e2e/local/` drives the full flow against a spawned dev server — the HTTP
+  invariants (happy path: send → click reveals code → poll `confirm` → confirm
+  → session in the PWA jar; **the regression that proves the fix:** an attacker
+  holding the poll key but not the code gets `confirm` from poll, `invalid` then
+  a lock from confirm, mints **no** session even with the correct code
+  post-lock; confirm-window expiry → rejected; unknown/malformed → expired/400;
+  desktop path unchanged) and the Playwright cross-jar UX (code page → code
+  input → `/me`, wrong-code retry, cold-start resume into the confirm step).
 - **Needs a real iPhone (not automatable):** the actual iOS standalone-jar
   isolation — confirmed only with the app added to the Home Screen.
 
@@ -106,18 +136,26 @@ CI collection (`testIgnore`), so it never runs where there is no database.
 
 ## Alternatives rejected
 
+- **Auto-arm + poll mint (no code)** — the naive handoff above; a
+  session-fixation / login-CSRF hole (attacker-chosen key armed by a victim's
+  click). Rejected outright.
+- **"Tap the matching number" on the click page** — security would depend on the
+  victim not approving an attacker-initiated prompt; code-on-click removes the
+  human from the trust decision (the attacker lacks the secret regardless).
 - **Universal links / app-intercepted click** — a pure PWA (no native app)
   cannot register them on iOS; the whole reason the link lands in Safari.
 - **BroadcastChannel / storage events between Safari and the PWA** — the two
-  jars are isolated by design; no shared channel exists to relay the session.
-- **Poll key + ready state on `magic_link_tokens`** — the callback deletes the
-  token row (deletion _is_ consumption, ADR-0002), so the ready claim could
-  not survive the click; a sibling table that outlives token consumption is
-  required.
-- **`GET /api/auth/poll?key=…`** — puts the bearer secret in the URL (server
-  logs, history) and lets the SW's `/api/*` NetworkFirst cache the response;
-  POST keeps the secret in the body and bypasses SW GET caching.
+  jars are isolated by design; no shared channel exists.
+- **Confirmation state on `magic_link_tokens`** — the callback deletes the token
+  row (deletion _is_ consumption, ADR-0002), so the claim could not survive the
+  click; a sibling table that outlives token consumption is required.
+- **`GET` poll/confirm with the key in the query** — puts the bearer secret in
+  the URL (logs, history) and lets the SW's `/api/*` NetworkFirst cache it; POST
+  keeps it in the body and bypasses SW GET caching.
 - **Attach the PWA to the callback's session** (claim stores `session_id`) —
-  simpler, but the PWA session would then carry Safari's user-agent/IP and
-  dangle if that session were deleted; minting a fresh session per jar is
-  cleaner.
+  simpler, but the PWA session would carry Safari's user-agent/IP and dangle if
+  that session were deleted; minting a fresh session per jar is cleaner.
+- **Code input on the landing hero too** — the landing ships no i18n runtime
+  (ADR-0006) and its own baked copy; scoping the whole poll/claim flow to
+  `/login` (the landing hero sends a plain link) avoids a second copy system and
+  never strands a PWA on a screen with no code input.

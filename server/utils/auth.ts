@@ -1,4 +1,9 @@
-import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
+import {
+  createHash,
+  randomBytes,
+  randomInt,
+  timingSafeEqual,
+} from 'node:crypto';
 import { eq } from 'drizzle-orm';
 import { jwtVerify, SignJWT } from 'jose';
 import { sessions } from '~/db/schema/sessions';
@@ -40,6 +45,11 @@ export const normalizeEmail = (raw: string) =>
     .toLowerCase();
 
 export const generateRawToken = () => randomBytes(32).toString('base64url');
+
+// Device-flow confirmation code (VKB-70): a uniformly random 4-digit code,
+// zero-padded. randomInt is rejection-sampled and unbiased over [0, 10000).
+export const generateConfirmCode = () =>
+  String(randomInt(0, 10000)).padStart(4, '0');
 
 export const hashToken = (raw: string) =>
   createHash('sha256').update(raw).digest();
