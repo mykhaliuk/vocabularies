@@ -80,12 +80,29 @@ the claim is upserted, and clicking any resent link arms the one claim the PWA
 polls. Arming is fail-open — if it throws, Safari is still signed in and only
 the PWA auto-sign-in is lost.
 
-**Verification.** The e2e-covered legs are the send/inbox screen and the
-security invariants driven over HTTP against a real local Postgres (poll
-before armed → pending; wrong/absent key → pending; double claim → one
-session; expired → pending). The one leg that cannot be automated is the
-actual iOS standalone-jar isolation: it can only be confirmed on a real
-iPhone with the app added to the Home Screen (recorded in the PR).
+**Verification — what runs where.** The poll/claim flow needs a live Postgres
+and the console email driver, which the CI e2e suite deliberately does not
+provision (`e2e/*.spec.ts` cover only DB-free routes — landing, login form,
+offline, 404 — so CI needs no infra). So the poll/claim tests are **local-only**
+and are **not** part of the `bun run test:e2e` CI gate:
+
+- **CI (`bun run test:e2e`, no infra):** the login/inbox screen renders and the
+  send button gating — the only poll/claim-adjacent surface that runs without a
+  DB.
+- **Local-only (`bun run test:poll-claim`, needs `infra:up` + local Postgres):**
+  `e2e/local/` drives the full flow against a spawned dev server — the server
+  invariants over HTTP (poll before armed → pending; unknown/absent/malformed
+  key → pending/400; happy path → ready + cookie in the PWA jar; double claim →
+  one session; concurrent double-poll → exactly one session; expired → pending;
+  desktop path unchanged) and the Playwright cross-jar scenario (standalone
+  context sends + persists a key; a separate context opens the link; the first
+  context's poll readies, receives its own distinct cookie, navigates to `/me`,
+  clears the key).
+- **Needs a real iPhone (not automatable):** the actual iOS standalone-jar
+  isolation — confirmed only with the app added to the Home Screen.
+
+The local suite is committed under `e2e/local/` and excluded from the Playwright
+CI collection (`testIgnore`), so it never runs where there is no database.
 
 ## Alternatives rejected
 

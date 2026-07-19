@@ -1,5 +1,3 @@
-import { MAGIC_LINK_TTL_MS } from '~/shared/magic-link';
-
 type FetchErrorLike = {
   statusCode?: number;
   statusMessage?: string;
@@ -68,7 +66,7 @@ export const useMagicLink = () => {
         body: { email: trimmedEmail.value, pollKey },
       });
       sent.value = true;
-      if (pollKey) poll.beginPolling(Date.now() + MAGIC_LINK_TTL_MS);
+      if (pollKey) poll.beginPolling();
     } catch (error) {
       errorMessage.value = translateError(error, t);
     } finally {
@@ -83,6 +81,18 @@ export const useMagicLink = () => {
     // drop the stored key so a new send mints a fresh one.
     poll.clear();
   };
+
+  // Cold-start resume (VKB-70): iOS evicts a backgrounded PWA while the user is
+  // in Mail clicking the link; on relaunch the component mounts fresh with no
+  // visibilitychange and sent=false. If a still-valid poll survived in storage,
+  // re-attach to it and restore the "check your inbox" state so the armed claim
+  // is collected instead of silently showing the empty form.
+  onMounted(() => {
+    const resumed = poll.resume();
+    if (!resumed) return;
+    email.value = resumed.email;
+    sent.value = true;
+  });
 
   return {
     email,
