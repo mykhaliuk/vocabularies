@@ -88,7 +88,7 @@ export const useMagicLink = (options: { pollClaim?: boolean } = {}) => {
     codeError.value = '';
     // "Use a different email" discards the pending sign-in: stop polling and
     // drop the stored key so a new send mints a fresh one.
-    poll.clear();
+    if (pollClaim) poll.clear();
   };
 
   // Submit the confirmation code shown on the click page. On success the poll

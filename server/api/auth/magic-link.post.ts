@@ -88,7 +88,6 @@ export default defineEventHandler(async (event) => {
   // instead of colliding on the unique poll_key_hash. The sweep of expired
   // claims rides here — the only moment the table grows — mirroring the token
   // sweep above (ADR-0002) and the session sweep in callback.get (ADR-0005),
-  // and fail-open for the same reason.
   if (pollKeyHash) {
     try {
       await db
