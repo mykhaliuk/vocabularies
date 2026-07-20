@@ -58,6 +58,11 @@ test.describe('entry locale redirect', () => {
     }) => {
       await page.goto('/');
       await expect(page).toHaveURL(/\/fr$/);
+      // The switcher's cookie write is a hydrated @click handler, so clicking
+      // before hydration navigates without setting the cookie and bounces back
+      // to /fr. Wait for the page to settle first — otherwise this is flaky
+      // under parallel load.
+      await page.waitForLoadState('networkidle');
       // Click "en" in the switcher: sets vocabu-locale=en, then navigates
       // to / — which must now stay English instead of bouncing back.
       await page.locator('.locale-switch__link[hreflang="en"]').click();

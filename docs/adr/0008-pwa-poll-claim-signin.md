@@ -139,7 +139,16 @@ logic and no manifest change** (`start_url` stays `/`):
   `/login`, so the conditions are complementary. The probe is advisory only
   (the server remains the sole authority) and resolves "no session" on 401,
   offline, timeout or error, so a dead probe degrades to the sign-in screen
-  rather than stranding the launch. It is issued **only** in the standalone
+  rather than stranding the launch. **The probe answers three ways, not two**:
+  `session`, `none` (a 401 — the server saying no) and `unknown` (timeout,
+  offline, DNS, 5xx — no answer at all). Collapsing the last two cost a
+  signed-in user their session: the landing reported "signed out", the `/login`
+  guard suppressed its own probe on that supposed certainty, and a valid cookie
+  ended up staring at the sign-in form with no address bar to escape. Only a
+  definite `none` may suppress the second probe; an `unknown` still falls back
+  to `/login` but leaves the hint unset, so the guard re-probes on a possibly
+  warmer radio. One extra bounded probe is far cheaper than re-authenticating
+  someone who was never signed out. It is issued **only** in the standalone
   branch, so the public landing makes no extra request and stays byte-identical
   for web visitors. Client-only + `onMounted` keeps the prerendered landing
   untouched during SSR/prerender, and `/login` resolves locale via
@@ -163,7 +172,26 @@ logic and no manifest change** (`start_url` stays `/`):
   inert surface until the entry resolves. The guarantee is structural, not
   timing-dependent: on a standalone launch the codeless hero is never
   interactive, however slow the probe. `resolvingEntry` stays false for web
-  visitors, so their render is unchanged.
+  visitors, so their render is unchanged. The resolver's failure path always
+  releases that gate (log + `resolvingEntry = false`): `navigateTo` rejects if
+  the target route's chunk will not load — a stale service-worker precache after
+  a deploy is the realistic case — and a gate that is only ever set would then
+  trap the PWA on a blank inert screen it cannot navigate out of, force-quit
+  included. A recoverable surface beats a permanent dead end.
+- **The client's key deadline mirrors the server's, which is not the link TTL.**
+  The confirm window opens at the CLICK (`click + CONFIRM_TTL_MS`) and the arm
+  extends the claim with `greatest(expires_at, confirm_expires_at)`, so the last
+  instant the server will still confirm is `send + MAGIC_LINK_TTL_MS +
+CONFIRM_TTL_MS`. Anchoring the client to the link TTL alone silently destroyed
+  the key for any link clicked in its final five minutes: the code screen stayed
+  up (clearing the key does not reset `sent`), the user typed the code Safari
+  had just shown them, and `submitCode` rejected it locally without issuing a
+  request — the impossible-instruction failure mode again, and worse after a
+  cold start, where `resume()` dropped the stored poll and offered an empty
+  email form instead. `prepareKey` therefore sets the deadline to the extended
+  bound. The cost is that an abandoned sign-in polls for five minutes longer;
+  the poll is rate-limited, self-terminates once the claim is armed, and this is
+  the only way the two clocks can agree.
 - **Show the code field immediately for standalone.** On `/login`, an installed
   PWA renders the confirmation-code input together with the "open the link"
   message the moment the link is sent, instead of waiting for the poll to
@@ -252,9 +280,12 @@ are **not** part of the `bun run test:e2e` CI gate:
   keep the code screen, show the one honest message, keep "ask for a new link"
   reachable, and **keep the poll key** — after which the real code still signs
   the PWA in. That pair is the regression guard: re-introducing a `clear()` on a
-  failed confirm strands the user on the sign-in screen and fails the suite. A
-  non-standalone `/login` and the landing still show the plain message with no
-  code field and no redirect).
+  failed confirm strands the user on the sign-in screen and fails the suite. It
+  also pins the two clocks and the tri-state probe: the stored key must outlive
+  the link TTL by a confirm window and a code entered past the old anchor still
+  signs in, and a signed-in launch whose first probe TIMES OUT must still reach
+  the app rather than being treated as signed out. A non-standalone `/login` and
+  the landing still show the plain message with no code field and no redirect).
 - **Needs a real iPhone (not automatable):** the actual iOS standalone-jar
   isolation and the on-device `navigator.standalone` launch that triggers the
   landing → `/login` redirect — confirmed only with the app added to the Home

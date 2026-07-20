@@ -1,4 +1,8 @@
-import { MAGIC_LINK_TTL_MS, POLL_KEY_PATTERN } from '~/shared/magic-link';
+import {
+  CONFIRM_TTL_MS,
+  MAGIC_LINK_TTL_MS,
+  POLL_KEY_PATTERN,
+} from '~/shared/magic-link';
 
 // Cross-jar sign-in poll/claim client (VKB-70). An installed standalone PWA
 // has its own cookie/storage jar, so the emailed magic link — which opens in
@@ -114,11 +118,13 @@ export const useSigninPoll = () => {
   // flap must not launch a second concurrent chain (would multiply the request
   // rate and can trip the server's per-IP bucket on shared egress).
   let inFlight = false;
-  // Reactive: flips true once the poll OBSERVES the claim armed. This is
-  // "observed", not "was ever armed" — iOS suspends the poll timer while the
-  // PWA is backgrounded in Mail, so a normal cross-jar sign-in can miss the arm
-  // entirely. Nothing may treat it as proof of arming state.
-  const awaitingCode = ref(false);
+  // Deliberately NO "claim observed armed" flag. The poll cannot see the arm on
+  // the normal iOS path (the timer is suspended while the PWA sits in the
+  // background during the Mail → Safari detour), so such a flag only ever
+  // reported "we happened to notice", never "the claim is armed" — and every
+  // attempt to drive UI or error copy from it produced a wrong branch. The code
+  // field is shown up front instead, and the server is the only authority on
+  // whether a code confirms.
 
   function clearTimer(): void {
     if (timer !== null) {
@@ -140,7 +146,6 @@ export const useSigninPoll = () => {
     activeKey = null;
     activeEmail = '';
     deadline = 0;
-    awaitingCode.value = false;
     removeStored();
   }
 
@@ -175,10 +180,11 @@ export const useSigninPoll = () => {
         body: { pollKey: key },
       });
       if (res.status === 'confirm') {
-        // The link was clicked and the claim is armed. Stop polling and hand
-        // off to the code input; the session is minted by submitCode, never by
-        // the poll — that is what closes the session-fixation hole (ADR-0008).
-        awaitingCode.value = true;
+        // The claim is armed, so there is nothing left to wait for: stop
+        // polling. The code field is already on screen and the session is
+        // minted by submitCode, never by the poll — that is what closes the
+        // session-fixation hole (ADR-0008). Reaching this only saves further
+        // requests; the sign-in completes with or without it.
         stopPolling();
         return;
       }
@@ -220,6 +226,15 @@ export const useSigninPoll = () => {
   // Returns the poll key to send with the magic-link request, or undefined when
   // not an installed PWA. Reuses the stored key for a resend of the same email
   // so clicking any of the resent links arms the one claim the PWA polls.
+  //
+  // The deadline mirrors the SERVER's outer bound, which is not the link TTL.
+  // The confirm window opens at the CLICK (click + CONFIRM_TTL_MS) and
+  // callback.get extends the claim with `greatest(expires_at,
+  // confirm_expires_at)`, so a link clicked in its final moments stays
+  // confirmable until send + MAGIC_LINK_TTL_MS + CONFIRM_TTL_MS. Anchoring the
+  // client to the link TTL alone would discard the key while the server would
+  // still accept the code — the user then types a valid code and it is rejected
+  // without a request ever leaving the device.
   function prepareKey(email: string): string | undefined {
     if (!isStandalone()) return undefined;
     const stored = readStored();
@@ -228,7 +243,7 @@ export const useSigninPoll = () => {
         ? stored.key
         : mintKey();
     activeEmail = email;
-    deadline = Date.now() + MAGIC_LINK_TTL_MS;
+    deadline = Date.now() + MAGIC_LINK_TTL_MS + CONFIRM_TTL_MS;
     writeStored({ key: activeKey, email: activeEmail, deadline });
     return activeKey;
   }
@@ -297,8 +312,6 @@ export const useSigninPoll = () => {
     beginPolling,
     resume,
     submitCode,
-    awaitingCode,
-    stopPolling,
     clear,
   };
 };

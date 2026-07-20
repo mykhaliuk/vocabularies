@@ -49,7 +49,7 @@
       "submit": "Confirm",
       "submitting": "Confirming…",
       "errorInvalid": "That code isn't right. Check the page that opened and try again.",
-      "errorNotConfirmed": "That code didn't work. Make sure you've opened the link in your email and entered the code it shows.",
+      "errorNotConfirmed": "That code didn't work. Make sure you've opened the link in your email and entered the code it shows — or ask for a new link below.",
       "errorGeneric": "Something went wrong. Try again in a moment."
     }
   },

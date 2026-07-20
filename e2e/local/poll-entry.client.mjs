@@ -16,6 +16,10 @@ import { STANDALONE_INIT, clickAndReadCode } from './helpers.mjs';
 // Accept-Language, and so the entry-locale redirect never bounces `/` to /fr.
 const EN = { locale: 'en-US' };
 
+// Mirrors MAGIC_LINK_TTL_MINUTES in shared/magic-link.ts (not imported: this
+// runner is plain node ESM and that module is TypeScript).
+const LINK_TTL_MS = 15 * 60 * 1000;
+
 const pathOf = (page) => new URL(page.url()).pathname;
 
 const gotoExpecting = async (context, url, pattern) => {
@@ -196,6 +200,37 @@ export const run = async ({ base, findLink }) => {
       guarded.url(),
     );
 
+    // A signed-in launch on a waking radio: the landing's probe times out, which
+    // says NOTHING about the session. It must not be treated as a definite
+    // "signed out" — otherwise the /login guard's retry is suppressed and a user
+    // holding a valid cookie is made to re-authenticate, in standalone, with no
+    // address bar. Only the first probe hangs; the second answers normally.
+    const slowSignedIn = await browser.newContext({
+      ...EN,
+      storageState: await standalone.storageState(),
+    });
+    await slowSignedIn.addInitScript(STANDALONE_INIT);
+    let meProbeCount = 0;
+    await slowSignedIn.route('**/api/me', async (route) => {
+      meProbeCount += 1;
+      // The landing's probe never answers -> resolves as `unknown`.
+      if (meProbeCount === 1) return;
+      await route.continue();
+    });
+    const slowSignedInPage = await slowSignedIn.newPage();
+    await slowSignedInPage.goto(`${base}/`);
+    try {
+      await slowSignedInPage.waitForURL('**/me', { timeout: 25000 });
+    } catch {
+      // assertion reports the actual URL
+    }
+    check(
+      'signed-in + timed-out first probe still reaches the app',
+      pathOf(slowSignedInPage) === '/me',
+      slowSignedInPage.url(),
+    );
+    await slowSignedIn.close();
+
     console.log(
       '\n== FIX B: a locked claim still never tears the screen down ==',
     );
@@ -249,6 +284,65 @@ export const run = async ({ base, findLink }) => {
     );
     await deadClicked.safari.close();
     await deadCtx.close();
+
+    console.log('\n== FIX 2: the key outlives the server confirm window ==');
+    // The server's outer bound is NOT the link TTL: the confirm window opens at
+    // the CLICK, and callback.get extends the claim with
+    // `greatest(expires_at, confirm_expires_at)`. So a link clicked in its final
+    // minutes stays confirmable until send + link TTL + confirm TTL. A client
+    // anchored to the link TTL alone throws the key away while the server would
+    // still accept the code — the user then types a valid code and it is
+    // rejected without a request ever leaving the device.
+    const lateEmail = `late-${Date.now()}@example.com`;
+    const lateCtx = await browser.newContext(EN);
+    await lateCtx.addInitScript(STANDALONE_INIT);
+    const lp = await lateCtx.newPage();
+    await sendFrom(lp, base, lateEmail);
+    await lp.getByLabel(/confirmation code/i).waitFor({ timeout: 10000 });
+
+    const stored = JSON.parse(
+      await lp.evaluate(() => localStorage.getItem('vocabu_poll')),
+    );
+    const remainingMs = stored.deadline - Date.now();
+    check(
+      'the stored key outlives the link TTL by the confirm window',
+      remainingMs > LINK_TTL_MS && remainingMs <= LINK_TTL_MS + 6 * 60 * 1000,
+      `${Math.round(remainingMs / 1000)}s remaining`,
+    );
+
+    // Arm the claim, then move the key into the window the old client deadline
+    // had already discarded (i.e. a link clicked in its last minutes), and cold
+    // start into it.
+    const lateClicked = await clickAndReadCode(
+      browser,
+      await findLink(lateEmail),
+    );
+    await lp.evaluate(
+      (deadline) => {
+        const entry = JSON.parse(localStorage.getItem('vocabu_poll'));
+        entry.deadline = deadline;
+        localStorage.setItem('vocabu_poll', JSON.stringify(entry));
+      },
+      Date.now() + 4 * 60 * 1000,
+    );
+    await lp.reload();
+    const lateInput = lp.getByLabel(/confirmation code/i);
+    await lateInput.waitFor({ timeout: 15000 });
+    await lateInput.click();
+    await lateInput.pressSequentially(lateClicked.code, { delay: 10 });
+    await lp.getByRole('button', { name: /^confirm$/i }).click();
+    try {
+      await lp.waitForURL('**/me', { timeout: 20000 });
+    } catch {
+      // assertion reports the actual URL
+    }
+    check(
+      'a code entered past the old client deadline still signs in',
+      pathOf(lp) === '/me',
+      lp.url(),
+    );
+    await lateClicked.safari.close();
+    await lateCtx.close();
 
     console.log(
       '\n== Non-standalone is untouched (no code field, no redirect) ==',

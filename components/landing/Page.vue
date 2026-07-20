@@ -84,37 +84,46 @@ useHead({
   ],
 });
 
-// Installed standalone PWAs open at the manifest start_url `/`, which renders
-// this marketing landing — whose hero form uses the plain magic-link flow with
-// NO poll/claim code path, so an installed PWA that signs in here can never
-// finish the cross-jar sign-in (VKB-70). Resolve the real entry instead: a
-// launch that already holds a session goes straight to the app, otherwise to
-// /login (the poll/claim flow's home). The session check is what keeps the
-// RETURNING user — the primary case — out of the sign-in form on every cold
-// launch, and standalone has no address bar to escape it with. Client-only +
-// onMounted so the prerendered landing is never redirected during SSR, and the
-// probe is standalone-only so the public landing issues no extra request and
-// stays byte-identical for web visitors. `replace` so the codeless landing is
-// not left in the PWA's history.
 // True only while an installed standalone launch is deciding where to go. It
-// gates the whole landing off the screen, because the hero form below is bound
-// to the plain (codeless) magic-link flow: a send from it mints a link with NO
-// poll key, which can never sign the PWA in and burns a rate-limit slot — the
-// exact defect VKB-70 exists to fix. Set synchronously (see onMounted), so that
+// gates the landing off the screen, because the hero form is bound to the plain
+// (codeless) magic-link flow: a send from it mints a link with NO poll key,
+// which can never sign the PWA in and burns a rate-limit slot — the exact
+// defect VKB-70 exists to fix. Set synchronously (see onMounted), so that
 // window does not exist regardless of how slow the session probe is.
 const resolvingEntry = ref(false);
 
+// Installed standalone PWAs open at the manifest start_url `/`, which renders
+// this marketing landing — whose hero can never finish a cross-jar sign-in
+// (VKB-70). Resolve the real entry instead: a launch already holding a session
+// goes straight to the app, otherwise to /login (the poll/claim flow's home).
+// The session check is what keeps the RETURNING user — the primary case — out
+// of the sign-in form on every cold launch, and standalone has no address bar
+// to escape it with. Client-only + onMounted so the prerendered landing is
+// never redirected during SSR, and the probe is standalone-only so the public
+// landing issues no extra request and stays byte-identical for web visitors.
+// `replace` so the codeless landing is not left in the PWA's history.
 const resolveStandaloneEntry = async () => {
-  // hasSession() resolves false on 401 / offline / timeout, so a failed probe
-  // falls back to /login instead of blocking the launch.
-  if (await hasSession()) {
-    await navigateTo('/me', { replace: true });
-    return;
+  try {
+    const probed = await probeSession();
+    if (probed === 'session') {
+      await navigateTo('/me', { replace: true });
+      return;
+    }
+    // Only a definite 401 may suppress the /login guard's own probe. On
+    // `unknown` (timeout / offline / 5xx) we still fall back to /login, but
+    // leave the hint unset so /login re-probes on a possibly warmer radio —
+    // one extra bounded probe is far cheaper than making a signed-in user
+    // re-authenticate.
+    if (probed === 'none') markSignedOutHandoff();
+    await navigateTo('/login', { replace: true });
+  } catch (error) {
+    // Operational failure — a route chunk that will not load (e.g. a stale
+    // service-worker precache after a deploy) rejects the navigation. Release
+    // the gate so the landing renders again: a recoverable surface beats
+    // trapping the PWA on a blank screen it cannot navigate out of.
+    console.error('[entry] standalone resolve failed', error);
+    resolvingEntry.value = false;
   }
-  // Tell the /login guard the answer we just paid for, so it does not probe the
-  // same endpoint again a moment later.
-  markSignedOutHandoff();
-  await navigateTo('/login', { replace: true });
 };
 
 onMounted(() => {
@@ -152,254 +161,257 @@ onMounted(() => {
 </script>
 
 <template>
-  <!-- Installed standalone launch: hold a neutral, inert surface while the
-       entry resolves so the codeless hero form is never interactive. Web
-       visitors never enter this branch — resolvingEntry stays false for them,
-       so the landing below renders exactly as before, with no extra request,
-       no splash and no flash. -->
-  <div v-if="resolvingEntry" class="entry-splash" aria-hidden="true"></div>
+  <div class="landing">
+    <!-- Installed standalone launch: hold a neutral, inert surface while the
+         entry resolves so the codeless hero form is never interactive. Web
+         visitors never enter this branch — resolvingEntry stays false for them,
+         so the markup below is exactly as before, with no extra request, no
+         splash and no flash. The `.landing` root stays constant either way, so
+         the component keeps a single stable root node to hydrate against. -->
+    <div v-if="resolvingEntry" class="entry-splash" aria-hidden="true"></div>
 
-  <div v-else class="landing">
-    <!-- NAV -->
-    <header class="nav">
-      <div class="wrap nav__in">
-        <a
-          class="brand"
-          :href="LANDING_LOCALE_PATHS[locale]"
-          :aria-label="copy.nav.homeAria"
-        >
-          <img src="/logo-mark.svg" alt="" width="28" height="28" />
-          <b>Vocabu</b>
-        </a>
-        <div class="nav__spacer"></div>
-        <nav class="nav__links">
-          <a class="ghost-link hide-sm" href="#why">{{ copy.nav.why }}</a>
-          <div
-            class="locale-switch"
-            role="group"
-            :aria-label="copy.nav.langAria"
+    <template v-else>
+      <!-- NAV -->
+      <header class="nav">
+        <div class="wrap nav__in">
+          <a
+            class="brand"
+            :href="LANDING_LOCALE_PATHS[locale]"
+            :aria-label="copy.nav.homeAria"
           >
-            <a
-              v-for="code in LANDING_LOCALES"
-              :key="code"
-              class="locale-switch__link"
-              :class="{ 'is-active': code === locale }"
-              :href="LANDING_LOCALE_PATHS[code]"
-              :hreflang="code"
-              :aria-label="LANDING_LOCALE_NAMES[code]"
-              :aria-current="code === locale ? 'page' : undefined"
-              @click="rememberLocale(code)"
-              >{{ code }}</a
+            <img src="/logo-mark.svg" alt="" width="28" height="28" />
+            <b>Vocabu</b>
+          </a>
+          <div class="nav__spacer"></div>
+          <nav class="nav__links">
+            <a class="ghost-link hide-sm" href="#why">{{ copy.nav.why }}</a>
+            <div
+              class="locale-switch"
+              role="group"
+              :aria-label="copy.nav.langAria"
             >
-          </div>
-          <div
-            class="theme-toggle"
-            role="group"
-            :aria-label="copy.nav.themeAria"
-          >
-            <button
-              class="theme-toggle__btn"
-              type="button"
-              :aria-label="copy.nav.themeLight"
-              :aria-pressed="themeMode === 'light'"
-              :class="{ 'is-active': themeMode === 'light' }"
-              @click="setThemeMode('light')"
+              <a
+                v-for="code in LANDING_LOCALES"
+                :key="code"
+                class="locale-switch__link"
+                :class="{ 'is-active': code === locale }"
+                :href="LANDING_LOCALE_PATHS[code]"
+                :hreflang="code"
+                :aria-label="LANDING_LOCALE_NAMES[code]"
+                :aria-current="code === locale ? 'page' : undefined"
+                @click="rememberLocale(code)"
+                >{{ code }}</a
+              >
+            </div>
+            <div
+              class="theme-toggle"
+              role="group"
+              :aria-label="copy.nav.themeAria"
             >
-              <Sun :size="18" />
-            </button>
-            <button
-              class="theme-toggle__btn"
-              type="button"
-              :aria-label="copy.nav.themeSystem"
-              :aria-pressed="themeMode === 'system'"
-              :class="{ 'is-active': themeMode === 'system' }"
-              @click="setThemeMode('system')"
-            >
-              <Monitor :size="18" />
-            </button>
-            <button
-              class="theme-toggle__btn"
-              type="button"
-              :aria-label="copy.nav.themeDark"
-              :aria-pressed="themeMode === 'dark'"
-              :class="{ 'is-active': themeMode === 'dark' }"
-              @click="setThemeMode('dark')"
-            >
-              <Moon :size="18" />
-            </button>
-          </div>
-        </nav>
-      </div>
-    </header>
+              <button
+                class="theme-toggle__btn"
+                type="button"
+                :aria-label="copy.nav.themeLight"
+                :aria-pressed="themeMode === 'light'"
+                :class="{ 'is-active': themeMode === 'light' }"
+                @click="setThemeMode('light')"
+              >
+                <Sun :size="18" />
+              </button>
+              <button
+                class="theme-toggle__btn"
+                type="button"
+                :aria-label="copy.nav.themeSystem"
+                :aria-pressed="themeMode === 'system'"
+                :class="{ 'is-active': themeMode === 'system' }"
+                @click="setThemeMode('system')"
+              >
+                <Monitor :size="18" />
+              </button>
+              <button
+                class="theme-toggle__btn"
+                type="button"
+                :aria-label="copy.nav.themeDark"
+                :aria-pressed="themeMode === 'dark'"
+                :class="{ 'is-active': themeMode === 'dark' }"
+                @click="setThemeMode('dark')"
+              >
+                <Moon :size="18" />
+              </button>
+            </div>
+          </nav>
+        </div>
+      </header>
 
-    <main>
-      <!-- HERO -->
-      <section id="start" class="hero">
-        <div class="wrap hero__grid">
-          <div class="hero__copy">
-            <span class="eyebrow">
-              <span class="eyebrow__dot"></span>{{ copy.hero.eyebrow }}
-            </span>
-            <h1 class="hero__h">
-              {{ copy.hero.titleTop }}<br />{{ copy.hero.titleAccentPre
-              }}<span class="accent">{{ copy.hero.titleAccent }}</span
-              >{{ copy.hero.titleAccentPost }}
-            </h1>
-            <p class="hero__sub">{{ copy.hero.sub }}</p>
+      <main>
+        <!-- HERO -->
+        <section id="start" class="hero">
+          <div class="wrap hero__grid">
+            <div class="hero__copy">
+              <span class="eyebrow">
+                <span class="eyebrow__dot"></span>{{ copy.hero.eyebrow }}
+              </span>
+              <h1 class="hero__h">
+                {{ copy.hero.titleTop }}<br />{{ copy.hero.titleAccentPre
+                }}<span class="accent">{{ copy.hero.titleAccent }}</span
+                >{{ copy.hero.titleAccentPost }}
+              </h1>
+              <p class="hero__sub">{{ copy.hero.sub }}</p>
 
-            <form
-              v-if="!sent"
-              class="capture"
-              novalidate
-              @submit.prevent="submit"
-            >
-              <div class="field-row">
-                <input
-                  v-model="email"
-                  class="field-row__input"
-                  type="email"
-                  inputmode="email"
-                  autocomplete="email"
-                  :placeholder="copy.hero.emailPlaceholder"
-                  :aria-label="copy.hero.emailAria"
-                  :readonly="submitting"
-                />
-                <VButton
-                  class="capture__submit"
-                  type="submit"
-                  variant="primary"
-                  size="lg"
-                  :loading="submitting"
-                  :disabled="!validEmail"
-                >
-                  {{ copy.hero.submit }}
-                  <template #right>
-                    <ArrowRight :size="18" />
-                  </template>
+              <form
+                v-if="!sent"
+                class="capture"
+                novalidate
+                @submit.prevent="submit"
+              >
+                <div class="field-row">
+                  <input
+                    v-model="email"
+                    class="field-row__input"
+                    type="email"
+                    inputmode="email"
+                    autocomplete="email"
+                    :placeholder="copy.hero.emailPlaceholder"
+                    :aria-label="copy.hero.emailAria"
+                    :readonly="submitting"
+                  />
+                  <VButton
+                    class="capture__submit"
+                    type="submit"
+                    variant="primary"
+                    size="lg"
+                    :loading="submitting"
+                    :disabled="!validEmail"
+                  >
+                    {{ copy.hero.submit }}
+                    <template #right>
+                      <ArrowRight :size="18" />
+                    </template>
+                  </VButton>
+                </div>
+                <p class="capture__note">
+                  <Mail :size="15" />
+                  {{ copy.hero.note }}
+                </p>
+                <p v-if="errorMessage" role="alert" class="capture__error">
+                  {{ errorMessage }}
+                </p>
+              </form>
+
+              <div v-else class="sent" role="status" aria-live="polite">
+                <span class="sent__check">
+                  <Check :size="16" :stroke-width="3" />
+                </span>
+                <div>
+                  <h4 class="sent__h">{{ copy.sent.title }}</h4>
+                  <p class="sent__p">
+                    {{ copy.sent.body }} <b>{{ trimmedEmail }}</b
+                    >.
+                    <button class="sent__again" type="button" @click="reset">
+                      {{ copy.sent.again }}
+                    </button>
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div class="hero__phone">
+              <LandingPhoneMock :copy="copy.phone" />
+            </div>
+          </div>
+        </section>
+
+        <!-- REASONS -->
+        <section id="why" class="reasons">
+          <div class="wrap">
+            <div class="band-head reveal">
+              <div class="overline overline--rose">
+                {{ copy.reasons.overline }}
+              </div>
+              <h2 class="band-h">{{ copy.reasons.title }}</h2>
+              <p>
+                {{ copy.reasons.bodyPre }}<em>{{ copy.reasons.bodyEm }}</em
+                >{{ copy.reasons.bodyPost }}
+              </p>
+            </div>
+            <div class="reason-grid">
+              <article
+                v-for="(card, index) in copy.reasons.cards"
+                :key="card.title"
+                class="card reveal"
+                :class="index === 1 ? 'card--rose' : 'card--blue'"
+              >
+                <div class="card__badge">
+                  <component :is="CARD_ICONS[index]" :size="24" />
+                </div>
+                <h3>{{ card.title }}</h3>
+                <p>{{ card.body }}</p>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <!-- HOW -->
+        <section class="how">
+          <div class="wrap">
+            <div class="band-head reveal">
+              <div class="overline overline--rose">{{ copy.how.overline }}</div>
+              <h2 class="band-h">{{ copy.how.title }}</h2>
+            </div>
+            <ol class="steps">
+              <li
+                v-for="(step, index) in copy.how.steps"
+                :key="step.title"
+                class="step reveal"
+              >
+                <div class="step__n">{{ index + 1 }}</div>
+                <h3>{{ step.title }}</h3>
+                <p>{{ step.body }}</p>
+              </li>
+            </ol>
+          </div>
+        </section>
+
+        <!-- CLOSER -->
+        <section class="closer">
+          <div class="wrap">
+            <div class="closer__card reveal">
+              <div class="overline overline--blue">
+                {{ copy.closer.overline }}
+              </div>
+              <h2 class="closer__h">
+                {{ copy.closer.titlePre
+                }}<span class="word-script">{{ copy.closer.titleScript }}</span
+                >{{ copy.closer.titlePost }}
+              </h2>
+              <p class="closer__p">{{ copy.closer.body }}</p>
+              <div class="closer__actions">
+                <VButton href="/login" variant="primary" size="lg">
+                  {{ copy.closer.start }}
+                </VButton>
+                <VButton href="/login" variant="secondary" size="lg">
+                  {{ copy.closer.signIn }}
                 </VButton>
               </div>
-              <p class="capture__note">
-                <Mail :size="15" />
-                {{ copy.hero.note }}
-              </p>
-              <p v-if="errorMessage" role="alert" class="capture__error">
-                {{ errorMessage }}
-              </p>
-            </form>
-
-            <div v-else class="sent" role="status" aria-live="polite">
-              <span class="sent__check">
-                <Check :size="16" :stroke-width="3" />
-              </span>
-              <div>
-                <h4 class="sent__h">{{ copy.sent.title }}</h4>
-                <p class="sent__p">
-                  {{ copy.sent.body }} <b>{{ trimmedEmail }}</b
-                  >.
-                  <button class="sent__again" type="button" @click="reset">
-                    {{ copy.sent.again }}
-                  </button>
-                </p>
-              </div>
             </div>
           </div>
+        </section>
+      </main>
 
-          <div class="hero__phone">
-            <LandingPhoneMock :copy="copy.phone" />
-          </div>
+      <!-- FOOTER -->
+      <footer class="foot">
+        <div class="wrap foot__in">
+          <a class="brand" :href="LANDING_LOCALE_PATHS[locale]">
+            <img src="/logo-mark.svg" alt="" width="24" height="24" />
+            <b>Vocabu</b>
+          </a>
+          <span class="foot__tag">{{ copy.footer.tag }}</span>
+          <nav class="foot__links">
+            <a href="#why">{{ copy.footer.why }}</a>
+          </nav>
         </div>
-      </section>
-
-      <!-- REASONS -->
-      <section id="why" class="reasons">
-        <div class="wrap">
-          <div class="band-head reveal">
-            <div class="overline overline--rose">
-              {{ copy.reasons.overline }}
-            </div>
-            <h2 class="band-h">{{ copy.reasons.title }}</h2>
-            <p>
-              {{ copy.reasons.bodyPre }}<em>{{ copy.reasons.bodyEm }}</em
-              >{{ copy.reasons.bodyPost }}
-            </p>
-          </div>
-          <div class="reason-grid">
-            <article
-              v-for="(card, index) in copy.reasons.cards"
-              :key="card.title"
-              class="card reveal"
-              :class="index === 1 ? 'card--rose' : 'card--blue'"
-            >
-              <div class="card__badge">
-                <component :is="CARD_ICONS[index]" :size="24" />
-              </div>
-              <h3>{{ card.title }}</h3>
-              <p>{{ card.body }}</p>
-            </article>
-          </div>
-        </div>
-      </section>
-
-      <!-- HOW -->
-      <section class="how">
-        <div class="wrap">
-          <div class="band-head reveal">
-            <div class="overline overline--rose">{{ copy.how.overline }}</div>
-            <h2 class="band-h">{{ copy.how.title }}</h2>
-          </div>
-          <ol class="steps">
-            <li
-              v-for="(step, index) in copy.how.steps"
-              :key="step.title"
-              class="step reveal"
-            >
-              <div class="step__n">{{ index + 1 }}</div>
-              <h3>{{ step.title }}</h3>
-              <p>{{ step.body }}</p>
-            </li>
-          </ol>
-        </div>
-      </section>
-
-      <!-- CLOSER -->
-      <section class="closer">
-        <div class="wrap">
-          <div class="closer__card reveal">
-            <div class="overline overline--blue">
-              {{ copy.closer.overline }}
-            </div>
-            <h2 class="closer__h">
-              {{ copy.closer.titlePre
-              }}<span class="word-script">{{ copy.closer.titleScript }}</span
-              >{{ copy.closer.titlePost }}
-            </h2>
-            <p class="closer__p">{{ copy.closer.body }}</p>
-            <div class="closer__actions">
-              <VButton href="/login" variant="primary" size="lg">
-                {{ copy.closer.start }}
-              </VButton>
-              <VButton href="/login" variant="secondary" size="lg">
-                {{ copy.closer.signIn }}
-              </VButton>
-            </div>
-          </div>
-        </div>
-      </section>
-    </main>
-
-    <!-- FOOTER -->
-    <footer class="foot">
-      <div class="wrap foot__in">
-        <a class="brand" :href="LANDING_LOCALE_PATHS[locale]">
-          <img src="/logo-mark.svg" alt="" width="24" height="24" />
-          <b>Vocabu</b>
-        </a>
-        <span class="foot__tag">{{ copy.footer.tag }}</span>
-        <nav class="foot__links">
-          <a href="#why">{{ copy.footer.why }}</a>
-        </nav>
-      </div>
-    </footer>
+      </footer>
+    </template>
   </div>
 </template>
 
