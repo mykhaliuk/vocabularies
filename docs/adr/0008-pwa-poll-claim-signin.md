@@ -144,6 +144,26 @@ logic and no manifest change** (`start_url` stays `/`):
   for web visitors. Client-only + `onMounted` keeps the prerendered landing
   untouched during SSR/prerender, and `/login` resolves locale via
   cookie/Accept-Language (no_prefix), so `/`, `/fr`, `/uk` all hand off cleanly.
+  The probe is bounded by ofetch's own `timeout` (plus `retry: false`, since
+  ofetch retries a GET once and does not treat a `TimeoutError` as an abort) —
+  not `AbortSignal.timeout`, which iOS ≤ 15 lacks and which ofetch would let
+  override the bound entirely. Two screens must never pay that bound twice, so
+  the landing hands its "no session" result to the `/login` guard as a
+  single-use, negative-only hint, and concurrent probes share one in-flight
+  promise (cleared on settle — never a cached value, which could go stale
+  across a real session change).
+- **Resolving the entry must gate the landing, not race it.** The hero form is
+  bound to the plain magic-link flow with no poll key, and it is painted and
+  interactive from first hydration — it is not a reveal-on-scroll element. An
+  `await` before the redirect therefore left a window (a slow probe ≈ seconds)
+  in which a tap on that hero sends a link with **no** poll key: no claim bound,
+  a rate-limit slot burned, and a link that can never sign the PWA in — exactly
+  the defect this ADR exists to remove. The standalone branch therefore sets its
+  gating flag **synchronously, before any await**, and the landing renders an
+  inert surface until the entry resolves. The guarantee is structural, not
+  timing-dependent: on a standalone launch the codeless hero is never
+  interactive, however slow the probe. `resolvingEntry` stays false for web
+  visitors, so their render is unchanged.
 - **Show the code field immediately for standalone.** On `/login`, an installed
   PWA renders the confirmation-code input together with the "open the link"
   message the moment the link is sent, instead of waiting for the poll to
@@ -157,23 +177,27 @@ logic and no manifest change** (`start_url` stays `/`):
   reserving the request-a-new-link message for a genuine post-arm expiry/lock.
   A correct code always mints regardless of the observed-armed flag, because
   `confirm.post` checks the DB directly.
-- **Classifying that `expired` cannot lean on the poll alone.** The server
+- **The client does not infer arming state — it stopped trying.** The server
   answers `expired` both for "not armed yet" and for "armed, then dead" (window
-  closed / attempt cap / claimed), and the two need opposite UI. The obvious
-  discriminator — "did the poll observe the arm?" — is **not** sound: iOS
-  suspends the poll timer while the PWA sits in the background during the Mail →
-  Safari detour, so the normal cross-jar path can miss the arm entirely. Keying
-  on it alone mislabels a real expiry as "not armed" and tells the user to open
-  a link whose token was already consumed — an impossible instruction with no
-  way forward, every retry repeating it. The client therefore treats the claim
-  as possibly-armed on **any** of three signals: the poll observed the arm; the
-  server once answered `invalid` (which only a live armed claim does, so a burnt
-  attempt cap is caught even with no poll observation); or more than a confirm
-  window has elapsed since the send (a post-arm expiry is impossible before
-  then, since the window opens at the click). The gentle hint is thus shown only
-  when the claim provably cannot have been armed yet, and **every ambiguous case
-  resolves to "ask for a new link"** — always actionable. The invariant is that
-  the user is never told to do something impossible.
+  closed / attempt cap / claimed) and deliberately refuses to distinguish them
+  (that non-disclosure is the no-enumeration property above). Two rounds were
+  spent trying to recover the distinction client-side, and each discriminator
+  produced a real bug: keying on "the poll observed the arm" mislabels the
+  normal iOS path, where the PWA is suspended in the background during the Mail
+  → Safari detour and the poll never sees the arm — telling the user to open a
+  link whose token was already consumed, an impossible instruction repeated on
+  every retry; adding an elapsed-time signal then destroyed the poll key while
+  the magic link was still valid (minutes 5–15 of its 15-minute life), so the
+  user's later click could no longer complete; and the elapsed anchor was itself
+  rewound by every send attempt, including failed ones. The inference is
+  **deleted**. On any non-`ready` response the client now changes nothing about
+  the pending sign-in — it never clears the key, never stops the poll, never
+  tears the screen down — and shows one message that is true in both states
+  ("that code didn't work; make sure you've opened the link in your email and
+  entered the code it shows"), with the resend action always on screen. The key
+  expires on its own deadline instead, so a link opened after a failed confirm
+  still completes the sign-in. **Invariant: the user is never stranded, never
+  told to do something impossible, and always has a path forward.**
 
 `isStandalone()` — the single detector both the poll client (`useSigninPoll`)
 and the landing redirect use — lives in `composables/usePwa.ts`, so the two can
@@ -222,14 +246,15 @@ are **not** part of the `bun run test:e2e` CI gate:
   (`poll-entry.client.mjs`: a signed-OUT forced-standalone context redirects `/`
   and `/fr` to `/login`, while a signed-IN one resolves `/` to `/me` and is
   never shown the email form, and an authenticated visitor on `/login` is sent
-  to `/me`; `/login` shows the code field immediately on send; a premature
-  submit before arming shows the gentle "open the link first" hint and does not
-  strand — the real code still signs in; **both directions of the expiry split**
-  — burning the 3-attempt cap after the poll observed the arm bounces back to
-  the send form with "ask for a new link" and _not_ the not-armed hint, the case
-  that fails if the classification is collapsed to an unconditional
-  `not-armed`; a non-standalone `/login` and the landing show the plain message
-  with no code field and no redirect).
+  to `/me`; `/login` shows the code field immediately on send; and the
+  never-strand invariant from both ends — a confirm submitted before the link is
+  opened, and a claim deliberately locked by burning the 3-attempt cap, each
+  keep the code screen, show the one honest message, keep "ask for a new link"
+  reachable, and **keep the poll key** — after which the real code still signs
+  the PWA in. That pair is the regression guard: re-introducing a `clear()` on a
+  failed confirm strands the user on the sign-in screen and fails the suite. A
+  non-standalone `/login` and the landing still show the plain message with no
+  code field and no redirect).
 - **Needs a real iPhone (not automatable):** the actual iOS standalone-jar
   isolation and the on-device `navigator.standalone` launch that triggers the
   landing → `/login` redirect — confirmed only with the app added to the Home

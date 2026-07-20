@@ -54,7 +54,6 @@ export const useMagicLink = (options: { pollClaim?: boolean } = {}) => {
   const submitting = ref(false);
   const sent = ref(false);
   const errorMessage = ref('');
-  const awaitingCode = poll.awaitingCode;
   const confirming = ref(false);
   const codeError = ref('');
   // Set on mount (client-only; needs window/navigator). `pollActive` means this
@@ -100,11 +99,10 @@ export const useMagicLink = (options: { pollClaim?: boolean } = {}) => {
   };
 
   // Submit the confirmation code shown on the click page. On success the poll
-  // composable navigates to /me. `invalid` keeps the input for a retry;
-  // `not-armed` (code typed before the link was clicked) shows a gentle "open
-  // the link first" hint and keeps the field usable — the claim is still alive;
-  // `expired` (window closed / attempt cap, after the claim WAS armed) returns
-  // the user to the email form with a message to request a new link.
+  // composable navigates to /me. Every failure keeps the user exactly where
+  // they are, with the field usable and the resend action on screen — the code
+  // screen is never torn down, because the pending sign-in outlives a failed
+  // confirm and a link opened afterwards can still complete it.
   const confirmCode = async (code: string) => {
     if (confirming.value) return;
     confirming.value = true;
@@ -114,13 +112,13 @@ export const useMagicLink = (options: { pollClaim?: boolean } = {}) => {
     if (result === 'ready') return;
     if (result === 'invalid') {
       codeError.value = t('login.confirm.errorInvalid');
-    } else if (result === 'not-armed') {
-      codeError.value = t('login.confirm.errorNotYet');
-    } else if (result === 'expired') {
-      sent.value = false;
-      errorMessage.value = t('login.confirm.errorExpired');
-    } else {
+    } else if (result === 'error') {
       codeError.value = t('login.confirm.errorGeneric');
+    } else {
+      // `expired`: the claim is not confirmable right now. The server does not
+      // say whether the link is still unopened or its window has closed, and
+      // guessing produces impossible advice, so say the one thing true of both.
+      codeError.value = t('login.confirm.errorNotConfirmed');
     }
   };
 
@@ -148,7 +146,6 @@ export const useMagicLink = (options: { pollClaim?: boolean } = {}) => {
     submit,
     reset,
     pollActive,
-    awaitingCode,
     confirming,
     codeError,
     confirmCode,

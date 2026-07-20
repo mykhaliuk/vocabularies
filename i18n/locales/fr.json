@@ -49,8 +49,7 @@
       "submit": "Confirmer",
       "submitting": "Confirmation…",
       "errorInvalid": "Ce code est incorrect. Vérifiez la page ouverte et réessayez.",
-      "errorNotYet": "Ouvrez d'abord le lien dans votre e-mail, puis saisissez le code.",
-      "errorExpired": "Ce code a expiré. Demandez un nouveau lien pour réessayer.",
+      "errorNotConfirmed": "Ce code n'a pas fonctionné. Vérifiez que vous avez ouvert le lien dans votre e-mail et saisi le code qu'il affiche.",
       "errorGeneric": "Un problème est survenu. Réessayez dans un instant."
     }
   },

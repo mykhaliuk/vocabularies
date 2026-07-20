@@ -31,12 +31,12 @@ That runs `infra:up` (OrbStack Postgres + MinIO) and then, under the local env,
    UX): a signed-out forced-standalone context redirects `/` and `/fr` to
    `/login`, while a signed-in one resolves `/` to `/me` and an authenticated
    visitor on `/login` is sent to `/me`; `/login` shows the confirmation-code
-   field immediately on send; a premature submit before the link is clicked shows
-   the gentle "open the link first" hint and does not strand the flow (the real
-   code still signs in); burning the 3-attempt cap after the poll observed the
-   arm bounces back to the send form with "ask for a new link" (the other
-   direction of the expiry split); a non-standalone `/login` and the landing show
-   the plain message with no code field and no redirect,
+   field immediately on send; and a failed confirm never strands — both a submit
+   before the link is opened and a claim locked by burning the 3-attempt cap keep
+   the code screen, the honest guidance message, a reachable "ask for a new link",
+   and the poll key, after which the real code still signs the PWA in (re-adding
+   a `clear()` on a failed confirm fails these); a non-standalone `/login` and
+   the landing show the plain message with no code field and no redirect,
 5. tears the dev server down.
 
 `helpers.mjs` holds the shared standalone-signal init script and the

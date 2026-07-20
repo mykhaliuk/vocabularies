@@ -96,17 +96,33 @@ useHead({
 // probe is standalone-only so the public landing issues no extra request and
 // stays byte-identical for web visitors. `replace` so the codeless landing is
 // not left in the PWA's history.
+// True only while an installed standalone launch is deciding where to go. It
+// gates the whole landing off the screen, because the hero form below is bound
+// to the plain (codeless) magic-link flow: a send from it mints a link with NO
+// poll key, which can never sign the PWA in and burns a rate-limit slot — the
+// exact defect VKB-70 exists to fix. Set synchronously (see onMounted), so that
+// window does not exist regardless of how slow the session probe is.
+const resolvingEntry = ref(false);
+
 const resolveStandaloneEntry = async () => {
   // hasSession() resolves false on 401 / offline / timeout, so a failed probe
   // falls back to /login instead of blocking the launch.
-  const target = (await hasSession()) ? '/me' : '/login';
-  await navigateTo(target, { replace: true });
+  if (await hasSession()) {
+    await navigateTo('/me', { replace: true });
+    return;
+  }
+  // Tell the /login guard the answer we just paid for, so it does not probe the
+  // same endpoint again a moment later.
+  markSignedOutHandoff();
+  await navigateTo('/login', { replace: true });
 };
 
 onMounted(() => {
-  // Standalone PWA → resolve the entry before doing anything else; the reveal
-  // animation on a page we're leaving would be wasted work.
+  // Standalone PWA → resolve the entry before doing anything else. The gate is
+  // set BEFORE any await: the codeless hero must never be interactive during a
+  // standalone launch, however long the probe takes.
   if (isStandalone()) {
+    resolvingEntry.value = true;
     void resolveStandaloneEntry();
     return;
   }
@@ -136,7 +152,14 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="landing">
+  <!-- Installed standalone launch: hold a neutral, inert surface while the
+       entry resolves so the codeless hero form is never interactive. Web
+       visitors never enter this branch — resolvingEntry stays false for them,
+       so the landing below renders exactly as before, with no extra request,
+       no splash and no flash. -->
+  <div v-if="resolvingEntry" class="entry-splash" aria-hidden="true"></div>
+
+  <div v-else class="landing">
     <!-- NAV -->
     <header class="nav">
       <div class="wrap nav__in">
@@ -381,6 +404,13 @@ onMounted(() => {
 </template>
 
 <style scoped>
+/* Inert holding surface for a standalone launch — brand canvas only, nothing
+   interactive, no spinner (the resolve is bounded and short). */
+.entry-splash {
+  min-height: 100dvh;
+  background: var(--bg);
+}
+
 .landing {
   background: var(--bg);
   color: var(--text);

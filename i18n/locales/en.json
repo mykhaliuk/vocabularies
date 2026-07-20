@@ -49,8 +49,7 @@
       "submit": "Confirm",
       "submitting": "Confirming…",
       "errorInvalid": "That code isn't right. Check the page that opened and try again.",
-      "errorNotYet": "Open the link in your email first, then enter the code.",
-      "errorExpired": "That code expired. Ask for a new link to try again.",
+      "errorNotConfirmed": "That code didn't work. Make sure you've opened the link in your email and entered the code it shows.",
       "errorGeneric": "Something went wrong. Try again in a moment."
     }
   },

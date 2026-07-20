@@ -19,7 +19,6 @@ const {
   submit,
   reset,
   pollActive,
-  awaitingCode,
   confirming,
   codeError,
   confirmCode,
@@ -40,6 +39,9 @@ async function onConfirm() {
 // timeout, so a failed probe simply leaves the form in place rather than
 // blocking. No loop — /me sends only *unauthenticated* visitors back here.
 onMounted(async () => {
+  // The standalone landing hands off after establishing there is no session;
+  // consume that instead of paying for the same probe twice in one launch.
+  if (takeSignedOutHandoff()) return;
   if (await hasSession()) await navigateTo('/me', { replace: true });
 });
 
@@ -210,7 +212,11 @@ async function resend() {
           >
             {{ $t('login.useDifferentEmail') }}
           </button>
-          <p v-if="!awaitingCode" class="auth__sent-resend">
+          <!-- Always available: a failed confirm leaves the user on this
+               screen, so asking for a fresh link must always be one tap away.
+               Never gated on poll state — that is what turned a failed confirm
+               into a dead end. -->
+          <p class="auth__sent-resend">
             {{ $t('login.resendPrompt') }}
             <button
               class="auth__sent-resend-btn"

@@ -4,11 +4,13 @@ import { STANDALONE_INIT, clickAndReadCode } from './helpers.mjs';
 // Local-only UI tests for the VKB-70 QA fixes: an installed standalone PWA
 // resolves its entry (the app when signed in, /login otherwise) instead of
 // landing on the codeless marketing hero, and /login shows the confirmation-code
-// field immediately on send — including BOTH directions of the expiry split (a
-// pre-arm premature submit stays gentle and recoverable; a genuinely dead claim
-// bounces to "ask for a new link"). NOT part of the CI e2e suite (needs a DB +
-// console email) — see e2e/local/README. Invoked by e2e/local/run.mjs with
-// { base, findLink }.
+// field immediately on send. The confirm-failure cases pin the invariant that
+// replaced the old arming inference: a failed confirm NEVER tears the pending
+// sign-in down — the message is honest about both possible states, the key and
+// the poll survive so a link opened afterwards still completes the sign-in, and
+// "ask for a new link" is always one tap away. NOT part of the CI e2e suite
+// (needs a DB + console email) — see e2e/local/README. Invoked by
+// e2e/local/run.mjs with { base, findLink }.
 
 // English locale so the assertions match the en copy regardless of the host's
 // Accept-Language, and so the entry-locale redirect never bounces `/` to /fr.
@@ -66,6 +68,42 @@ export const run = async ({ base, findLink }) => {
       fromFr.url(),
     );
 
+    console.log('\n== FIX 1: the entry probe is bounded on any engine ==');
+    // Black-hole /api/me AND remove AbortSignal.timeout (iOS <= 15), so the only
+    // thing that can end the probe is ofetch's own timer. The launch must still
+    // resolve — a dead probe degrades to the sign-in screen, it never strands
+    // the PWA on the landing — and must cost ONE timeout, not two (ofetch
+    // retries a GET by default and does not treat a TimeoutError as an abort,
+    // so `retry: false` is what holds this bound).
+    const slowCtx = await browser.newContext(EN);
+    await slowCtx.addInitScript(STANDALONE_INIT);
+    await slowCtx.addInitScript(`
+      try { delete AbortSignal.timeout; } catch {}
+    `);
+    await slowCtx.route('**/api/me', () => {
+      // never fulfilled: the probe hangs until it is timed out client-side
+    });
+    const slowPage = await slowCtx.newPage();
+    await slowPage.goto(`${base}/`);
+    const probeStartedAt = Date.now();
+    try {
+      await slowPage.waitForURL('**/login', { timeout: 20000 });
+    } catch {
+      // assertion reports the actual URL
+    }
+    const probeElapsedMs = Date.now() - probeStartedAt;
+    check(
+      'a black-holed probe still resolves the entry (no AbortSignal.timeout)',
+      pathOf(slowPage) === '/login',
+      `${probeElapsedMs}ms -> ${slowPage.url()}`,
+    );
+    check(
+      'the entry costs one probe timeout, not two',
+      pathOf(slowPage) === '/login' && probeElapsedMs < 5000,
+      `${probeElapsedMs}ms`,
+    );
+    await slowCtx.close();
+
     console.log('\n== FIX 2: /login shows the code field immediately ==');
     const email = `entry-${Date.now()}@example.com`;
     const p = await standalone.newPage();
@@ -80,29 +118,39 @@ export const run = async ({ base, findLink }) => {
       (await p.getByText(/check your inbox/i).count()) === 0,
     );
 
-    console.log('\n== FIX 2: premature submit is gentle, not stranding ==');
+    console.log('\n== FIX 2: a failed confirm guides, and never strands ==');
     // Type a code and confirm BEFORE the link is clicked. The claim is unarmed,
-    // so the server returns expired -> the client shows "open the link first"
-    // and keeps the field + poll alive (no attempt consumed, no bounce).
+    // so the server answers `expired`. The client must NOT guess why: it shows
+    // the one honest message, keeps the field and the resend action, and — the
+    // regression that matters — keeps the poll key, because the magic link is
+    // still valid for ~15 minutes and must still be able to finish the sign-in.
     await codeInput.click();
     await codeInput.pressSequentially('0000', { delay: 10 });
     await p.getByRole('button', { name: /^confirm$/i }).click();
-    await p
-      .getByText(/open the link in your email first/i)
-      .waitFor({ timeout: 10000 });
+    await p.getByText(/that code didn't work/i).waitFor({ timeout: 10000 });
     check(
-      'premature submit -> gentle "open the link first" hint',
-      (await p.getByText(/open the link in your email first/i).count()) === 1,
+      'failed confirm guides to open the link and enter the code it shows',
+      (await p.getByText(/that code didn't work/i).count()) === 1,
     );
     check(
-      'premature submit does NOT bounce to the email form',
+      'failed confirm does NOT bounce to the email form',
       (await p.getByRole('button', { name: /send me a link/i }).count()) ===
         0 && (await codeInput.count()) === 1,
     );
-    check('premature submit does NOT navigate to /me', pathOf(p) !== '/me');
+    check('failed confirm does NOT navigate to /me', pathOf(p) !== '/me');
+    check(
+      'failed confirm keeps "ask for a new link" reachable',
+      (await p.getByRole('button', { name: /^resend$/i }).count()) === 1,
+    );
+    // The mutation target: re-introducing clear() on a failed confirm wipes
+    // this key, and the sign-in below can then never complete.
+    check(
+      'failed confirm does NOT discard the poll key',
+      (await p.evaluate(() => localStorage.getItem('vocabu_poll'))) !== null,
+    );
 
-    // Prove the flow is not stranded: click the real link, then the real code
-    // still signs the PWA in.
+    // Prove the pending sign-in survived a failed confirm: click the real link,
+    // and the real code still signs the PWA in.
     const link = await findLink(email);
     const clicked = await clickAndReadCode(browser, link);
     check(
@@ -120,7 +168,7 @@ export const run = async ({ base, findLink }) => {
       // reported below
     }
     check(
-      'the real code after a premature attempt signs the PWA in',
+      'the real code still signs the PWA in after a failed confirm',
       pathOf(p) === '/me',
       p.url(),
     );
@@ -148,12 +196,13 @@ export const run = async ({ base, findLink }) => {
       guarded.url(),
     );
 
-    console.log('\n== FIX B: a genuinely dead claim bounces to "new link" ==');
-    // The OTHER direction of the expiry split: arm the claim, let the poll
-    // observe it, then burn the 3-attempt cap so the claim is truly locked. The
-    // UI must return to the send form with "ask for a new link" — never the
-    // not-armed hint, which would be an impossible instruction here (the
-    // magic-link token was already consumed by the click).
+    console.log(
+      '\n== FIX B: a locked claim still never tears the screen down ==',
+    );
+    // A genuinely dead claim: arm it, then burn the 3-attempt cap. The client
+    // must NOT infer anything from that — it shows the one honest message,
+    // leaves the code screen standing, keeps the key, and keeps "ask for a new
+    // link" one tap away.
     const deadEmail = `dead-${Date.now()}@example.com`;
     const deadCtx = await browser.newContext(EN);
     await deadCtx.addInitScript(STANDALONE_INIT);
@@ -164,13 +213,6 @@ export const run = async ({ base, findLink }) => {
 
     const deadLink = await findLink(deadEmail);
     const deadClicked = await clickAndReadCode(browser, deadLink);
-    // The resend prompt renders only while the poll has NOT observed the arm,
-    // so its removal is the UI's signal that awaitingCode flipped.
-    await dp
-      .getByText(/didn't get it/i)
-      .waitFor({ state: 'detached', timeout: 25000 });
-    check('poll observed the arm (resend prompt retracted)', true);
-
     const deadWrong = String((Number(deadClicked.code) + 1) % 10000).padStart(
       4,
       '0',
@@ -185,25 +227,25 @@ export const run = async ({ base, findLink }) => {
           .waitFor({ timeout: 10000 });
       }
     }
+    await dp.getByText(/that code didn't work/i).waitFor({ timeout: 10000 });
 
-    const sendButton = dp.getByRole('button', { name: /send me a link/i });
-    try {
-      await sendButton.waitFor({ timeout: 10000 });
-    } catch {
-      // assertions below report the actual state
-    }
     check(
-      'burnt attempt cap bounces back to the send form',
-      (await sendButton.count()) === 1 &&
-        (await dp.getByLabel(/confirmation code/i).count()) === 0,
+      'locked claim keeps the code screen (no bounce to the send form)',
+      (await dp.getByLabel(/confirmation code/i).count()) === 1 &&
+        (await dp.getByRole('button', { name: /send me a link/i }).count()) ===
+          0,
     );
     check(
-      'burnt attempt cap shows the "ask for a new link" message',
-      (await dp.getByText(/ask for a new link/i).count()) === 1,
+      'locked claim shows the one honest guidance message',
+      (await dp.getByText(/that code didn't work/i).count()) === 1,
     );
     check(
-      'burnt attempt cap does NOT show the not-armed hint',
-      (await dp.getByText(/open the link in your email first/i).count()) === 0,
+      'locked claim keeps "ask for a new link" reachable',
+      (await dp.getByRole('button', { name: /^resend$/i }).count()) === 1,
+    );
+    check(
+      'locked claim does NOT discard the poll key',
+      (await dp.evaluate(() => localStorage.getItem('vocabu_poll'))) !== null,
     );
     await deadClicked.safari.close();
     await deadCtx.close();
