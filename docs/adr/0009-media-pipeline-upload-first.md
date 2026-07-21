@@ -36,8 +36,9 @@ transcoder reads, nothing is ever served from it. `media` — derivatives,
 posters, avatars; GET-only for clients, future candidate for an R2 custom
 domain with CDN caching. Bucket-level access profiles, per-bucket scoped
 tokens, per-bucket CORS (`scripts/r2-cors-set.js`), independent lifecycle
-rules. Legacy `S3_BUCKET` is still read as the media bucket until envs
-migrate to `S3_BUCKET_MEDIA` + `S3_BUCKET_ORIGINALS`.
+rules. All stages read `S3_BUCKET_MEDIA` + `S3_BUCKET_ORIGINALS`; the
+legacy single-bucket `S3_BUCKET` fallback was dropped once production
+migrated to the two-bucket vars (VKB-72).
 
 **Async normalization with ffmpeg, in the Nitro app on Vercel.** Confirm
 returns immediately (`processing`); a queued job downloads the original,

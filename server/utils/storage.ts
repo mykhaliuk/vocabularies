@@ -43,9 +43,7 @@ const create = (): Storage => {
   const region = process.env.S3_REGION ?? 'auto';
   const accessKeyId = process.env.S3_ACCESS_KEY_ID;
   const secretAccessKey = process.env.S3_SECRET_ACCESS_KEY;
-  // S3_BUCKET_MEDIA is the canonical name; S3_BUCKET is the pre-two-bucket
-  // fallback kept so deployed envs keep working until their vars migrate.
-  const mediaBucket = process.env.S3_BUCKET_MEDIA || process.env.S3_BUCKET;
+  const mediaBucket = process.env.S3_BUCKET_MEDIA;
   const originalsBucket = process.env.S3_BUCKET_ORIGINALS || null;
   const forcePathStyle = parseBool(
     process.env.S3_FORCE_PATH_STYLE,
@@ -58,9 +56,7 @@ const create = (): Storage => {
     throw new Error('[storage] S3_SECRET_ACCESS_KEY is required');
   }
   if (!mediaBucket) {
-    throw new Error(
-      '[storage] S3_BUCKET_MEDIA (or legacy S3_BUCKET) is required',
-    );
+    throw new Error('[storage] S3_BUCKET_MEDIA is required');
   }
 
   const client = new S3Client({
