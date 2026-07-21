@@ -73,9 +73,10 @@ settled 2026-07-17 (details in the M12 ADR once the spike lands):
 - **Open questions the spike answers:** where transcoding lives — ffmpeg in
   a Vercel function (a 20s 4K60 HEVC clip must fit the 300s limit; explicit
   `maxDuration`, plan allows it, ffmpeg binary fits the bundle) vs
-  Cloudflare Stream as fallback — and the async trigger (QStash first
-  candidate vs R2 events → CF Queues; QStash to be discussed with the owner
-  before it's final).
+  Cloudflare Stream as fallback — and the async trigger. Both settled:
+  ffmpeg-in-function fits with 15× headroom, and QStash is final (decided
+  2026-07-21, VKB-80) with per-stage named queues (`vocabu-stage` /
+  `vocabu`).
 
 - **Entitlements as capability→roles RBAC** (decided 2026-07-18): each
   capability maps to the roles that receive it (e.g. `videoUpload: [vip,

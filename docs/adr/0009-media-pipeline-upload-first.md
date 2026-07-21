@@ -1,11 +1,13 @@
 # ADR-0009: upload-first media pipeline — two buckets, async ffmpeg, 720p derivatives
 
 <!-- Renumbered from 0007: the number was minted twice in parallel PRs
-     (transactional-email kept it as the indexed one). Content untouched. -->
+     (transactional-email kept it as the indexed one). The core decision
+     text is unchanged; the async-transport open end was later finalized
+     by VKB-80. -->
 
-- Status: Accepted (async transport provisional — see Open ends)
-- Date: 2026-07-17
-- Refs: VKB-63, ROADMAP "Media core", `server/utils/storage.ts`,
+- Status: Accepted
+- Date: 2026-07-17 (async transport finalized 2026-07-21, VKB-80)
+- Refs: VKB-63, VKB-80, ROADMAP "Media core", `server/utils/storage.ts`,
   `server/utils/media-process.ts`, `server/utils/media-queue.ts`
 
 ## Context
@@ -82,10 +84,14 @@ problem the numbers say we do not have.
 
 ## Open ends (tracked, not blocking)
 
-- **Async transport is provisionally QStash** (already Upstash customers;
-  retries + DLQ; signature-verified worker endpoint). Locally the job runs
-  in-process. The owner wants a dedicated discussion before this is final —
-  swapping transports touches only `media-queue.ts`.
+- **Async transport is QStash — final** (decided with the owner
+  2026-07-21, VKB-80; already Upstash customers; retries + DLQ;
+  signature-verified worker endpoint). QStash tokens and signing keys are
+  account-level, so stage/prod isolation uses **named queues** —
+  `vocabu-stage` (dev + preprod) and `vocabu` (prod), mirroring the Redis
+  instance naming — selected via `QSTASH_QUEUE_NAME`. Locally the job
+  still runs in-process. Swapping transports would touch only
+  `media-queue.ts`.
 - Audio canonical format chosen as AAC/M4A for universal playback (iOS
   Safari cannot play Opus-in-WebM); revisit only if size ever matters.
 - Real-device playback checks (iOS Safari standalone, Android Chrome) run
