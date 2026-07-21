@@ -38,3 +38,9 @@ Format: `NNNN-short-slug.md`, template in [0000-template.md](0000-template.md).
 - [ADR-0008](0008-pwa-poll-claim-signin.md) — installed PWAs sign in via a
   poll/claim handoff gated by a click-revealed confirmation code (closes a
   session-fixation hole), not the Safari link cookie
+- [ADR-0009](0009-media-pipeline-upload-first.md) — upload-first media
+  pipeline: originals stored as-is in a private bucket, async ffmpeg to
+  720p derivatives (renumbered from a 0007 collision)
+- [ADR-0010](0010-server-layering-domain-operations.md) — server layering:
+  transport never touches the db; every db access is a domain operation,
+  enforced by `layering:check`

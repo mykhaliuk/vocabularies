@@ -26,6 +26,7 @@
     "icons:gen": "node scripts/generate-icons.js",
     "ds:check": "node scripts/ds-check.js",
     "i18n:check": "node scripts/i18n-check.js",
+    "layering:check": "node scripts/layering-check.js",
     "proto:check": "node scripts/proto-check.js",
     "proto:pull": "node scripts/proto-pull.js",
     "proto:update": "node scripts/proto-pull.js && node scripts/proto-check.js",
