@@ -185,6 +185,12 @@ export default defineNuxtConfig({
   },
   pwa: {
     registerType: 'autoUpdate',
+    // crossorigin="use-credentials" on the manifest link: manifest fetches
+    // default to credentials:omit, so on protected previews (Vercel SSO)
+    // they 302 to sso-api and die on CORS in an endless retry loop. With
+    // credentials the SSO cookie rides along. No effect where the
+    // deployment is public (production).
+    useCredentials: true,
     // injectManifest: a custom service-worker/sw.js serves the friendly
     // /offline page on failed navigations (runtime caching lives there now).
     strategies: 'injectManifest',
