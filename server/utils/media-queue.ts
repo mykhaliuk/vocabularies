@@ -81,12 +81,24 @@ export const enqueueMediaProcessing = async (key: string, userId: string) => {
     // must fail loudly, not masquerade as a QStash outage.
     const baseUrl = getAppUrl().replace(/\/+$/, '');
     const queueName = process.env.QSTASH_QUEUE_NAME as string;
+    // Preview deployments sit behind Vercel Deployment Protection; the
+    // callback must carry the bypass header or every delivery 401s at
+    // the platform layer (3 retries → DLQ) before our code runs. The
+    // secret is injected by Vercel when Protection Bypass for Automation
+    // is enabled; absent (e.g. production) the header is skipped.
+    // Accepted risk: the header rides inside the QStash message, so the
+    // secret is visible in our own Upstash console (messages/DLQ).
+    const bypassSecret = process.env.VERCEL_AUTOMATION_BYPASS_SECRET;
+    const headers = bypassSecret
+      ? { 'x-vercel-protection-bypass': bypassSecret }
+      : undefined;
     try {
       await ensureQueue(client, queueName);
       await client.queue({ queueName }).enqueueJSON({
         url: `${baseUrl}/api/media/process`,
         body: { key, userId },
         retries: 3,
+        headers,
       });
       return 'qstash';
     } catch (error) {
