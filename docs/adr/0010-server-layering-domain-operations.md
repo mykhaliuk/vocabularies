@@ -18,8 +18,9 @@ review-debate generator, not a rule).
 
 ## Decision
 
-Three layers under `server/`: **transport** (`server/api`,
-`server/middleware`), **domain** (`server/domain`), **infra**
+Three layers under `server/`: **transport** — every request-facing Nitro
+surface (`server/api`, `server/routes`, `server/middleware`,
+`server/plugins`) — **domain** (`server/domain`), **infra**
 (`server/utils`). The rule is binary: **transport never touches the db;
 every db access is a domain operation** — a function in `server/domain/**`
 named by business intent. A one-line `db.update` and a five-way join
@@ -29,9 +30,14 @@ A query needed identically by 2+ operations may move to a shared domain
 helper (plain DRY, not a pattern). Resources are reached via lazy `use*()`
 module singletons (`useDb()`), imported exactly where used; a context
 object may carry only request-scoped state (`user`, `can()`, a transaction
-handle) with a fixed shape. Enforcement is mechanical: `bun run
-layering:check` fails CI on any db reference in transport outside the
-legacy allowlist frozen in `scripts/layering-check.js`; the list only
+handle) with a fixed shape. This deliberately **narrows the
+resource-injection sentence** of `feedback_no_dto_in_js.md` ("inject
+resources as a context object"): in this codebase the Context pattern is
+reserved for request scope, process resources come from `use*()`
+singletons, and this ADR wins until the upstream rule (maintained outside
+the repo, synced via `rules:sync`) is aligned. Enforcement is mechanical:
+`bun run layering:check` fails CI on any db reference in transport outside
+the legacy allowlist frozen in `scripts/layering-check.js`; the list only
 shrinks, and new files are never added to it.
 
 ## Consequences
@@ -44,6 +50,15 @@ shrinks, and new files are never added to it.
 - Eight pre-decision routes are grandfathered in the allowlist; they
   migrate opportunistically (when touched), not as a big-bang refactor.
   VKB-64 materializes `server/domain/` (entries, media, entitlements).
+- `server/utils/auth.ts` is the same legacy in infra clothing: the
+  session lookup inside `requireUser` becomes a `resolveSession` domain
+  operation when the auth routes migrate. The guard is lexical and only
+  scans transport, so this transitive access is held by review until then.
+- The lazy sweeps pinned by ADR-0002 (expired tokens, in
+  `magic-link.post`) and ADR-0005 (expired sessions, in the auth
+  callback) keep their behavior and timing; only their home moves into
+  the corresponding domain operation when those routes migrate. This does
+  not reverse either decision.
 - Tree-shaking and cold-start stay exact: each Nitro route chunk traces
   only the `use*()` modules its domain operations import — no god context
   factory dragging every resource into every function.

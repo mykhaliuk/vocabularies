@@ -104,14 +104,15 @@ the diff. Do not hand-edit `.claude/rules/` in the repo.
 Three layers under `server/`; the boundary is structural, never a
 judgement call:
 
-- **transport** — `server/api/**`, `server/middleware/**`: auth guard, zod
-  validation, rate limits, calling the domain, HTTP error mapping, response
-  projection. **Transport never touches the db.**
+- **transport** — every request-facing Nitro surface: `server/api/**`,
+  `server/routes/**`, `server/middleware/**`, `server/plugins/**`. Auth
+  guard, zod validation, rate limits, calling the domain, HTTP error
+  mapping, response projection. **Transport never touches the db.**
 - **domain** — `server/domain/**`: business logic and invariants. Every db
   access is a **domain operation** — a function named by business intent
-  (`updateDisplayName`, `feedPage`), whether it wraps one Drizzle line or a
-  five-way join. If it reads or writes the db, it is a domain operation;
-  "too simple to extract" is not a thing here.
+  (`updateDisplayName`, `getFeedPage`), whether it wraps one Drizzle line
+  or a five-way join. If it reads or writes the db, it is a domain
+  operation; "too simple to extract" is not a thing here.
 - **infra** — `server/utils/**`: resources (db, storage, redis, email) and
   platform helpers.
 
@@ -125,7 +126,9 @@ Rules that keep it honest:
 - Resources are reached via lazy `use*()` module singletons (`useDb()`),
   imported exactly where used — never bundled into a god context. A context
   object carries request-scoped state only (`user`, `can()`, tx) with a
-  fixed shape.
+  fixed shape. Where this narrows the resource-injection sentence of
+  `feedback_no_dto_in_js.md` ("inject resources as a context object"),
+  ADR-0010 wins until the upstream rule is aligned via `rules:sync`.
 - Enforced by `bun run layering:check` (CI): zero db references in
   transport outside the shrinking legacy allowlist in
   `scripts/layering-check.js`. Never add a file to that list; remove

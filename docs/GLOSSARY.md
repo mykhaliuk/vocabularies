@@ -62,12 +62,14 @@ crystallizes during planning, add it here in the same PR.
 
 - **stage** — one of the three runtime environments: `local`, `dev`,
   `preprod`. A stage is selected per command, not per checkout.
-- **transport** — the HTTP skin of the server (`server/api`,
-  `server/middleware`): guards, validation, calling the domain, shaping
-  responses. Never touches the database.
+- **transport** — the request-facing skin of the server (`server/api`,
+  `server/routes`, `server/middleware`, `server/plugins`): guards,
+  validation, calling the domain, shaping responses. Never touches the
+  database.
 - **domain operation** — the unit of business logic: a function in the
   domain layer named by business intent that owns any db access it needs;
-  the only way the app reads or writes the database.
+  the only sanctioned way the app reads or writes the database (legacy
+  pre-ADR-0010 call sites are grandfathered and shrinking).
 - **canon** — the exported design-system manifest; the single source of
   truth every design artifact is checked against.
 - **the triad** — the three consumers of canon kept in sync by checks:
