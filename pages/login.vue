@@ -39,10 +39,18 @@ async function onConfirm() {
 // timeout, so a failed probe simply leaves the form in place rather than
 // blocking. No loop — /me sends only *unauthenticated* visitors back here.
 onMounted(async () => {
-  // The standalone landing hands off after establishing there is no session;
-  // consume that instead of paying for the same probe twice in one launch.
-  if (takeSignedOutHandoff()) return;
-  if (await hasSession()) await navigateTo('/me', { replace: true });
+  try {
+    // The standalone landing hands off after establishing there is no session;
+    // consume that instead of paying for the same probe twice in one launch.
+    if (takeSignedOutHandoff()) return;
+    if (await hasSession()) await navigateTo('/me', { replace: true });
+  } catch (error) {
+    // hasSession() cannot reject (the probe swallows everything), but
+    // navigateTo() can — a stale service-worker precache / failed chunk load
+    // after a deploy rejects the navigation. Operational error: log and leave
+    // the sign-in form in place, which is already the correct fallback here.
+    console.error('[login] auth guard failed', error);
+  }
 });
 
 // Surface auth-callback failures (expired / invalid link) routed here as
