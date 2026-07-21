@@ -1,6 +1,6 @@
 import { Receiver } from '@upstash/qstash';
 import { z } from 'zod';
-import { processMedia } from '~/server/utils/media-process';
+import { MediaRejection, processMedia } from '~/server/utils/media-process';
 
 const Body = z.object({
   key: z.string(),
@@ -62,9 +62,22 @@ export default defineEventHandler(async (event) => {
 
   const { key, userId } = parsed.data;
   console.log('[media.process] start', { key });
-  const manifest = await processMedia(key, userId);
-  console.log('[media.process] done', { key, timings: manifest.timings });
-
   setResponseHeader(event, 'Cache-Control', 'no-store');
-  return { ok: true, timings: manifest.timings, kind: manifest.kind };
+
+  try {
+    const manifest = await processMedia(key, userId);
+    console.log('[media.process] done', { key, timings: manifest.timings });
+    return { ok: true, timings: manifest.timings, kind: manifest.kind };
+  } catch (error) {
+    // A rejection (over-limit, unreadable file) is a PERMANENT outcome:
+    // the failure manifest is already written, the job is done. Return
+    // 200 so QStash does not retry it — with a FIFO queue (parallelism
+    // 1) a retrying head message blocks every job behind it. Transient
+    // errors keep propagating as 500 → QStash retries (desired).
+    if (error instanceof MediaRejection) {
+      console.warn('[media.process] rejected', { key, error: error.message });
+      return { ok: false, status: 'failed', error: error.message };
+    }
+    throw error;
+  }
 });

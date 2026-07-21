@@ -401,12 +401,15 @@ const runPipeline = async (
 // fail on a transient and must NOT clobber the ready manifest a previous
 // run wrote — failed→ready self-heals on retry, ready→failed would be
 // permanent. Only write the failure when no ready manifest exists.
+// Returns whether a terminal manifest (failed just written, or an
+// already-present ready one) is durably in place — callers use it to
+// decide if the job outcome is recorded or a retry is still needed.
 const writeFailureManifest = async (
   userId: string,
   mediaId: string,
   key: string,
   error: unknown,
-) => {
+): Promise<boolean> => {
   const { manifest } = derivedKeys(userId, mediaId);
   try {
     const existing = await getObject(manifest, 'media');
@@ -416,20 +419,20 @@ const writeFailureManifest = async (
         '[media-process] retry failed but ready manifest exists — keeping it',
         { key },
       );
-      return;
+      return true;
     }
   } catch (readError) {
     // NotFound is the normal first-run case — proceed to record the
     // failure. Any OTHER read error is a transient exactly when a
     // retry-after-transient is running, so writing now risks clobbering
-    // a ready manifest we could not see; skip instead (the client keeps
-    // seeing 'processing', which a later retry resolves either way).
+    // a ready manifest we could not see; skip instead and report the
+    // outcome as unrecorded so the caller keeps the retry path alive.
     if (!isNotFoundError(readError)) {
       console.error(
         '[media-process] manifest read failed — skipping failure write',
         { key, readError },
       );
-      return;
+      return false;
     }
   }
 
@@ -443,16 +446,20 @@ const writeFailureManifest = async (
       error instanceof MediaRejection ? error.message : 'processing failed',
     processedAt: new Date().toISOString(),
   };
-  await putObject(
-    manifest,
-    Buffer.from(JSON.stringify(failure)),
-    'application/json',
-  ).catch((writeError) => {
+  try {
+    await putObject(
+      manifest,
+      Buffer.from(JSON.stringify(failure)),
+      'application/json',
+    );
+    return true;
+  } catch (writeError) {
     console.error('[media-process] failed to write failure manifest', {
       key,
       writeError,
     });
-  });
+    return false;
+  }
 };
 
 export const processMedia = async (
@@ -467,8 +474,17 @@ export const processMedia = async (
     return await runPipeline(key, userId, mediaId, workDir, startedAt);
   } catch (error) {
     // Record the failure where status looks for the result, so clients see
-    // a terminal 'failed' instead of polling 'processing' forever.
-    await writeFailureManifest(userId, mediaId, key, error);
+    // a terminal 'failed' instead of polling 'processing' forever. A
+    // rejection whose manifest could NOT be persisted must stay retryable:
+    // rethrow it as a plain error so the worker 500s and QStash retries,
+    // instead of 200-ing a rejection that no manifest records.
+    const recorded = await writeFailureManifest(userId, mediaId, key, error);
+    if (error instanceof MediaRejection && !recorded) {
+      throw new Error(
+        `[media-process] rejection not recorded, keeping retry alive: ${error.message}`,
+        { cause: error },
+      );
+    }
     throw error;
   } finally {
     await rm(workDir, { recursive: true, force: true });

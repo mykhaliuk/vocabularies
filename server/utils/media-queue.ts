@@ -41,15 +41,23 @@ const getClient = () => {
 
 // Queue existence is not guaranteed by enqueue alone, so the queue is
 // upserted once per warm process. Upsert is create-or-update, which also
-// pins the queue config in code: parallelism 1 (FIFO, one transcode at a
-// time) is the desired state, not an accident of creation defaults.
+// pins the queue config in code, not in creation defaults or dashboard
+// tuning.
+//
+// Parallelism 5: uploads from different users must not wait for each
+// other (each delivery runs in its own function instance), while staying
+// under the plan cap of 10. NOT 1 — serial FIFO turns any slow or
+// retrying head message into head-of-line blocking for every upload
+// behind it (observed live during VKB-80/84 QA).
+const QUEUE_PARALLELISM = 5;
+
 let queueReady: Promise<void> | null = null;
 
 const ensureQueue = (client: Client, queueName: string) => {
   if (!queueReady) {
     queueReady = client
       .queue({ queueName })
-      .upsert({ parallelism: 1 })
+      .upsert({ parallelism: QUEUE_PARALLELISM })
       .catch((error) => {
         queueReady = null;
         throw error;
