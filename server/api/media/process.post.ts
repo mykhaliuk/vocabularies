@@ -71,9 +71,10 @@ export default defineEventHandler(async (event) => {
   } catch (error) {
     // A rejection (over-limit, unreadable file) is a PERMANENT outcome:
     // the failure manifest is already written, the job is done. Return
-    // 200 so QStash does not retry it — with a FIFO queue (parallelism
-    // 1) a retrying head message blocks every job behind it. Transient
-    // errors keep propagating as 500 → QStash retries (desired).
+    // 200 so QStash does not retry it — retries of permanent outcomes
+    // waste delivery slots and, on a saturated queue, delay every job
+    // behind them. Transient errors keep propagating as 500 → QStash
+    // retries (desired).
     if (error instanceof MediaRejection) {
       console.warn('[media.process] rejected', { key, error: error.message });
       return { ok: false, status: 'failed', error: error.message };
