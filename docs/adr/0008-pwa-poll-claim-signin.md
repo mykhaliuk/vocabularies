@@ -112,6 +112,125 @@ expires_at < now()`, not scoped to one key), it would delete a still-confirmable
   tap; desktop/browser sign-in is unchanged; only the installed PWA sees the
   extra step, which is the only client that needs the cross-jar handoff.
 
+## Follow-up: routing the installed PWA into the flow (VKB-70 QA)
+
+The first cut scoped the whole poll/claim flow to `/login` and left the landing
+hero on the plain magic-link path. On-device QA then found the gap: an installed
+PWA opens at the manifest `start_url` `/`, which renders the marketing landing —
+so the PWA signed in from the codeless hero (no poll key), `callback.get` saw no
+`poll_key_hash`, and it redirected to `/me` while the code screen never appeared.
+The root cause is an **entry-point mismatch**, not iOS and not caching.
+
+Two client-only changes close it, with **no change to the server claim/confirm
+logic and no manifest change** (`start_url` stays `/`):
+
+- **Resolve the standalone entry, session-aware.** The landing detects an
+  installed standalone launch on mount and resolves where that launch belongs:
+  it probes `/api/me` and goes to `/me` when a session already exists, else to
+  `/login` (the flow's home). So an installed PWA never signs in from the
+  codeless hero — and, just as importantly, a **returning** user (the primary
+  case) is never shown the sign-in form on a cold launch while holding a valid
+  cookie. Without the session check that user would have no way back into the
+  app but a full redundant magic-link round-trip, burning a rate-limit slot per
+  launch, because standalone has no address bar to navigate out of `/login`
+  with. `/login` carries the same guard for every other route in (bookmark,
+  back button, shared link): an authenticated visitor goes to `/me`. The two
+  guards cannot loop — `/me` bounces only _unauthenticated_ visitors back to
+  `/login`, so the conditions are complementary. The probe is advisory only
+  (the server remains the sole authority) and resolves "no session" on 401,
+  offline, timeout or error, so a dead probe degrades to the sign-in screen
+  rather than stranding the launch. **The probe answers three ways, not two**:
+  `session`, `none` (a 401 — the server saying no) and `unknown` (timeout,
+  offline, DNS, 5xx — no answer at all). Collapsing the last two cost a
+  signed-in user their session: the landing reported "signed out", the `/login`
+  guard suppressed its own probe on that supposed certainty, and a valid cookie
+  ended up staring at the sign-in form with no address bar to escape. Only a
+  definite `none` may suppress the second probe; an `unknown` still falls back
+  to `/login` but leaves the hint unset, so the guard re-probes on a possibly
+  warmer radio. One extra bounded probe is far cheaper than re-authenticating
+  someone who was never signed out. It is issued **only** in the standalone
+  branch, so the public landing makes no extra request and stays byte-identical
+  for web visitors. Client-only + `onMounted` keeps the prerendered landing
+  untouched during SSR/prerender, and `/login` resolves locale via
+  cookie/Accept-Language (no_prefix), so `/`, `/fr`, `/uk` all hand off cleanly.
+  The probe is bounded by ofetch's own `timeout` (plus `retry: false`, since
+  ofetch retries a GET once and does not treat a `TimeoutError` as an abort) —
+  not `AbortSignal.timeout`, which iOS ≤ 15 lacks and which ofetch would let
+  override the bound entirely. Two screens must never pay that bound twice, so
+  the landing hands its "no session" result to the `/login` guard as a
+  single-use, negative-only hint, and concurrent probes share one in-flight
+  promise (cleared on settle — never a cached value, which could go stale
+  across a real session change).
+- **Resolving the entry must gate the landing, not race it.** The hero form is
+  bound to the plain magic-link flow with no poll key, and it is painted and
+  interactive from first hydration — it is not a reveal-on-scroll element. An
+  `await` before the redirect therefore left a window (a slow probe ≈ seconds)
+  in which a tap on that hero sends a link with **no** poll key: no claim bound,
+  a rate-limit slot burned, and a link that can never sign the PWA in — exactly
+  the defect this ADR exists to remove. The standalone branch therefore sets its
+  gating flag **synchronously, before any await**, and the landing renders an
+  inert surface until the entry resolves. The guarantee is structural, not
+  timing-dependent: on a standalone launch the codeless hero is never
+  interactive, however slow the probe. `resolvingEntry` stays false for web
+  visitors, so their render is unchanged. The resolver's failure path always
+  releases that gate (log + `resolvingEntry = false`): `navigateTo` rejects if
+  the target route's chunk will not load — a stale service-worker precache after
+  a deploy is the realistic case — and a gate that is only ever set would then
+  trap the PWA on a blank inert screen it cannot navigate out of, force-quit
+  included. A recoverable surface beats a permanent dead end.
+- **The client's key deadline mirrors the server's, which is not the link TTL.**
+  The confirm window opens at the CLICK (`click + CONFIRM_TTL_MS`) and the arm
+  extends the claim with `greatest(expires_at, confirm_expires_at)`, so the last
+  instant the server will still confirm is `send + MAGIC_LINK_TTL_MS +
+CONFIRM_TTL_MS`. Anchoring the client to the link TTL alone silently destroyed
+  the key for any link clicked in its final five minutes: the code screen stayed
+  up (clearing the key does not reset `sent`), the user typed the code Safari
+  had just shown them, and `submitCode` rejected it locally without issuing a
+  request — the impossible-instruction failure mode again, and worse after a
+  cold start, where `resume()` dropped the stored poll and offered an empty
+  email form instead. `prepareKey` therefore sets the deadline to the extended
+  bound. The cost is that an abandoned sign-in polls for five minutes longer;
+  the poll is rate-limited, self-terminates once the claim is armed, and this is
+  the only way the two clocks can agree.
+- **Show the code field immediately for standalone.** On `/login`, an installed
+  PWA renders the confirmation-code input together with the "open the link"
+  message the moment the link is sent, instead of waiting for the poll to
+  observe the click. The old late reveal (gated on the observed-armed flag) was
+  jank: after clicking the link in Safari and returning, the user stared at
+  "check your inbox" for seconds before the field appeared. The poll still runs;
+  only the field's _visibility_ is decoupled from it. A code typed **before** the
+  link is clicked hits an unarmed claim — the guarded UPDATE matches no row and
+  returns `expired` with **no attempt consumed** — so the client shows a gentle
+  "open the link in your email first" hint and keeps the field and poll alive,
+  reserving the request-a-new-link message for a genuine post-arm expiry/lock.
+  A correct code always mints regardless of the observed-armed flag, because
+  `confirm.post` checks the DB directly.
+- **The client does not infer arming state — it stopped trying.** The server
+  answers `expired` both for "not armed yet" and for "armed, then dead" (window
+  closed / attempt cap / claimed) and deliberately refuses to distinguish them
+  (that non-disclosure is the no-enumeration property above). Two rounds were
+  spent trying to recover the distinction client-side, and each discriminator
+  produced a real bug: keying on "the poll observed the arm" mislabels the
+  normal iOS path, where the PWA is suspended in the background during the Mail
+  → Safari detour and the poll never sees the arm — telling the user to open a
+  link whose token was already consumed, an impossible instruction repeated on
+  every retry; adding an elapsed-time signal then destroyed the poll key while
+  the magic link was still valid (minutes 5–15 of its 15-minute life), so the
+  user's later click could no longer complete; and the elapsed anchor was itself
+  rewound by every send attempt, including failed ones. The inference is
+  **deleted**. On any non-`ready` response the client now changes nothing about
+  the pending sign-in — it never clears the key, never stops the poll, never
+  tears the screen down — and shows one message that is true in both states
+  ("that code didn't work; make sure you've opened the link in your email and
+  entered the code it shows"), with the resend action always on screen. The key
+  expires on its own deadline instead, so a link opened after a failed confirm
+  still completes the sign-in. **Invariant: the user is never stranded, never
+  told to do something impossible, and always has a path forward.**
+
+`isStandalone()` — the single detector both the poll client (`useSigninPoll`)
+and the landing redirect use — lives in `composables/usePwa.ts`, so the two can
+never disagree about what "standalone" means.
+
 ## Duplicated-logic parity (PR-CHECKLIST)
 
 The claim lifecycle spans four handlers; this is the reference:
@@ -149,11 +268,28 @@ are **not** part of the `bun run test:e2e` CI gate:
   and mint nothing** — the atomic-gate regression, which fails on a
   read-then-increment; **a late click's confirm window survives the global
   sweep** and still confirms; confirm-window expiry → rejected;
-  unknown/malformed → expired/400; desktop path unchanged) and the Playwright
+  unknown/malformed → expired/400; desktop path unchanged), the Playwright
   cross-jar UX (code page → code input → `/me`, wrong-code retry, cold-start
-  resume into the confirm step).
+  resume into the confirm step), and the entry-routing + code-field UX
+  (`poll-entry.client.mjs`: a signed-OUT forced-standalone context redirects `/`
+  and `/fr` to `/login`, while a signed-IN one resolves `/` to `/me` and is
+  never shown the email form, and an authenticated visitor on `/login` is sent
+  to `/me`; `/login` shows the code field immediately on send; and the
+  never-strand invariant from both ends — a confirm submitted before the link is
+  opened, and a claim deliberately locked by burning the 3-attempt cap, each
+  keep the code screen, show the one honest message, keep "ask for a new link"
+  reachable, and **keep the poll key** — after which the real code still signs
+  the PWA in. That pair is the regression guard: re-introducing a `clear()` on a
+  failed confirm strands the user on the sign-in screen and fails the suite. It
+  also pins the two clocks and the tri-state probe: the stored key must outlive
+  the link TTL by a confirm window and a code entered past the old anchor still
+  signs in, and a signed-in launch whose first probe TIMES OUT must still reach
+  the app rather than being treated as signed out. A non-standalone `/login` and
+  the landing still show the plain message with no code field and no redirect).
 - **Needs a real iPhone (not automatable):** the actual iOS standalone-jar
-  isolation — confirmed only with the app added to the Home Screen.
+  isolation and the on-device `navigator.standalone` launch that triggers the
+  landing → `/login` redirect — confirmed only with the app added to the Home
+  Screen.
 
 The local suite is committed under `e2e/local/` and excluded from the Playwright
 CI collection (`testIgnore`), so it never runs where there is no database.

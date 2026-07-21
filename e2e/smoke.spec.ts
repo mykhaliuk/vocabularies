@@ -22,6 +22,11 @@ test.describe('landing', () => {
 test.describe('login', () => {
   test('submit stays disabled until the email is valid', async ({ page }) => {
     await page.goto('/login');
+    // Wait for hydration to settle before typing: filling the input while Vue
+    // is still attaching v-model loses the value on the hydration patch, which
+    // makes this assertion flaky under parallel load. /login issues its session
+    // probe from onMounted, so network-idle implies hydration has run.
+    await page.waitForLoadState('networkidle');
     const submit = page.getByRole('button', { name: /send me a link/i });
     const email = page.getByLabel(/your email/i);
 

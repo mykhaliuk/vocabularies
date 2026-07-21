@@ -44,12 +44,12 @@
     },
     "confirm": {
       "title": "One more step",
-      "body": "Type the code shown on the page that opened when you tapped the link.",
+      "standaloneBody": "Open the link we emailed you — it shows a 4-digit code. Enter it here.",
       "codeLabel": "Confirmation code",
       "submit": "Confirm",
       "submitting": "Confirming…",
       "errorInvalid": "That code isn't right. Check the page that opened and try again.",
-      "errorExpired": "That code expired. Ask for a new link to try again.",
+      "errorNotConfirmed": "That code didn't work. Make sure you've opened the link in your email and entered the code it shows — or ask for a new link below.",
       "errorGeneric": "Something went wrong. Try again in a moment."
     }
   },

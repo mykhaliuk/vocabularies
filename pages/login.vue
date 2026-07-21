@@ -18,7 +18,7 @@ const {
   errorMessage,
   submit,
   reset,
-  awaitingCode,
+  pollActive,
   confirming,
   codeError,
   confirmCode,
@@ -31,6 +31,27 @@ async function onConfirm() {
   if (!validCode.value || confirming.value) return;
   await confirmCode(code.value);
 }
+
+// An authenticated visitor has no business on the sign-in screen — send them to
+// the app. This covers every route in (the installed-PWA launch hands off here,
+// plus bookmarks, the back button, a shared link), not just the PWA case. The
+// probe is advisory only: `hasSession()` resolves false on 401 / offline /
+// timeout, so a failed probe simply leaves the form in place rather than
+// blocking. No loop — /me sends only *unauthenticated* visitors back here.
+onMounted(async () => {
+  try {
+    // The standalone landing hands off after establishing there is no session;
+    // consume that instead of paying for the same probe twice in one launch.
+    if (takeSignedOutHandoff()) return;
+    if (await hasSession()) await navigateTo('/me', { replace: true });
+  } catch (error) {
+    // hasSession() cannot reject (the probe swallows everything), but
+    // navigateTo() can — a stale service-worker precache / failed chunk load
+    // after a deploy rejects the navigation. Operational error: log and leave
+    // the sign-in form in place, which is already the correct fallback here.
+    console.error('[login] auth guard failed', error);
+  }
+});
 
 // Surface auth-callback failures (expired / invalid link) routed here as
 // ?error=... by server/api/auth/callback.get.js.
@@ -121,23 +142,20 @@ async function resend() {
         role="status"
         aria-live="polite"
       >
-        <template v-if="!awaitingCode">
-          <div class="auth__sent-icon" aria-hidden="true">
-            <Mail :size="32" />
-          </div>
-          <h2 class="auth__sent-title">{{ $t('login.sentTitle') }}</h2>
-          <p class="auth__sent-body">
-            {{ $t('login.sentBody') }}<br />
-            <span class="auth__sent-email">{{ trimmedEmail }}</span>
-          </p>
-        </template>
-
-        <template v-else>
+        <!-- Installed standalone PWA (poll/claim flow): the emailed link opens
+             in Safari — a separate jar that can't sign the app in — so the code
+             must be entered here. Show the "open the link" message AND the code
+             field together from the first render; don't wait for the poll to
+             observe the click (VKB-70 FIX 2). -->
+        <template v-if="pollActive">
           <div class="auth__sent-icon" aria-hidden="true">
             <KeyRound :size="32" />
           </div>
           <h2 class="auth__sent-title">{{ $t('login.confirm.title') }}</h2>
-          <p class="auth__sent-body">{{ $t('login.confirm.body') }}</p>
+          <p class="auth__sent-body">
+            {{ $t('login.confirm.standaloneBody') }}<br />
+            <span class="auth__sent-email">{{ trimmedEmail }}</span>
+          </p>
 
           <form class="auth__code-form" novalidate @submit.prevent="onConfirm">
             <label for="code" class="auth__label">
@@ -176,6 +194,20 @@ async function resend() {
           </form>
         </template>
 
+        <!-- Desktop / browser: the link opens in the same jar and just signs
+             the user in, so this screen only confirms the send. No code field;
+             byte-identical to before. -->
+        <template v-else>
+          <div class="auth__sent-icon" aria-hidden="true">
+            <Mail :size="32" />
+          </div>
+          <h2 class="auth__sent-title">{{ $t('login.sentTitle') }}</h2>
+          <p class="auth__sent-body">
+            {{ $t('login.sentBody') }}<br />
+            <span class="auth__sent-email">{{ trimmedEmail }}</span>
+          </p>
+        </template>
+
         <p v-if="errorMessage" role="alert" class="auth__error">
           {{ errorMessage }}
         </p>
@@ -188,7 +220,11 @@ async function resend() {
           >
             {{ $t('login.useDifferentEmail') }}
           </button>
-          <p v-if="!awaitingCode" class="auth__sent-resend">
+          <!-- Always available: a failed confirm leaves the user on this
+               screen, so asking for a fresh link must always be one tap away.
+               Never gated on poll state — that is what turned a failed confirm
+               into a dead end. -->
+          <p class="auth__sent-resend">
             {{ $t('login.resendPrompt') }}
             <button
               class="auth__sent-resend-btn"
