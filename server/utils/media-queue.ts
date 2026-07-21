@@ -2,7 +2,7 @@ import { Client } from '@upstash/qstash';
 import { getAppUrl } from './app-url';
 import { processMedia } from './media-process';
 
-// Async trigger for media processing (ADR-0007; VKB-80).
+// Async trigger for media processing (ADR-0009; VKB-80).
 //
 // - QStash configured → enqueue an HTTP job on a per-stage named queue
 //   (QSTASH_QUEUE_NAME: `vocabu-stage` for dev/preprod, `vocabu` for prod)
@@ -58,6 +58,20 @@ const ensureQueue = (client: Client, queueName: string) => {
   return queueReady;
 };
 
+const processInline = async (stage: string, key: string, userId: string) => {
+  if (stage !== 'local') {
+    // Blocking beats silently losing the job on a frozen lambda.
+    await processMedia(key, userId);
+    return 'inline-blocking';
+  }
+
+  // The catch exists only to keep the detached promise from becoming an
+  // unhandled rejection — processMedia already logged the error and
+  // persisted the failure manifest; a second log here would duplicate it.
+  processMedia(key, userId).catch(() => {});
+  return 'inline';
+};
+
 export const enqueueMediaProcessing = async (key: string, userId: string) => {
   const client = getClient();
   const stage = process.env.APP_ENV ?? 'local';
@@ -76,27 +90,20 @@ export const enqueueMediaProcessing = async (key: string, userId: string) => {
       });
       return 'qstash';
     } catch (error) {
-      // Operational failure (QStash outage, rate limit): degrade to the
-      // inline paths below instead of surfacing a raw 500 from confirm.
+      // Operational failure (QStash outage, rate limit): degrade inline
+      // instead of surfacing a raw 500 from confirm.
       console.error(
-        '[media-queue] QStash enqueue failed — falling back to inline processing',
+        '[media-queue] QStash enqueue failed — falling back to inline processing (blocking on non-local stages)',
         error,
       );
+      return processInline(stage, key, userId);
     }
   }
 
   if (stage !== 'local') {
     console.warn(
-      '[media-queue] QSTASH_TOKEN unset on non-local stage — processing inline; the request will block until done',
+      '[media-queue] QStash unconfigured on non-local stage — processing inline; the request will block until done',
     );
-    // Blocking beats silently losing the job on a frozen lambda.
-    await processMedia(key, userId);
-    return 'inline-blocking';
   }
-
-  // The catch exists only to keep the detached promise from becoming an
-  // unhandled rejection — processMedia already logged the error and
-  // persisted the failure manifest; a second log here would duplicate it.
-  processMedia(key, userId).catch(() => {});
-  return 'inline';
+  return processInline(stage, key, userId);
 };

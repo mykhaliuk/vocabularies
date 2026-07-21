@@ -1,7 +1,9 @@
 # ADR-0009: upload-first media pipeline — two buckets, async ffmpeg, 720p derivatives
 
 <!-- Renumbered from 0007: the number was minted twice in parallel PRs
-     (transactional-email kept it as the indexed one). Content untouched. -->
+     (transactional-email kept it as the indexed one). The core decision
+     text is unchanged; the async-transport open end was later finalized
+     by VKB-80. -->
 
 - Status: Accepted
 - Date: 2026-07-17 (async transport finalized 2026-07-21, VKB-80)
