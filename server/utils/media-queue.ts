@@ -45,10 +45,12 @@ const getClient = () => {
 // tuning.
 //
 // Parallelism 5: uploads from different users must not wait for each
-// other (each delivery runs in its own function instance), while staying
-// under the plan cap of 10. NOT 1 — serial FIFO turns any slow or
-// retrying head message into head-of-line blocking for every upload
-// behind it (observed live during VKB-80/84 QA).
+// other, while staying under the plan cap of 10. Concurrent deliveries
+// are not guaranteed separate function instances (Fluid Compute may
+// pack them), but even 5 worst-case transcodes fit maxDuration with the
+// ADR-0009 headroom. NOT 1 — serial FIFO turns any slow or retrying
+// head message into head-of-line blocking for every upload behind it
+// (observed live during VKB-80/84 QA).
 const QUEUE_PARALLELISM = 5;
 
 let queueReady: Promise<void> | null = null;
