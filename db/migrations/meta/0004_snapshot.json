@@ -1,5 +1,5 @@
 {
-  "id": "473f2a06-0d0e-428e-8b17-6fc6dcf44d02",
+  "id": "92c2235a-6129-4a9b-8283-c43db0a3ddfe",
   "prevId": "2ebce268-3fe6-4b67-bcb5-ef4f22328756",
   "version": "7",
   "dialect": "postgresql",
@@ -432,7 +432,7 @@
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true,
-          "default": "now()"
+          "default": "date_trunc('milliseconds', now())"
         },
         "updated_at": {
           "name": "updated_at",
@@ -454,6 +454,12 @@
             },
             {
               "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"

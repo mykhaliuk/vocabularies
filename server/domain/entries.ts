@@ -1,4 +1,4 @@
-import { and, desc, eq, lt } from 'drizzle-orm';
+import { and, desc, eq, sql } from 'drizzle-orm';
 import { entries } from '~/db/schema/entries';
 import { media } from '~/db/schema/media';
 import { useDb } from '~/server/utils/db';
@@ -55,27 +55,39 @@ export const createEntry = async (
   return { entry, media: minted.row, upload: minted.slot };
 };
 
-export interface FeedPageOptions {
-  limit: number;
-  before: Date | null;
+export interface FeedCursor {
+  at: Date;
+  id: string;
 }
 
-// Own feed, newest first, keyset-paginated by createdAt. One media row per
-// entry in v1; the left join keeps text-only entries in the page.
+export interface FeedPageOptions {
+  limit: number;
+  before: FeedCursor | null;
+}
+
+// Own feed, newest first, keyset-paginated by (createdAt, id) — the id
+// tiebreak keeps pages stable when rows share a timestamp (now() is a
+// transaction timestamp). The row comparison matches the DESC sort order.
+// One media row per entry in v1; the left join keeps text-only entries in
+// the page.
 export const getFeedPage = async (
   ownerId: string,
   options: FeedPageOptions,
 ): Promise<EntryWithMedia[]> => {
   const db = useDb();
   const conditions = [eq(entries.ownerId, ownerId)];
-  if (options.before) conditions.push(lt(entries.createdAt, options.before));
+  if (options.before) {
+    conditions.push(
+      sql`(${entries.createdAt}, ${entries.id}) < (${options.before.at}::timestamptz, ${options.before.id}::uuid)`,
+    );
+  }
 
   const rows = await db
     .select({ entry: entries, media })
     .from(entries)
     .leftJoin(media, eq(media.entryId, entries.id))
     .where(and(...conditions))
-    .orderBy(desc(entries.createdAt))
+    .orderBy(desc(entries.createdAt), desc(entries.id))
     .limit(options.limit);
 
   return rows.map(({ entry, media: mediaRow }) => ({

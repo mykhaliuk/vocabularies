@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS "entries" (
 	"speaker" text,
 	"story" text,
 	"collection" text,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"created_at" timestamp with time zone DEFAULT date_trunc('milliseconds', now()) NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
@@ -48,6 +48,6 @@ EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
 --> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "entries_owner_created_idx" ON "entries" USING btree ("owner_id","created_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "entries_owner_created_idx" ON "entries" USING btree ("owner_id","created_at","id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "media_entry_id_idx" ON "media" USING btree ("entry_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "media_owner_id_idx" ON "media" USING btree ("owner_id");
