@@ -179,7 +179,7 @@ const run = async () => {
     <p v-if="phase === 'error'" class="error">{{ errorMessage }}</p>
 
     <section v-if="result">
-      <h2>
+      <h2 v-if="result.manifest">
         {{ result.manifest.kind }} ·
         {{ result.manifest.durationSec.toFixed(1) }}s
       </h2>
@@ -194,7 +194,7 @@ const run = async () => {
       />
       <audio v-else-if="result.audioUrl" :src="result.audioUrl" controls />
 
-      <div v-if="result.manifest.peaks" class="peaks">
+      <div v-if="result.manifest?.peaks" class="peaks">
         <span
           v-for="(peak, index) in result.manifest.peaks"
           :key="index"
@@ -202,7 +202,7 @@ const run = async () => {
         />
       </div>
 
-      <table>
+      <table v-if="result.manifest">
         <tbody>
           <tr v-for="(value, name) in result.manifest.timings" :key="name">
             <td>{{ name }}</td>

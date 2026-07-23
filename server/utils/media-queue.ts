@@ -1,6 +1,10 @@
 import { Client } from '@upstash/qstash';
 import { getAppUrl } from './app-url';
-import { processMedia } from './media-process';
+
+// The job body is injected by the caller (a domain operation) instead of
+// imported: the inline fallback must run the same op the worker route runs
+// (pipeline + db outcome record), and infra must not import domain.
+export type MediaJob = (key: string, userId: string) => Promise<unknown>;
 
 // Async trigger for media processing (ADR-0009; VKB-80).
 //
@@ -68,21 +72,30 @@ const ensureQueue = (client: Client, queueName: string) => {
   return queueReady;
 };
 
-const processInline = async (stage: string, key: string, userId: string) => {
+const processInline = async (
+  stage: string,
+  key: string,
+  userId: string,
+  runJob: MediaJob,
+) => {
   if (stage !== 'local') {
     // Blocking beats silently losing the job on a frozen lambda.
-    await processMedia(key, userId);
+    await runJob(key, userId);
     return 'inline-blocking';
   }
 
   // The catch exists only to keep the detached promise from becoming an
-  // unhandled rejection — processMedia already logged the error and
-  // persisted the failure manifest; a second log here would duplicate it.
-  processMedia(key, userId).catch(() => {});
+  // unhandled rejection — the job already logged the error and persisted
+  // the failure outcome; a second log here would duplicate it.
+  runJob(key, userId).catch(() => {});
   return 'inline';
 };
 
-export const enqueueMediaProcessing = async (key: string, userId: string) => {
+export const enqueueMediaProcessing = async (
+  key: string,
+  userId: string,
+  runJob: MediaJob,
+) => {
   const client = getClient();
   const stage = process.env.APP_ENV ?? 'local';
 
@@ -118,7 +131,7 @@ export const enqueueMediaProcessing = async (key: string, userId: string) => {
         '[media-queue] QStash enqueue failed — falling back to inline processing (blocking on non-local stages)',
         error,
       );
-      return processInline(stage, key, userId);
+      return processInline(stage, key, userId, runJob);
     }
   }
 
@@ -127,5 +140,5 @@ export const enqueueMediaProcessing = async (key: string, userId: string) => {
       '[media-queue] QStash unconfigured on non-local stage — processing inline; the request will block until done',
     );
   }
-  return processInline(stage, key, userId);
+  return processInline(stage, key, userId, runJob);
 };

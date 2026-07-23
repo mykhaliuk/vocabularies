@@ -1,6 +1,7 @@
 import { Receiver } from '@upstash/qstash';
 import { z } from 'zod';
-import { MediaRejection, processMedia } from '~/server/utils/media-process';
+import { processUploadedMedia } from '~/server/domain/media';
+import { MediaRejection } from '~/server/utils/media-process';
 
 const Body = z.object({
   key: z.string(),
@@ -65,7 +66,7 @@ export default defineEventHandler(async (event) => {
   setResponseHeader(event, 'Cache-Control', 'no-store');
 
   try {
-    const manifest = await processMedia(key, userId);
+    const manifest = await processUploadedMedia(key, userId);
     console.log('[media.process] done', { key, timings: manifest.timings });
     return { ok: true, timings: manifest.timings, kind: manifest.kind };
   } catch (error) {
