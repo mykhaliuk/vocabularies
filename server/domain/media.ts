@@ -1,0 +1,228 @@
+import { and, eq, ne } from 'drizzle-orm';
+import { media } from '~/db/schema/media';
+import { users } from '~/db/schema/users';
+import { can } from '~/server/utils/entitlements';
+import {
+  MAX_ORIGINAL_BYTES,
+  derivedKeys,
+  mintMediaId,
+  mintOriginalKey,
+  parseOriginalKey,
+} from '~/server/utils/media-key';
+import { MediaRejection, processMedia } from '~/server/utils/media-process';
+import { enqueueMediaProcessing } from '~/server/utils/media-queue';
+import { presignPut } from '~/server/utils/storage';
+import { useDb } from '~/server/utils/db';
+import { DOMAIN_ERROR_CODES, DomainError } from './errors';
+import type { InferSelectModel } from 'drizzle-orm';
+import type { MediaManifest } from '~/server/utils/media-process';
+
+type User = InferSelectModel<typeof users>;
+export type MediaRow = InferSelectModel<typeof media>;
+
+const UPLOAD_TTL_SEC = 600;
+
+export interface UploadSlotInput {
+  contentType: string;
+  sizeBytes: number;
+}
+
+export interface UploadSlot {
+  mediaId: string;
+  key: string;
+  uploadUrl: string;
+  maxBytes: number;
+}
+
+export interface MintedSlot {
+  slot: UploadSlot;
+  row: MediaRow;
+}
+
+const kindOfContentType = (contentType: string): 'audio' | 'video' =>
+  contentType.startsWith('video/') ? 'video' : 'audio';
+
+// The single enforcement point for the videoUpload capability: every upload
+// slot — entry-bound (POST /api/entries) or standalone (POST
+// /api/media/upload) — is minted here, so the rest of the pipeline stays
+// role-agnostic.
+export const mintUploadSlot = async (
+  user: User,
+  input: UploadSlotInput,
+  entryId: string | null,
+): Promise<MintedSlot> => {
+  const kind = kindOfContentType(input.contentType);
+  if (kind === 'video' && !can(user, 'videoUpload')) {
+    throw new DomainError(
+      DOMAIN_ERROR_CODES.videoUploadForbidden,
+      'video upload requires a premium plan',
+    );
+  }
+
+  const mediaId = mintMediaId();
+  const key = mintOriginalKey(user.id, mediaId, input.contentType);
+  // Presign before the insert: a signing failure then leaves no orphan row.
+  let uploadUrl;
+  try {
+    uploadUrl = await presignPut(key, input.contentType, {
+      kind: 'originals',
+      ttlSec: UPLOAD_TTL_SEC,
+      contentLength: input.sizeBytes,
+    });
+  } catch (error) {
+    // Missing originals bucket / bad creds is an availability problem, not
+    // a client error.
+    console.error('[domain.media] presign failed', { key, error });
+    throw new DomainError(
+      DOMAIN_ERROR_CODES.storageUnavailable,
+      'storage unavailable',
+    );
+  }
+
+  const db = useDb();
+  const [row] = await db
+    .insert(media)
+    .values({
+      id: mediaId,
+      entryId,
+      ownerId: user.id,
+      kind,
+      originalKey: key,
+    })
+    .returning();
+  if (!row) throw new Error('[domain.media] insert returned no row');
+
+  return {
+    slot: { mediaId, key, uploadUrl, maxBytes: MAX_ORIGINAL_BYTES },
+    row,
+  };
+};
+
+const ownerCanUploadVideo = async (userId: string): Promise<boolean> => {
+  const db = useDb();
+  const [owner] = await db
+    .select({ plan: users.plan, grants: users.grants })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+  return owner !== undefined && can(owner, 'videoUpload');
+};
+
+export const getOwnMedia = async (
+  ownerId: string,
+  mediaId: string,
+): Promise<MediaRow> => {
+  const db = useDb();
+  const [row] = await db
+    .select()
+    .from(media)
+    .where(and(eq(media.id, mediaId), eq(media.ownerId, ownerId)))
+    .limit(1);
+  if (!row) {
+    throw new DomainError(DOMAIN_ERROR_CODES.mediaNotFound, 'unknown media');
+  }
+  return row;
+};
+
+// Confirm = "the original is in the bucket, start processing". Transport
+// has already verified the object (HeadObject) and the key shape; here the
+// row is checked for ownership and the job is dispatched. Re-confirming an
+// already-processed upload is a no-op — at-least-once friendly.
+export const confirmMediaUpload = async (
+  ownerId: string,
+  mediaId: string,
+  key: string,
+): Promise<{ status: MediaRow['status']; transport: string | null }> => {
+  const row = await getOwnMedia(ownerId, mediaId);
+  if (row.status === 'ready' || row.status === 'failed') {
+    return { status: row.status, transport: null };
+  }
+  const transport = await enqueueMediaProcessing(
+    key,
+    ownerId,
+    processUploadedMedia,
+  );
+  return { status: 'processing', transport };
+};
+
+// Retries must never regress a ready row (failed→ready self-heals,
+// ready→failed would be permanent) — mirrors the manifest no-clobber rule
+// in media-process.ts.
+const recordMediaReady = async (
+  ownerId: string,
+  mediaId: string,
+  manifest: MediaManifest,
+) => {
+  const keys = derivedKeys(ownerId, mediaId);
+  const db = useDb();
+  const updated = await db
+    .update(media)
+    .set({
+      status: 'ready',
+      kind: manifest.kind,
+      derivativeKey: manifest.kind === 'video' ? keys.video : keys.audio,
+      posterKey: manifest.kind === 'video' ? keys.poster : null,
+      durationSec: manifest.durationSec,
+      width: manifest.width,
+      height: manifest.height,
+      peaks: manifest.peaks,
+      error: null,
+      updatedAt: new Date(),
+    })
+    .where(and(eq(media.id, mediaId), eq(media.ownerId, ownerId)))
+    .returning({ id: media.id });
+  if (updated.length === 0) {
+    // Pre-schema spike uploads have manifests but no rows — the outcome is
+    // still recorded in R2, so this is loud but not fatal.
+    console.warn('[domain.media] ready outcome for unknown row', { mediaId });
+  }
+};
+
+const recordMediaFailure = async (
+  ownerId: string,
+  mediaId: string,
+  message: string,
+) => {
+  const db = useDb();
+  await db
+    .update(media)
+    .set({ status: 'failed', error: message, updatedAt: new Date() })
+    .where(
+      and(
+        eq(media.id, mediaId),
+        eq(media.ownerId, ownerId),
+        ne(media.status, 'ready'),
+      ),
+    );
+};
+
+// The processing job as a domain operation: run the pipeline, then record
+// the outcome on the media row. Called by the QStash worker route and, on
+// local stages, directly as the inline fallback injected into the queue.
+// Transient errors leave the row 'processing' and propagate so the caller
+// retries; rejections are terminal and become 'failed'.
+export const processUploadedMedia = async (
+  rawKey: string,
+  userId: string,
+): Promise<MediaManifest> => {
+  const { mediaId, key } = parseOriginalKey(rawKey, userId);
+  try {
+    const manifest = await processMedia(key, userId);
+    // The slot-mint gate keys off the DECLARED content type; the probe
+    // keys off the bytes. A video smuggled under an audio/* declaration
+    // (mp4/m4a containers carry both) lands here as kind 'video' — re-check
+    // the entitlement on the probed kind so the mint gate cannot be
+    // bypassed. Runs on every delivery: an at-least-once redelivery must
+    // not resurrect a row this check has failed.
+    if (manifest.kind === 'video' && !(await ownerCanUploadVideo(userId))) {
+      throw new MediaRejection('video moments require a premium plan');
+    }
+    await recordMediaReady(userId, mediaId, manifest);
+    return manifest;
+  } catch (error) {
+    if (error instanceof MediaRejection) {
+      await recordMediaFailure(userId, mediaId, error.message);
+    }
+    throw error;
+  }
+};

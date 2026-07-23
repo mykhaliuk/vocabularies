@@ -44,3 +44,6 @@ Format: `NNNN-short-slug.md`, template in [0000-template.md](0000-template.md).
 - [ADR-0010](0010-server-layering-domain-operations.md) — server layering:
   transport never touches the db; every db access is a domain operation,
   enforced by `layering:check`
+- [ADR-0011](0011-entitlements-capability-roles-in-code.md) — entitlements:
+  capability→roles map in code behind a single `can()` door; enforcement at
+  the upload-slot mint

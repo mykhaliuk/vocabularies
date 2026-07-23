@@ -1,11 +1,12 @@
 import { z } from 'zod';
+import { confirmMediaUpload } from '~/server/domain/media';
 import { requireUser } from '~/server/utils/auth';
+import { toHttpError } from '~/server/utils/http-errors';
 import {
   MAX_ORIGINAL_BYTES,
   contentTypeMatchesKey,
   parseOriginalKey,
 } from '~/server/utils/media-key';
-import { enqueueMediaProcessing } from '~/server/utils/media-queue';
 import { headObject, isNotFoundError } from '~/server/utils/storage';
 
 const Body = z.object({
@@ -58,8 +59,17 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'size out of range' });
   }
 
-  const transport = await enqueueMediaProcessing(parsed.key, user.id);
+  let confirmed;
+  try {
+    confirmed = await confirmMediaUpload(user.id, parsed.mediaId, parsed.key);
+  } catch (error) {
+    throw toHttpError(error);
+  }
 
   setResponseHeader(event, 'Cache-Control', 'no-store');
-  return { mediaId: parsed.mediaId, status: 'processing', transport };
+  return {
+    mediaId: parsed.mediaId,
+    status: confirmed.status,
+    transport: confirmed.transport,
+  };
 });
