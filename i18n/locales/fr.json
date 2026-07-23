@@ -63,6 +63,33 @@
       "generic": "Impossible d'envoyer le lien. Réessayez dans un instant."
     }
   },
+  "app": {
+    "nav": {
+      "label": "Navigation principale",
+      "feed": "Fil",
+      "discover": "Découvrir",
+      "saved": "Enregistrés",
+      "profile": "Profil",
+      "compose": "Nouveau mot"
+    },
+    "feed": {
+      "pageTitle": "Fil · Vocabu",
+      "placeholder": "Vos mots vivront bientôt ici."
+    },
+    "discover": {
+      "pageTitle": "Découvrir · Vocabu",
+      "placeholder": "Les jolis moments de vos proches apparaîtront ici."
+    },
+    "saved": {
+      "pageTitle": "Enregistrés · Vocabu",
+      "placeholder": "Les mots que vous gardez vous attendront ici."
+    },
+    "profile": {
+      "pageTitle": "Profil · Vocabu",
+      "placeholder": "Votre profil arrive bientôt.",
+      "accountSettings": "Réglages du compte"
+    }
+  },
   "me": {
     "pageTitle": "Mon profil · Vocabu",
     "greeting": "Bonjour, {name}",

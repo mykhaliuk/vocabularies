@@ -63,6 +63,33 @@
       "generic": "We couldn't send the link. Try again in a moment."
     }
   },
+  "app": {
+    "nav": {
+      "label": "Main navigation",
+      "feed": "Feed",
+      "discover": "Discover",
+      "saved": "Saved",
+      "profile": "Profile",
+      "compose": "New word"
+    },
+    "feed": {
+      "pageTitle": "Feed · Vocabu",
+      "placeholder": "Your words will live here soon."
+    },
+    "discover": {
+      "pageTitle": "Discover · Vocabu",
+      "placeholder": "Sweet moments from your people will show up here."
+    },
+    "saved": {
+      "pageTitle": "Saved · Vocabu",
+      "placeholder": "Words you save will wait for you here."
+    },
+    "profile": {
+      "pageTitle": "Profile · Vocabu",
+      "placeholder": "Your profile is on its way.",
+      "accountSettings": "Account settings"
+    }
+  },
   "me": {
     "pageTitle": "My profile · Vocabu",
     "greeting": "Hello, {name}",

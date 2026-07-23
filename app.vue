@@ -9,5 +9,7 @@ useHead(useLocaleHead({ dir: true, lang: true, seo: false }));
   <!-- Injects <link rel="manifest"> into head; without it the PWA manifest
        (and its install icons) is never referenced by the page. -->
   <VitePwaManifest />
-  <NuxtPage />
+  <NuxtLayout>
+    <NuxtPage />
+  </NuxtLayout>
 </template>
