@@ -1,5 +1,18 @@
 import { expect, test } from '@playwright/test';
 
+// Alpha of a computed CSS color. Chromium serializes computed colors as
+// rgb(r, g, b), rgba(r, g, b, a), or color(srgb r g b [/ a]) — the alpha
+// component is omitted whenever it equals 1.
+const parseAlpha = (color: string): number => {
+  const match = color.match(/^(rgba?|color)\(([^)]+)\)$/);
+  if (!match) return Number.NaN;
+  const [channels, alpha] = match[2].split('/').map((part) => part.trim());
+  if (alpha !== undefined) return Number.parseFloat(alpha);
+  const parts = channels.split(/[\s,]+/).filter(Boolean);
+  const isLegacyRgba = match[1] !== 'color' && parts.length === 4;
+  return isLegacyRgba ? Number.parseFloat(parts[3]) : 1;
+};
+
 test.describe('landing', () => {
   test('renders the hero, CTA, and key sections', async ({ page }) => {
     await page.goto('/');
@@ -16,6 +29,23 @@ test.describe('landing', () => {
     await expect(
       page.getByRole('heading', { name: /two taps to keep a word/i }),
     ).toBeVisible();
+  });
+
+  // VKB-82: the disabled CTA used element opacity, so the hero gradient bled
+  // through and the button looked different per locale (copy length moves it
+  // across the gradient). The disabled state must stay fully opaque.
+  test('disabled CTA is opaque so page art cannot bleed through', async ({
+    page,
+  }) => {
+    await page.goto('/');
+    const submit = page.getByRole('button', { name: /get my login link/i });
+    await expect(submit).toBeDisabled();
+    const styles = await submit.evaluate((el) => {
+      const cs = getComputedStyle(el);
+      return { opacity: cs.opacity, background: cs.backgroundColor };
+    });
+    expect(styles.opacity).toBe('1');
+    expect(parseAlpha(styles.background)).toBe(1);
   });
 });
 
