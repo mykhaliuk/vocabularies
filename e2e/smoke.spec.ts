@@ -17,6 +17,23 @@ test.describe('landing', () => {
       page.getByRole('heading', { name: /two taps to keep a word/i }),
     ).toBeVisible();
   });
+
+  // VKB-82: the disabled CTA used element opacity, so the hero gradient bled
+  // through and the button looked different per locale (copy length moves it
+  // across the gradient). The disabled state must stay fully opaque.
+  test('disabled CTA is opaque so page art cannot bleed through', async ({
+    page,
+  }) => {
+    await page.goto('/');
+    const submit = page.getByRole('button', { name: /get my login link/i });
+    await expect(submit).toBeDisabled();
+    const styles = await submit.evaluate((el) => {
+      const cs = getComputedStyle(el);
+      return { opacity: cs.opacity, background: cs.backgroundColor };
+    });
+    expect(styles.opacity).toBe('1');
+    expect(styles.background).not.toMatch(/rgba|\//);
+  });
 });
 
 test.describe('login', () => {

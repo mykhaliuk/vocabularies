@@ -97,12 +97,8 @@ const anchorRel = computed(() =>
     border-color var(--dur-fast),
     filter var(--dur-fast);
 
-  &:disabled,
-  &[aria-disabled='true'] {
-    cursor: not-allowed;
-    opacity: 0.55;
-    pointer-events: none;
-  }
+  --v-btn-bg: var(--bg);
+  --v-btn-fg: var(--text);
 
   &:not(:disabled):not([aria-disabled='true']):active {
     transform: scale(0.97);
@@ -135,8 +131,10 @@ const anchorRel = computed(() =>
 
   /* variants */
   &.v-btn--primary {
-    background: var(--primary-action);
-    color: var(--text-on-accent);
+    --v-btn-bg: var(--primary-action);
+    --v-btn-fg: var(--text-on-accent);
+    background: var(--v-btn-bg);
+    color: var(--v-btn-fg);
     box-shadow: var(--shadow-float);
 
     &:not(:disabled):not([aria-disabled='true']):hover {
@@ -145,8 +143,10 @@ const anchorRel = computed(() =>
   }
 
   &.v-btn--blue {
-    background: var(--secondary-action);
-    color: var(--text-on-accent);
+    --v-btn-bg: var(--secondary-action);
+    --v-btn-fg: var(--text-on-accent);
+    background: var(--v-btn-bg);
+    color: var(--v-btn-fg);
 
     &:not(:disabled):not([aria-disabled='true']):hover {
       filter: brightness(0.94);
@@ -154,9 +154,16 @@ const anchorRel = computed(() =>
   }
 
   &.v-btn--secondary {
-    background: var(--surface);
-    color: var(--text);
+    --v-btn-bg: var(--surface);
+    --v-btn-fg: var(--text);
+    background: var(--v-btn-bg);
+    color: var(--v-btn-fg);
     border: 1.5px solid var(--hairline-2);
+
+    &:disabled,
+    &[aria-disabled='true'] {
+      border-color: color-mix(in srgb, var(--hairline-2) 55%, var(--bg));
+    }
 
     &:not(:disabled):not([aria-disabled='true']):hover {
       background: var(--surface-sunk);
@@ -165,12 +172,34 @@ const anchorRel = computed(() =>
   }
 
   &.v-btn--ghost {
+    --v-btn-fg: var(--rose-600);
     background: transparent;
-    color: var(--rose-600);
+    color: var(--v-btn-fg);
+
+    &:disabled,
+    &[aria-disabled='true'] {
+      background: transparent;
+    }
 
     &:not(:disabled):not([aria-disabled='true']):hover {
       background: var(--rose-50);
     }
+  }
+
+  /* Dim by mixing toward the page background instead of element opacity:
+     a translucent button lets whatever sits behind it (e.g. the landing
+     hero gradient) bleed through, so its look would depend on where the
+     button lands on the page — which shifts with label / copy length.
+     Opaque mixed colors keep the disabled state identical anywhere on
+     any surface. Declared after the variants so it wins the equal-
+     specificity tie against their background / color declarations. */
+  &:disabled,
+  &[aria-disabled='true'] {
+    cursor: not-allowed;
+    background: color-mix(in srgb, var(--v-btn-bg) 55%, var(--bg));
+    color: color-mix(in srgb, var(--v-btn-fg) 55%, transparent);
+    box-shadow: none;
+    pointer-events: none;
   }
 }
 
