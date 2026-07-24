@@ -63,6 +63,33 @@
       "generic": "Не вдалося надіслати посилання. Спробуйте за мить."
     }
   },
+  "app": {
+    "nav": {
+      "label": "Головна навігація",
+      "feed": "Стрічка",
+      "discover": "Цікаве",
+      "saved": "Збережене",
+      "profile": "Профіль",
+      "compose": "Нове слово"
+    },
+    "feed": {
+      "pageTitle": "Стрічка · Vocabu",
+      "placeholder": "Тут скоро житимуть ваші слова."
+    },
+    "discover": {
+      "pageTitle": "Цікаве · Vocabu",
+      "placeholder": "Тут з'являться теплі моменти ваших близьких."
+    },
+    "saved": {
+      "pageTitle": "Збережене · Vocabu",
+      "placeholder": "Збережені слова чекатимуть на вас тут."
+    },
+    "profile": {
+      "pageTitle": "Профіль · Vocabu",
+      "placeholder": "Ваш профіль уже в дорозі.",
+      "accountSettings": "Налаштування акаунта"
+    }
+  },
   "me": {
     "pageTitle": "Мій профіль · Vocabu",
     "greeting": "Привіт, {name}",

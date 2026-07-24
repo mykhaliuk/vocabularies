@@ -136,3 +136,16 @@ test.describe('not found', () => {
     await expect(page.getByText(/not in the dictionary/i)).toBeVisible();
   });
 });
+
+test.describe('app shell guard', () => {
+  // VKB-65: the tab pages sit behind the auth middleware. Without a session
+  // cookie /api/me answers 401 before touching any infra, so the negative
+  // case is CI-testable with no database.
+  test('unauthenticated /feed redirects to /login', async ({ page }) => {
+    await page.goto('/feed');
+    await expect(page).toHaveURL(/\/login$/);
+    await expect(
+      page.getByRole('button', { name: /send me a link/i }),
+    ).toBeVisible();
+  });
+});
