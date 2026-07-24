@@ -9,11 +9,7 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
   "backdrop": true,
   "density": "airy",
   "previewOffline": false,
-  "emptyFeed": false,
-  "plan": "free",
-  "picker": "by plan",
-  "videoState": "ready",
-  "videoOrientation": "portrait"
+  "emptyFeed": false
 }/*EDITMODE-END*/;
 
 const ACCENTS = {
@@ -56,13 +52,12 @@ function App() {
 
   const open = (m) => m && setDetail(m);
 
-  const post = ({ word, speaker, rel, gloss, story, collection, audio, video }) => {
+  const post = ({ word, speaker, rel, gloss, story, collection, audio }) => {
     setTweak("emptyFeed", false);
     const m = {
       id: "n" + Date.now(), speaker, tone: "rose", rel: rel || "just now",
       word, gloss, desc: story || "you kept this just now.",
       audio: audio && audio.wave ? audio : null,
-      video: video || null,
       collection, likes: 0, liked: false, replies: 0, saved: false,
     };
     setEntries((arr) => [m, ...arr]);
@@ -74,7 +69,7 @@ function App() {
   React.useEffect(() => { if (scrollRef.current) scrollRef.current.scrollTop = 0; }, [tab]);
 
   const ac = ACCENTS[t.accent] || ACCENTS.standard;
-  const mediaTweaks = { state: t.videoState, orientation: t.videoOrientation };  const hand = t.wordStyle === "handwritten";
+  const hand = t.wordStyle === "handwritten";
   const dark = t.theme === "dark" || (t.theme === "system" && prefersDark);
 
   // Drive the official DS dark theme by toggling [data-theme] on <html>.
@@ -108,7 +103,7 @@ function App() {
         {tab === "feed" && (
           <>
             <TopBar brand />
-            <FeedScreen entries={t.emptyFeed ? [] : entries} onOpen={open} media={mediaTweaks} />
+            <FeedScreen entries={t.emptyFeed ? [] : entries} onOpen={open} />
             {!t.emptyFeed && <div style={{ height: "calc(var(--bottom-nav-h) + 40px)" }} />}
           </>
         )}
@@ -119,9 +114,9 @@ function App() {
 
       <BottomNav active={tab} onNav={setTab} onCompose={() => setComposeOpen(true)} />
 
-      {detail && <DetailScreen m={detail} onBack={() => setDetail(null)} media={mediaTweaks} />}
+      {detail && <DetailScreen m={detail} onBack={() => setDetail(null)} />}
       {settingsOpen && <SettingsScreen theme={t.theme} onTheme={(v) => setTweak("theme", v)} onBack={() => setSettingsOpen(false)} onSignOut={signOut} />}
-      <Compose open={composeOpen} onClose={() => setComposeOpen(false)} onPost={post} plan={t.plan} picker={t.picker} />
+      <Compose open={composeOpen} onClose={() => setComposeOpen(false)} onPost={post} />
 
       {!authed && <LoginScreen onSignedIn={signIn} />}
       {(offline || t.previewOffline) && <OfflineScreen onRetry={() => setOffline(typeof navigator !== "undefined" && navigator.onLine === false)} />}
@@ -135,11 +130,6 @@ function App() {
         <TweakSection label="Feed" />
         <TweakToggle label="Backdrop gradient" value={t.backdrop} onChange={(v) => setTweak("backdrop", v)} />
         <TweakRadio label="Density" value={t.density} options={["airy", "compact"]} onChange={(v) => setTweak("density", v)} />
-        <TweakSection label="Media (VKB-66 / 67)" />
-        <TweakRadio label="Plan" value={t.plan} options={["free", "premium"]} onChange={(v) => setTweak("plan", v)} />
-        <TweakRadio label="Compose picker" value={t.picker} options={["by plan", "separate", "combined"]} onChange={(v) => setTweak("picker", v)} />
-        <TweakRadio label="Feed video" value={t.videoState} options={["ready", "processing", "failed"]} onChange={(v) => setTweak("videoState", v)} />
-        <TweakRadio label="Orientation" value={t.videoOrientation} options={["portrait", "landscape"]} onChange={(v) => setTweak("videoOrientation", v)} />
         <TweakSection label="States" />
         <TweakToggle label="Empty feed" value={t.emptyFeed} onChange={(v) => setTweak("emptyFeed", v)} />
         <TweakToggle label="Preview offline" value={t.previewOffline} onChange={(v) => setTweak("previewOffline", v)} />

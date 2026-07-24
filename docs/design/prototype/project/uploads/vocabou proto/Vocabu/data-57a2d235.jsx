@@ -26,13 +26,6 @@ window.VOCABU_ENTRIES = [
     likes: 31, liked: false, replies: 4, saved: true,
   },
   {
-    id: "w6", speaker: "Mira", tone: "rose", rel: "my daughter · 22 mo",
-    word: "bapple", gloss: "apple, probably",
-    desc: "Holds it up like evidence before every bite. The video is eleven seconds of her explaining it to the cat.",
-    audio: null, video: { dur: "0:11", orientation: "portrait" }, collection: "Mira's words",
-    likes: 17, liked: false, replies: 3, saved: false,
-  },
-  {
     id: "w2", speaker: "Theo", tone: "ink", rel: "best friend",
     word: "emotionally damp", gloss: null,
     desc: "Not depressed — just a bit moist about the feelings. Describes him most Sundays, and the entire month of January.",

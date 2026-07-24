@@ -1,4 +1,4 @@
-/* global React, Icon, Button, Chip, MediaChips, MediaAttach, UpgradeSheet, window */
+/* global React, Icon, Button, Chip, AudioSample, VoiceRecorder, window */
 // Vocabu — Compose: a bottom sheet that rises over the blurred feed.
 // Word/phrase first, then who said it; meaning / story / voice / collection as add-chips.
 
@@ -22,18 +22,15 @@ const composeInput = {
   fontSize: 16, color: "var(--ink)", width: "100%", boxSizing: "border-box",
 };
 
-function Compose({ open, onClose, onPost, plan = "free", picker = "by plan" }) {
-  // free → two affordances (voice + locked video); premium → one combined control.
-  const mode = picker === "by plan" ? (plan === "premium" ? "combined" : "separate") : picker;
+function Compose({ open, onClose, onPost }) {
   const [word, setWord] = useC("");
   const [speaker, setSpeaker] = useC("");
   const [gloss, setGloss] = useC("");
   const [story, setStory] = useC("");
   const [collection, setCollection] = useC(null);
   const [show, setShow] = useC({ meaning: false, story: false, collection: false });
-  const [attach, setAttach] = useC(null); // null | "audio" | "video" | "media"
-  const [media, setMedia] = useC(null);   // { kind, audio? , video? }
-  const [upsell, setUpsell] = useC(false);
+  const [voiceOpen, setVoiceOpen] = useC(false);
+  const [audioData, setAudioData] = useC(null);
   const [wordFocus, setWordFocus] = useC(false);
   const [customColls, setCustomColls] = useC([]);
   const [creatingColl, setCreatingColl] = useC(false);
@@ -44,7 +41,7 @@ function Compose({ open, onClose, onPost, plan = "free", picker = "by plan" }) {
     if (open) {
       setWord(""); setSpeaker(""); setGloss(""); setStory(""); setCollection(null);
       setShow({ meaning: false, story: false, collection: false });
-      setAttach(null); setMedia(null); setUpsell(false);
+      setVoiceOpen(false); setAudioData(null);
       setCustomColls([]); setCreatingColl(false); setNewCollName("");
       setTimeout(() => ref.current && ref.current.focus(), 280);
     }
@@ -112,9 +109,8 @@ function Compose({ open, onClose, onPost, plan = "free", picker = "by plan" }) {
                 style={{ ...composeInput, resize: "none", lineHeight: 1.5 }} autoFocus />
             </ComposeField>
           )}
-          {attach && (
-            <MediaAttach accept={attach} plan={plan} media={media}
-              onDone={(m) => setMedia(m)} onRemove={() => setMedia(null)} onUpsell={() => setUpsell(true)} />
+          {voiceOpen && (
+            <VoiceRecorder existing={audioData} onDone={(a) => setAudioData(a)} onRemove={() => setAudioData(null)} />
           )}
           {show.collection && (
             <ComposeField label="Collection">
@@ -156,8 +152,7 @@ function Compose({ open, onClose, onPost, plan = "free", picker = "by plan" }) {
             <div style={{ display: "flex", gap: 9, flexWrap: "wrap" }}>
               {!show.meaning && <Chip icon="plus" onClick={() => reveal("meaning")}>meaning</Chip>}
               {!show.story && <Chip icon="plus" onClick={() => reveal("story")}>story</Chip>}
-              <MediaChips mode={mode} plan={plan} attach={attach} media={media}
-                onOpen={(m) => setAttach(m)} onClose={() => setAttach(null)} onLocked={() => setUpsell(true)} />
+              <Chip tone="blue" active={voiceOpen || !!audioData} icon={audioData ? "check" : "mic"} onClick={() => setVoiceOpen((v) => !v)}>voice</Chip>
               {!show.collection && <Chip icon="plus" onClick={() => reveal("collection")}>collection</Chip>}
             </div>
           </div>
@@ -173,16 +168,13 @@ function Compose({ open, onClose, onPost, plan = "free", picker = "by plan" }) {
                 word: word.trim(),
                 speaker: parts[0] || "You",
                 rel: parts.length > 1 ? parts.slice(1).join(" · ") : null,
-                gloss: gloss.trim() || null, story: story.trim(), collection,
-                audio: media && media.kind === "audio" ? media.audio : null,
-                video: media && media.kind === "video" ? media.video : null,
+                gloss: gloss.trim() || null, story: story.trim(), collection, audio: audioData,
               });
             }}>
             Keep it
           </Button>
         </div>
       </div>
-      <UpgradeSheet open={upsell} onClose={() => setUpsell(false)} />
     </div>
   );
 }

@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Media affordance — spec · VKB-66 / VKB-67</title>
+<link rel="stylesheet" href="../_ds/vocabu-design-system-fc456a27-02a5-4423-9181-3fc0311e1354/colors_and_type.css" />
+<script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+<style>
+*{box-sizing:border-box}html,body{margin:0}
+body{background:var(--paper);color:var(--ink);font-family:var(--font-sans);-webkit-font-smoothing:antialiased}
+.wrap{max-width:1040px;margin:0 auto;padding:56px 28px 96px}
+.eyebrow{display:flex;align-items:center;gap:9px;font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3)}
+.eyebrow i{width:7px;height:7px;border-radius:50%;background:var(--primary);display:inline-block}
+h1{font-size:38px;font-weight:800;letter-spacing:-.03em;line-height:1.1;margin:14px 0 0}
+.lede{font-size:17px;line-height:1.55;color:var(--ink-2);max-width:640px;margin:14px 0 0;text-wrap:pretty}
+.meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
+.tag{font-size:12.5px;font-weight:600;padding:6px 11px;border-radius:var(--r-pill);background:var(--surface-sunk);color:var(--ink-2)}
+.tag.rose{background:var(--primary-soft);color:var(--on-primary-soft)}
+h2{font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:0 0 20px}
+section{margin-top:64px;border-top:1px solid var(--hairline);padding-top:26px}
+h3{font-size:21px;font-weight:700;letter-spacing:-.02em;margin:0 0 8px}
+p{font-size:15.5px;line-height:1.6;color:var(--ink-2);margin:0 0 14px;max-width:660px;text-wrap:pretty}
+p b,li b{color:var(--ink);font-weight:600}
+ul{margin:0 0 14px;padding-left:20px;max-width:660px}
+li{font-size:15.5px;line-height:1.6;color:var(--ink-2);margin-bottom:7px}
+.answers{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-top:8px}
+.ans{background:var(--surface);border:1px solid var(--hairline);border-radius:var(--r-lg);box-shadow:var(--shadow-sm);padding:20px}
+.ans .q{font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-3);margin-bottom:8px}
+.ans .a{font-size:16.5px;font-weight:700;letter-spacing:-.01em;color:var(--ink);line-height:1.35;margin-bottom:8px}
+.ans p{font-size:14.5px;margin:0}
+.cap{font-size:13px;font-weight:600;color:var(--ink-2);margin:34px 0 9px}
+.cap span{color:var(--ink-3);font-weight:400}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.frame{background:var(--paper);border:1px solid var(--hairline);border-radius:var(--r-lg);padding:20px 18px}
+.frame[data-theme="dark"]{border-color:var(--hairline);--primary:var(--rose-500);--primary-hover:var(--rose-600);--primary-soft:var(--rose-50);--primary-soft-border:var(--rose-100);--secondary:var(--blue-500);--secondary-hover:var(--blue-600);--secondary-soft:var(--blue-50);--link:var(--blue-600);--like:var(--rose-500);--text:var(--ink);--text-muted:var(--ink-2);--text-faint:var(--ink-3);--border:var(--hairline)}
+.mob{max-width:340px;margin:0 auto}
+table{border-collapse:collapse;width:100%;margin-top:6px}
+th{text-align:left;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);padding:0 12px 10px 0;border-bottom:1px solid var(--hairline)}
+td{font-size:14px;line-height:1.5;color:var(--ink-2);padding:12px 12px 12px 0;border-bottom:1px solid var(--hairline);vertical-align:top}
+td:first-child{color:var(--ink);font-weight:600;white-space:nowrap}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;background:var(--surface-sunk);color:var(--ink);padding:2px 5px;border-radius:var(--r-xs)}
+a{color:var(--link)}a:hover{color:var(--secondary-hover)}
+/* ── component mocks (same values as media.jsx) ── */
+.chips{display:flex;gap:9px;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:13.5px;font-weight:600;padding:9px 13px;border-radius:var(--r-sm);background:var(--surface);border:1.5px solid var(--hairline-2);color:var(--ink-2);min-height:38px}
+.chip.on{background:var(--secondary-soft);border-color:var(--blue-200);color:var(--on-secondary-soft)}
+.chip.lock{background:var(--surface-sunk);border-color:var(--hairline);color:var(--ink-2)}
+.chip.lock i[data-lucide="lock"],.chip.lock svg:last-child{color:var(--ink-3)}
+.chip svg{width:15px;height:15px}
+.panel{background:var(--secondary-soft);border:1px solid var(--blue-100);border-radius:var(--r-md);padding:16px}
+.drop{border:1.5px dashed var(--blue-200);border-radius:var(--r-sm);padding:22px 16px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}
+.dot{width:48px;height:48px;border-radius:50%;background:var(--secondary);color:var(--text-on-accent);display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.dot svg{width:22px;height:22px}
+.t1{font-size:14.5px;font-weight:600;color:var(--ink)}
+.t2{font-size:13px;color:var(--ink-3);line-height:1.4}
+.note{display:flex;align-items:center;gap:7px;margin-top:12px;font-size:12.5px;color:var(--ink-3)}
+.note svg{width:13px;height:13px}
+.note b{margin-left:auto;font-size:12.5px;font-weight:700;color:var(--link)}
+.hd{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;color:var(--ink-2);margin-bottom:14px}
+.hd svg{width:15px;height:15px;color:var(--secondary)}
+.hd .pct{margin-left:auto;font-size:13px;font-weight:600;color:var(--secondary);font-variant-numeric:tabular-nums}
+.row{display:flex;align-items:center;gap:14px}
+.play{width:36px;height:36px;border-radius:var(--r-sm);border:1.5px solid var(--blue-300);color:var(--secondary);display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.play svg{width:14px;height:14px;fill:currentColor;stroke:none}
+.poster{position:relative;flex:1;height:36px;border-radius:var(--r-sm);background:var(--surface-sunk);border:1px solid var(--hairline-2);display:flex;align-items:center;justify-content:center;color:var(--ink-3);overflow:hidden}
+.poster{position:relative;flex:1;height:36px;border-radius:var(--r-sm);background:var(--surface-sunk);border:1px solid var(--hairline-2);display:flex;align-items:center;justify-content:center;color:var(--ink-2);overflow:hidden}
+.poster svg{width:15px;height:15px}
+.poster.tall{height:64px}
+.dur{font-size:12.5px;font-weight:500;color:var(--ink-3);font-variant-numeric:tabular-nums;flex:0 0 auto}
+.wave{display:flex;align-items:center;gap:3px;height:44px;flex:1}
+.wave i{flex:1;min-width:2px;border-radius:3px;background:var(--blue-200);align-self:center}
+.wave i.lit{background:var(--secondary)}
+.vframe{position:relative;border-radius:var(--r-card);border:1px solid var(--hairline-2);background:var(--surface-sunk);overflow:hidden;display:flex;align-items:center;justify-content:center;color:var(--ink-3)}
+.vframe.portrait{height:300px}.vframe.land{height:176px}
+.vframe{position:relative;border-radius:var(--r-card);border:1px solid var(--hairline-2);background:var(--surface-sunk);overflow:hidden;display:flex;align-items:center;justify-content:center;color:var(--ink-2)}
+.vframe>svg{width:30px;height:30px}
+.badge{position:absolute;width:56px;height:56px;border-radius:50%;background:color-mix(in oklch,var(--ink) 62%,transparent);color:var(--paper);display:flex;align-items:center;justify-content:center}
+.badge svg{width:22px;height:22px;fill:currentColor;stroke:none}
+.chev{position:absolute;top:6px;right:6px;width:32px;height:32px;border-radius:50%;background:color-mix(in oklch,var(--ink) 46%,transparent);color:var(--paper);display:flex;align-items:center;justify-content:center}
+.chev svg{width:16px;height:16px}
+.prog{position:absolute;left:0;right:0;bottom:0;height:3px;background:color-mix(in oklch,var(--ink) 22%,transparent)}
+.prog i{display:block;height:100%;background:var(--secondary)}
+.prog.flat{background:var(--blue-100)}
+.fail{display:flex;align-items:center;gap:12px;background:var(--danger-bg);border:1px solid color-mix(in oklch,var(--danger) 26%,transparent);border-radius:var(--r-sm);padding:10px 12px}
+.fail svg{width:17px;height:17px;color:var(--danger);flex:0 0 auto}
+.fail p{font-size:13.5px;margin:0;flex:1;line-height:1.35}
+.fail b{font-size:13.5px;font-weight:600;color:var(--link);white-space:nowrap}
+.kept{display:flex;align-items:center;gap:7px;margin-bottom:12px}
+.tick{width:18px;height:18px;border-radius:50%;background:var(--secondary);color:var(--text-on-accent);display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.tick svg{width:11px;height:11px;stroke-width:3}
+.kept .lbl{font-size:13.5px;font-weight:600;color:var(--ink-2)}
+.kept .rep{margin-left:auto;display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:600;color:var(--ink-3)}
+.kept .rep svg{width:14px;height:14px}
+.sheet{background:var(--surface);border:1px solid var(--hairline);border-radius:var(--r-xl);box-shadow:var(--shadow-lg);padding:26px 22px 18px;text-align:center}
+.sheet .ico{width:54px;height:54px;border-radius:50%;background:var(--primary-soft);border:1px solid var(--primary-soft-border);color:var(--primary);display:inline-flex;align-items:center;justify-content:center;margin-bottom:14px}
+.sheet .ico svg{width:24px;height:24px}
+.sheet h4{margin:0;font-size:20px;font-weight:700;letter-spacing:-.02em;color:var(--ink)}
+.sheet p{margin:9px auto 0;max-width:285px;font-size:15px;line-height:1.5;color:var(--ink-2)}
+.btn{margin-top:20px;display:flex;align-items:center;justify-content:center;min-height:50px;border-radius:var(--r-btn);background:var(--primary-action);color:var(--text-on-accent);font-size:16px;font-weight:600;box-shadow:var(--shadow-float)}
+.btn.sm{margin:0;min-height:34px;font-size:14px;padding:0 13px;box-shadow:none;background:var(--secondary-action);gap:7px}
+.btn.sm svg{width:15px;height:15px}
+.btn.ghost{background:transparent;color:var(--ink-3);box-shadow:none;font-size:14.5px;min-height:44px;margin-top:0}
+.btn.outline{background:var(--surface);color:var(--ink);border:1.5px solid var(--hairline-2);box-shadow:none;min-height:34px;font-size:14px;padding:0 13px;margin:0}
+.acts{display:flex;gap:8px;margin-top:12px}
+@media(max-width:720px){.pair{grid-template-columns:1fr}h1{font-size:30px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow"><i></i>Design spec · handoff back to product</div>
+  <h1>Media affordance</h1>
+  <p class="lede">Two surfaces: the compose media picker across every state and both entitlement tiers, and the video moment in the feed. Audio is for everyone; video is premium. The server stays the gate — this design only makes the gate honest and gentle.</p>
+  <div class="meta"><span class="tag rose">VKB-66 · feed video</span><span class="tag rose">VKB-67 · compose picker</span><span class="tag">ADR-0009 upload-first</span><span class="tag">ADR-0011 entitlements</span><span class="tag">24 Jul 2026</span></div>
+
+  <section>
+    <h2>The three open questions, answered</h2>
+    <div class="answers">
+      <div class="ans">
+        <div class="q">Q1 · one control or two</div>
+        <div class="a">Tier decides — and that is the point.</div>
+        <p><b>Premium:</b> one combined <b>“voice or video”</b> control; kind is inferred from the file. Nothing to choose, one tap fewer.<br><b>Non-premium:</b> two controls — <b>voice</b> plus a visible <b>locked video</b>. The lock needs a body of its own to sit on; folded into a combined control the gate would only appear as a failure.</p>
+      </div>
+      <div class="ans">
+        <div class="q">Q2 · locked video</div>
+        <div class="a">A muted chip with a lock, tap opens one small sheet.</div>
+        <p>No hover anywhere — the state is legible at rest (sunk fill, hairline border, <code>--ink-3</code>, trailing <b>Lock</b>). Tap → a bottom sheet that names premium and offers one CTA. The audio path stays open right beside it.</p>
+      </div>
+      <div class="ans">
+        <div class="q">Q3 · feed video card</div>
+        <div class="a">No poster card. One line, then it opens.</div>
+        <p>Collapsed, the video keeps the audio player's exact rhythm — play · strip · duration. Tap expands a framed player inline; portrait and landscape both fit without swallowing the entry. The word stays the loudest thing on screen.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>1 · Compose media picker</h2>
+    <h3>The affordance layer</h3>
+    <p>Sits in the existing add-chip row (<code>meaning · story · … · collection</code>), so media never gets its own toolbar. The panel underneath is the approved upload dropzone — only the affordance layer changes with tier.</p>
+
+    <template class="state" data-cap="Non-premium · idle <span>— two controls; video is present, muted, locked</span>">
+      <div class="chips"><span class="chip">＋ meaning</span><span class="chip">＋ story</span><span class="chip on"><i data-lucide="mic"></i>voice</span><span class="chip lock"><i data-lucide="video"></i>video<i data-lucide="lock" style="width:13px;height:13px"></i></span><span class="chip">＋ collection</span></div>
+    </template>
+
+    <template class="state" data-cap="Premium · idle <span>— one combined control, kind inferred from the file</span>">
+      <div class="chips"><span class="chip">＋ meaning</span><span class="chip">＋ story</span><span class="chip on"><i data-lucide="paperclip"></i>voice or video</span><span class="chip">＋ collection</span></div>
+    </template>
+
+    <template class="state" data-cap="Tap on locked video <span>— gentle, explicit, one CTA (no pricing copy yet)</span>">
+      <div class="mob sheet"><span class="ico"><i data-lucide="video"></i></span><h4>video moments are premium.</h4><p>voice is always yours. premium adds up to 20 seconds of video — their face, not only their words.</p><div class="btn">See premium</div><div class="btn ghost">not now</div></div>
+    </template>
+
+    <template class="state" data-cap="idle · combined dropzone <span>— premium; accepts either kind</span>">
+      <div class="mob panel"><div class="drop"><span class="dot"><i data-lucide="upload"></i></span><div class="t1">upload a voice clip or a video</div><div class="t2">audio up to 3 min · video up to 20 s</div></div></div>
+    </template>
+
+    <template class="state" data-cap="idle · audio dropzone <span>— non-premium; the gate is stated before it can be hit</span>">
+      <div class="mob panel"><div class="drop"><span class="dot"><i data-lucide="upload"></i></span><div class="t1">upload a voice clip</div><div class="t2">their actual voice — up to 3 minutes</div></div><div class="note"><i data-lucide="lock"></i>video moments are premium.<b>see premium</b></div></div>
+    </template>
+
+    <template class="state" data-cap="uploading · audio <span>— bars light left→right with progress</span>">
+      <div class="mob panel"><div class="hd"><i data-lucide="upload"></i>uploading mira-bapple.m4a…<span class="pct">46%</span></div><div class="row"><div class="wave" data-bars="32" data-lit="15"></div></div></div>
+    </template>
+
+    <template class="state" data-cap="uploading · video <span>— poster placeholder + a 3px progress line</span>">
+      <div class="mob panel"><div class="hd"><i data-lucide="upload"></i>uploading IMG_4471.mov…<span class="pct">72%</span></div><div class="poster tall"><i data-lucide="video"></i><div class="prog flat"><i style="width:72%"></i></div></div></div>
+    </template>
+
+    <template class="state" data-cap="processing <span>— normalizing; shimmer on the poster, spinner in the label</span>">
+      <div class="mob panel"><div class="hd"><i data-lucide="loader"></i>normalizing…</div><div class="poster tall"><i data-lucide="video"></i></div></div>
+    </template>
+
+    <template class="state" data-cap="ready · voice <span>— unchanged from the shipped audio player</span>">
+      <div class="mob panel"><div class="kept"><span class="tick"><i data-lucide="check"></i></span><span class="lbl">voice kept</span><span class="rep"><i data-lucide="repeat"></i>replace</span></div><div class="row"><span class="play"><i data-lucide="play"></i></span><div class="wave" data-bars="28" data-lit="0"></div><span class="dur">0:05</span></div></div>
+    </template>
+
+    <template class="state" data-cap="ready · video <span>— same footprint as the audio player</span>">
+      <div class="mob panel"><div class="kept"><span class="tick"><i data-lucide="check"></i></span><span class="lbl">video kept</span><span class="rep"><i data-lucide="repeat"></i>replace</span></div><div class="row"><span class="play"><i data-lucide="play"></i></span><div class="poster"><i data-lucide="video"></i></div><span class="dur">0:11</span></div></div>
+    </template>
+
+    <template class="state" data-cap="failed · upload <span>— retry keeps the file; nothing is lost</span>">
+      <div class="mob panel"><div class="fail" style="align-items:flex-start"><i data-lucide="alert-circle" style="margin-top:1px"></i><p><b style="color:var(--ink);display:block;font-size:14px;margin-bottom:3px">couldn't upload that.</b>the connection dropped. nothing was lost.</p></div><div class="acts"><span class="btn sm"><i data-lucide="refresh-cw"></i>try again</span><span class="btn outline">choose another</span></div></div>
+    </template>
+
+    <template class="state" data-cap="failed · video on a free plan <span>— 403 VIDEO_UPLOAD_FORBIDDEN / probe caught it</span>">
+      <div class="mob panel"><div class="fail" style="align-items:flex-start"><i data-lucide="alert-circle" style="margin-top:1px"></i><p><b style="color:var(--ink);display:block;font-size:14px;margin-bottom:3px">that one's a video.</b>video moments are part of premium — the voice clip path is always open.</p></div><div class="acts"><span class="btn sm"><i data-lucide="lock"></i>see premium</span><span class="btn outline">choose another</span></div></div>
+    </template>
+  </section>
+
+  <section>
+    <h2>2 · Feed video card</h2>
+    <h3>Quiet by default, opens on tap</h3>
+    <p>The collapsed row is 36px tall inside a 44px tap area — the same block the audio player occupies, so a mixed feed keeps one rhythm. Poster comes from the 720p derivative (<code>poster.jpg</code>): <b>cover</b> in the collapsed strip, <b>contain</b> in the expanded frame so faces are never cropped. Short edge stays 720, never upscaled.</p>
+
+    <template class="state" data-cap="ready · collapsed <span>— play · poster strip · duration</span>">
+      <div class="mob"><div class="row" style="padding:4px 0"><span class="play"><i data-lucide="play"></i></span><div class="poster"><i data-lucide="video"></i></div><span class="dur">0:11</span></div></div>
+    </template>
+
+    <template class="state" data-cap="playing · portrait <span>— 300px frame, badge fades out, 3px blue progress</span>">
+      <div class="mob"><div class="vframe portrait"><i data-lucide="video"></i><span class="chev"><i data-lucide="chevron-up"></i></span><div class="prog"><i style="width:38%"></i></div></div></div>
+    </template>
+
+    <template class="state" data-cap="paused · landscape <span>— 176px frame, play badge visible</span>">
+      <div class="mob"><div class="vframe land"><i data-lucide="video"></i><span class="badge"><i data-lucide="play"></i></span><span class="chev"><i data-lucide="chevron-up"></i></span><div class="prog"><i style="width:12%"></i></div></div></div>
+    </template>
+
+    <template class="state" data-cap="processing <span>— no play affordance offered until it's real</span>">
+      <div class="mob"><div class="row" style="padding:4px 0"><span class="play" style="border-color:var(--hairline-2);color:var(--ink-3)"><i data-lucide="loader" style="fill:none;stroke:currentColor"></i></span><div class="poster"><i data-lucide="video"></i></div><span class="dur">normalizing…</span></div></div>
+    </template>
+
+    <template class="state" data-cap="failed <span>— one warm line + retry, no error codes</span>">
+      <div class="mob"><div class="fail"><i data-lucide="alert-circle"></i><p>this video didn't make it through.</p><b>try again</b></div></div>
+    </template>
+  </section>
+
+  <section>
+    <h2>3 · State machine</h2>
+    <table>
+      <tr><th>State</th><th>Enters on</th><th>Compose</th><th>Feed</th></tr>
+      <tr><td>idle</td><td>panel opens</td><td>dropzone + limits line; free plan also gets the premium note</td><td>—</td></tr>
+      <tr><td>picking</td><td>tap / drop</td><td>native file sheet; drop target turns <code>--secondary</code></td><td>—</td></tr>
+      <tr><td>uploading</td><td>file chosen</td><td>filename + % right-aligned; audio bars light with progress, video shows poster + progress line</td><td>entry not posted yet</td></tr>
+      <tr><td>processing</td><td>upload done</td><td>“normalizing…”, spinner + poster shimmer</td><td>collapsed row, spinner in place of play, “normalizing…” instead of duration</td></tr>
+      <tr><td>ready</td><td>derivative done</td><td>“voice kept” / “video kept” + replace, inline player</td><td>collapsed row; tap expands</td></tr>
+      <tr><td>failed</td><td>403 / probe / network</td><td>plain-language line + <b>try again</b>, or <b>see premium</b> when the reason is entitlement</td><td>terracotta strip + <b>try again</b></td></tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>4 · Rules the build must keep</h2>
+    <ul>
+      <li><b>The server is the gate.</b> Every locked affordance is presentation only; a <code>403 VIDEO_UPLOAD_FORBIDDEN</code> or a post-probe <code>failed</code> row must always land in the failed state above, never in a dead end.</li>
+      <li><b>Limits mirrored client-side, best effort:</b> video ≤ 20 s, audio ≤ 180 s, ≤ 250 MB. Client rejection reads exactly like server rejection.</li>
+      <li><b>Kind inference:</b> <code>video/*</code> MIME first, extension as fallback (<code>mov · mp4 · webm · mkv · 3gp</code>) — never the filename alone.</li>
+      <li><b>Tokens only.</b> Accent for all media chrome is <code>--secondary</code> (blue = media, so audio and video read as siblings); the poster frame is <code>--surface-sunk</code> so imagery reads as content. Rose stays with the primary action and the upsell icon. Radii <code>--r-sm</code> (strip, chips) · <code>--r-card</code> (expanded frame) · <code>--r-xl</code> (sheet). Failure uses <code>--danger</code> / <code>--danger-bg</code>. Overlay fills are <code>color-mix</code> of <code>--ink</code> — no raw hex.</li>
+      <li><b>Icons</b> (lucide-vue-next): <code>Mic · Video · Lock · Upload · Loader · Play · ChevronUp · Check · Repeat · RefreshCw · AlertCircle · Paperclip</code>. 44px minimum tap target everywhere, including the collapse control and the collapsed row.</li>
+      <li><b>Motion:</b> 120/200/320ms on <code>--ease-out</code>. Progress is a linear width transition, not a loop. The poster shimmer and the spinner are the only repeating animations, both dropped under <code>prefers-reduced-motion</code> (the state stays readable from the label alone).</li>
+      <li><b>Copy:</b> sentence case, one breath, no error codes, no exclamation. Never “upgrade now” — “see premium”.</li>
+      <li><b>Sheet footer</b> honors <code>--safe-bottom</code>; the sheet backdrop uses <code>--scrim</code>.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>5 · Still needs product</h2>
+    <ul>
+      <li>Where <b>see premium</b> goes — no plans screen exists in the prototype; the sheet CTA is a stub, and the sheet carries no price.</li>
+      <li>Whether the premium combined control should still <i>mention</i> video for a free user who has the combined variant forced (currently: lock badge + a note in the panel).</li>
+      <li>No trim / crop / thumbnail-pick UI in v0 — the 20s limit is a hard reject, not a trimmer. Confirm that's acceptable for launch.</li>
+    </ul>
+    <p style="margin-top:22px">Interactive version, with the tier and every state on tweaks: <a href="index.html">Vocabu prototype →</a></p>
+  </section>
+</div>
+<script>
+document.querySelectorAll("template.state").forEach((t) => {
+  const wrap = document.createElement("div");
+  wrap.innerHTML = '<div class="cap">' + t.dataset.cap + '</div><div class="pair"></div>';
+  const pair = wrap.querySelector(".pair");
+  ["light", "dark"].forEach((theme) => {
+    const f = document.createElement("div");
+    f.className = "frame"; f.setAttribute("data-theme", theme);
+    f.appendChild(t.content.cloneNode(true));
+    pair.appendChild(f);
+  });
+  t.parentNode.insertBefore(wrap, t);
+});
+document.querySelectorAll(".wave").forEach((w) => {
+  const n = +w.dataset.bars || 32, lit = +w.dataset.lit || 0;
+  for (let i = 0; i < n; i++) {
+    const b = document.createElement("i");
+    b.style.height = (16 + Math.abs(Math.sin(i * 1.7 + 3)) * 84) + "%";
+    if (i < lit) b.className = "lit";
+    w.appendChild(b);
+  }
+});
+lucide.createIcons();
+</script>
+</body>
+</html>

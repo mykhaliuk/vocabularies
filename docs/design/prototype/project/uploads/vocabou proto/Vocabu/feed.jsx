@@ -1,4 +1,4 @@
-/* global React, Icon, Avatar, VideoSample, window */
+/* global React, Icon, Avatar, window */
 // Vocabu — the feed: "one big word per entry", edge-to-edge, hairline dividers.
 
 const { useState } = React;
@@ -100,7 +100,7 @@ function SocialRow({ m, liked, likes, saved, onLike, onSave, onReply, pop }) {
 }
 
 /* ---------- a feed entry ---------- */
-function Entry({ m, onOpen, media }) {
+function Entry({ m, onOpen }) {
   const [liked, setLiked] = useState(m.liked);
   const [likes, setLikes] = useState(m.likes);
   const [saved, setSaved] = useState(m.saved);
@@ -136,11 +136,6 @@ function Entry({ m, onOpen, media }) {
       )}
 
       {m.audio && <div style={{ width: "100%", marginTop: 2 }}><AudioSample audio={m.audio} /></div>}
-      {m.video && (
-        <div style={{ width: "100%", marginTop: 2 }} onClick={(e) => e.stopPropagation()}>
-          <VideoSample video={{ ...m.video, ...(media || {}) }} />
-        </div>
-      )}
 
       <div style={{ marginTop: 2 }}>
         <SocialRow m={m} liked={liked} likes={likes} saved={saved} pop={pop}
@@ -228,7 +223,7 @@ function EmptyFeed() {
 }
 
 /* ---------- the feed ---------- */
-function FeedScreen({ entries, onOpen, onKeep, media }) {
+function FeedScreen({ entries, onOpen, onKeep }) {
   if (!entries.length) return <EmptyFeed />;
   return (
     <div style={{ display: "flex", flexDirection: "column" }}>
@@ -237,7 +232,7 @@ function FeedScreen({ entries, onOpen, onKeep, media }) {
           {i > 0 && <div style={{ height: 1, background: "var(--hairline)" }} />}
           {m.band
             ? <OnThisDayBand m={m} onOpen={onOpen} onKeep={onKeep} />
-            : <Entry m={m} onOpen={onOpen} media={media} />}
+            : <Entry m={m} onOpen={onOpen} />}
         </React.Fragment>
       ))}
       <div style={{ height: 1, background: "var(--hairline)" }} />
