@@ -74,7 +74,19 @@
     },
     "feed": {
       "pageTitle": "Fil · Vocabu",
-      "placeholder": "Vos mots vivront bientôt ici."
+      "empty": {
+        "title": "pas encore de mots.",
+        "subtitle": "gardez la première chose qu'on vous dit qui vous fait sourire.",
+        "hint": "touchez pour garder le premier"
+      },
+      "end": "c'est tous les mots pour l'instant.",
+      "loadMore": "voir plus",
+      "processing": "traitement…",
+      "failed": "impossible de traiter celui-ci",
+      "loadError": "impossible de charger vos mots pour l'instant.",
+      "videoPending": "vidéo · design à venir",
+      "audioPlay": "lire",
+      "audioPause": "pause"
     },
     "discover": {
       "pageTitle": "Découvrir · Vocabu",

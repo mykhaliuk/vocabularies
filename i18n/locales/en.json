@@ -74,7 +74,19 @@
     },
     "feed": {
       "pageTitle": "Feed · Vocabu",
-      "placeholder": "Your words will live here soon."
+      "empty": {
+        "title": "no words yet.",
+        "subtitle": "keep the first thing someone says that makes you smile.",
+        "hint": "tap to keep your first one"
+      },
+      "end": "that's every word for now.",
+      "loadMore": "show more",
+      "processing": "processing…",
+      "failed": "couldn't process this one",
+      "loadError": "we couldn't load your words just now.",
+      "videoPending": "video · design pending",
+      "audioPlay": "play",
+      "audioPause": "pause"
     },
     "discover": {
       "pageTitle": "Discover · Vocabu",
