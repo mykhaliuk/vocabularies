@@ -80,8 +80,8 @@ const tabs = computed(() => [
 }
 
 .bottom-nav__tab {
+  position: relative;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
   width: 52px;
@@ -100,10 +100,16 @@ const tabs = computed(() => [
   }
 }
 
+/* The icon is the tab's only in-flow child, so it centers on the box by
+   itself; the active dot is taken out of flow (absolute) so its presence
+   or absence never shifts the icon off-centre. */
 .bottom-nav__dot {
+  position: absolute;
+  bottom: 3px;
+  left: 50%;
   width: 5px;
   height: 5px;
-  margin-top: 5px;
+  transform: translateX(-50%);
   border-radius: var(--r-pill);
   background: transparent;
   transition: background var(--dur-fast);
