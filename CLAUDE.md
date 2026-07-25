@@ -141,7 +141,14 @@ Work is tracked in Linear: team **Vocabu team** (prefix `VKB`), project
 narrative source of truth; Linear tracks execution state.
 
 - Every code task starts from a Linear issue (`VKB-N`). Create or decompose
-  issues via the Linear MCP before starting work.
+  issues via the Linear MCP before starting work. Linear is the live view of
+  execution state (milestones, what's done / in progress / blocked) — read it
+  there; don't reconstruct current state from git branches or issue archaeology.
+- Base branch: cut every feature/fix branch (and its worktree) from `dev` by
+  default — never from `main`, even though `main` is the repo's default HEAD, so
+  worktree tooling may seed a branch there. Only `hotfix/` and `hotfeat/` (work
+  explicitly targeting production) branch from `main`. If a worktree lands on
+  `main`, rebase it onto `dev` (`git reset --hard origin/dev`) before starting.
 - Branch naming: `<type>/vkb-<n>-<short-desc>` (e.g. `feat/vkb-15-i18n-setup`).
   The `vkb-<n>` segment lets Linear auto-link the branch and move the issue to
   In Progress; `<type>/` follows the usual feat/fix/chore/refactor prefixes.

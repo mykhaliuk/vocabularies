@@ -1,4 +1,4 @@
-/* global React, Icon, Avatar, IconButton, TopBar, WordText, AudioSample, VideoSample, SocialRow, window */
+/* global React, Icon, Avatar, IconButton, TopBar, WordText, AudioSample, SocialRow, window */
 // Vocabu — word detail: full entry, unfoldable meaning & story, tender replies.
 
 const { useState: useD } = React;
@@ -18,7 +18,7 @@ function Reply({ r }) {
   );
 }
 
-function DetailScreen({ m, onBack, media }) {
+function DetailScreen({ m, onBack }) {
   const [liked, setLiked] = useD(m.liked);
   const [likes, setLikes] = useD(m.likes);
   const [saved, setSaved] = useD(m.saved);
@@ -46,7 +46,6 @@ function DetailScreen({ m, onBack, media }) {
           <WordText word={m.word} />
           {m.gloss && <div style={{ fontFamily: "var(--font-sans)", fontSize: 17, fontStyle: "italic", color: "var(--ink-2)", marginTop: -6 }}>{m.gloss}</div>}
           {m.audio && <div style={{ width: "100%", marginTop: 6 }}><AudioSample audio={m.audio} big /></div>}
-          {m.video && <div style={{ width: "100%", marginTop: 6 }}><VideoSample video={{ ...m.video, ...(media || {}) }} big /></div>}
         </div>
 
         {/* unfoldable meaning & story — blue toggle */}

@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Vocabu</title>
   <link rel="stylesheet" href="../_ds/vocabu-design-system-fc456a27-02a5-4423-9181-3fc0311e1354/colors_and_type.css" />
+  <link rel="stylesheet" href="ds-bridge.css" />
   <script>
     /* set theme before paint to avoid flash; React (useLayoutEffect) is the source of truth after mount */
     (function () {
@@ -16,6 +17,7 @@
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&display=swap" rel="stylesheet" />
   <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
   <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
   <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
@@ -65,8 +67,6 @@
     @keyframes vrecpulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
     @keyframes vfloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
     @keyframes vbob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(5px); } }
-    @keyframes vshimmer { from { background-position: 140% 0; } to { background-position: -40% 0; } }
-    @keyframes vspin { to { transform: rotate(360deg); } }
     @media (prefers-reduced-motion: reduce) { * { animation: none !important; } }
     @media (max-width: 430px) {
       body { padding: 0; background: var(--paper); }
@@ -95,7 +95,7 @@
   <script type="text/babel" src="data.jsx"></script>
   <script type="text/babel" src="feed.jsx"></script>
   <script type="text/babel" src="chrome.jsx"></script>
-  <script type="text/babel" src="media.jsx"></script>
+  <script type="text/babel" src="voice.jsx"></script>
   <script type="text/babel" src="compose.jsx"></script>
   <script type="text/babel" src="detail.jsx"></script>
   <script type="text/babel" src="screens.jsx"></script>
