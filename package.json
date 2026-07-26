@@ -17,10 +17,11 @@
     "vercel-build": "node scripts/migrate-deploy.js && nuxt build",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
-    "lint": "oxlint app.vue error.vue assets components composables db layouts middleware pages plugins scripts server shared utils *.config.js",
+    "lint": "oxlint app.vue error.vue assets components composables db layouts middleware pages plugins scripts server shared tests utils *.config.js",
     "fmt": "oxfmt .",
     "fmt:check": "oxfmt --check .",
     "typecheck": "nuxt typecheck",
+    "test:unit": "bun test tests/unit",
     "test:e2e": "playwright test",
     "test:poll-claim": "bun run infra:up && node scripts/with-env.js local node e2e/local/run.mjs",
     "icons:gen": "node scripts/generate-icons.js",
@@ -67,12 +68,13 @@
   "devDependencies": {
     "@nuxt/fonts": "^0.14.0",
     "@playwright/test": "^1.60.0",
-    "playwright": "^1.60.0",
+    "@types/bun": "^1.3.14",
     "@types/node": "^24.0.0",
     "@types/pg": "^8.11.0",
     "drizzle-kit": "^0.28.0",
     "oxfmt": "^0.47.0",
     "oxlint": "^0.13.0",
+    "playwright": "^1.60.0",
     "typescript": "^5.6.0",
     "vue-tsc": "^3.2.7"
   }

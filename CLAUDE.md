@@ -125,8 +125,8 @@ Rules that keep it honest:
   inside the domain (plain DRY, not a pattern).
 - Resources are reached via lazy `use*()` module singletons (`useDb()`),
   imported exactly where used — never bundled into a god context. A context
-  object carries request-scoped state only (`user`, `can()`, tx) with a
-  fixed shape. Where this narrows the resource-injection sentence of
+  object carries request-scoped state only (`user` — identity plus resolved
+  `entitlements`, per ADR-0012 — and tx) with a fixed shape. Where this narrows the resource-injection sentence of
   `feedback_no_dto_in_js.md` ("inject resources as a context object"),
   ADR-0010 wins until the upstream rule is aligned via `rules:sync`.
 - Enforced by `bun run layering:check` (CI): zero db references in

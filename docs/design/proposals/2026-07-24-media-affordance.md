@@ -63,7 +63,7 @@ as one "media affordance" system.
 ## Product rules (fixed — design around these)
 
 - **Audio is available to everyone.** Any user can attach an audio moment.
-- **Video is premium-gated.** The server enforces `can(user, 'videoUpload')`
+- **Video is premium-gated.** The server enforces `entitlements.videoUpload`
   (premium / vip / admin). A non-entitled user who declares a `video/*` upload
   gets **403 `VIDEO_UPLOAD_FORBIDDEN`**; a video smuggled as `audio/*` is caught
   after the ffmpeg probe and the row goes `failed` with

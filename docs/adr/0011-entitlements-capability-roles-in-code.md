@@ -1,6 +1,8 @@
 # ADR-0011: entitlements — capability→roles map in code, one door
 
-- Status: Accepted
+- Status: Superseded by ADR-0012 — the capability→roles map became a plan
+  table and the one-door rule was dissolved structurally. The two enforcement
+  moments below (slot mint, post-probe re-check) survive unchanged.
 - Date: 2026-07-18 (decided in VKB-64 planning; implemented 2026-07-23)
 - Refs: VKB-64, `server/utils/entitlements.ts`, docs/GLOSSARY.md
   (plan, grant, role, capability)

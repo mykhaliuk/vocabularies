@@ -47,16 +47,18 @@ crystallizes during planning, add it here in the same PR.
 - **peaks** — the amplitude array extracted from audio, used to draw the
   waveform.
 - **plan** — the user's billing tier (`free`, `essentials`, `premium`);
-  written only by billing. Read exclusively through `can()`.
-- **grant** — a hand-issued role (`vip`, `admin`) independent of the plan;
-  a user may hold several. Read exclusively through `can()`.
-- **role** — what a user is for access purposes: their plan plus their
-  grants.
-- **capability** (also **entitlement**) — a product right (e.g. video
-  upload) mapped to the roles that receive it; answered by the
-  `can(user, capability)` policy module and enforced server-side. Distinct
-  from a _feature flag_, which is an ops rollout tool — Vocabu has no
-  feature-flags table until a real cohort need exists.
+  written only by billing. States what that tier includes; never read by
+  consumers, only resolved into entitlements.
+- **grant** — a hand-issued role (`vip`, `admin`) independent of the plan; a
+  user may hold several. Overrides the plan's entitlements.
+- **role** — a plan or a grant: the two kinds of thing a user _is_ for access
+  purposes.
+- **entitlements** — the resolved set of a user's rights, and the only form in
+  which rights leave the entitlements module: **capabilities** as booleans
+  (a feature you have or do not, e.g. video upload) and **limits** as numbers
+  (a cap, e.g. maximum upload bytes). Distinct from a _feature flag_, which is
+  an ops rollout tool — Vocabu has no feature-flags table until a real cohort
+  need exists.
 
 ## Platform
 
