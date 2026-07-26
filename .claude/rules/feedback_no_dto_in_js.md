@@ -27,7 +27,7 @@ across an extra layer for zero benefit. The user explicitly rejects this:
   `toPublicUser(user) => ({ email, displayName, hasAvatar })`) is fine and
   encouraged — that is serialization, NOT a DTO layer. The line: one small
   projection function per exposed shape = good; a `UserDTO` class + `UserMapper`
-  - `toEntity`/`toDTO` round-trips = banned.
+  + `toEntity`/`toDTO` round-trips = banned.
 - In the **domain layer**, pass and return plain objects / ORM row types
   directly. Inject resources (db, mailer, storage) as a context object (the
   Context pattern), but do not wrap tables in Repository interfaces or rows in
