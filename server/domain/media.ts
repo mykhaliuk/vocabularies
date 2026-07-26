@@ -57,6 +57,18 @@ export const mintUploadSlot = async (
     );
   }
 
+  // Transport validates sizeBytes against the absolute ceiling, which is a
+  // shape check; the plan's own cap is a business rule and belongs here. Today
+  // every plan carries the ceiling, so this never fires — but slot.maxBytes is
+  // reported FROM the plan, and reporting a cap the server would not accept is
+  // exactly the contract drift that appears the day the numbers diverge.
+  if (input.sizeBytes > user.entitlements.maxUploadBytes) {
+    throw new DomainError(
+      DOMAIN_ERROR_CODES.uploadTooLarge,
+      `upload exceeds the ${user.entitlements.maxUploadBytes} byte limit`,
+    );
+  }
+
   const mediaId = mintMediaId();
   const key = mintOriginalKey(user.id, mediaId, input.contentType);
   // Presign before the insert: a signing failure then leaves no orphan row.
