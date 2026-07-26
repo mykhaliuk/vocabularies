@@ -12,6 +12,7 @@ export class DomainError extends Error {
 
 export const DOMAIN_ERROR_CODES = Object.freeze({
   videoUploadForbidden: 'VIDEO_UPLOAD_FORBIDDEN',
+  uploadTooLarge: 'UPLOAD_TOO_LARGE',
   entryNotFound: 'ENTRY_NOT_FOUND',
   mediaNotFound: 'MEDIA_NOT_FOUND',
   storageUnavailable: 'STORAGE_UNAVAILABLE',

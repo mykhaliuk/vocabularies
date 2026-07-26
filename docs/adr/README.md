@@ -46,4 +46,8 @@ Format: `NNNN-short-slug.md`, template in [0000-template.md](0000-template.md).
   enforced by `layering:check`
 - [ADR-0011](0011-entitlements-capability-roles-in-code.md) — entitlements:
   capability→roles map in code behind a single `can()` door; enforcement at
-  the upload-slot mint
+  the upload-slot mint (**superseded by ADR-0012**)
+- [ADR-0012](0012-entitlements-plan-table.md) — entitlements are a plan table
+  resolved once into rights: enum-backed plan/grants, `requireUser` hands back
+  entitlements instead of the row, `admin` a full-shape grant override so its
+  rights cannot drift unnoticed

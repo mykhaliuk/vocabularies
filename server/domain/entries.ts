@@ -5,10 +5,9 @@ import { useDb } from '~/server/utils/db';
 import { DOMAIN_ERROR_CODES, DomainError } from './errors';
 import { mintUploadSlot } from './media';
 import type { InferSelectModel } from 'drizzle-orm';
-import type { users } from '~/db/schema/users';
+import type { AuthUser } from '~/server/utils/auth';
 import type { MediaRow, UploadSlot, UploadSlotInput } from './media';
 
-type User = InferSelectModel<typeof users>;
 export type EntryRow = InferSelectModel<typeof entries>;
 
 export interface EntryInput {
@@ -29,7 +28,7 @@ export interface CreatedEntry extends EntryWithMedia {
 }
 
 export const createEntry = async (
-  user: User,
+  user: AuthUser,
   input: EntryInput,
   mediaInput: UploadSlotInput | null,
 ): Promise<CreatedEntry> => {

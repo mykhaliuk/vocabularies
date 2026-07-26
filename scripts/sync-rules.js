@@ -13,6 +13,7 @@ const RULES = [
   'metaskills-js-gof.md',
   'metaskills-js-data-structures.md',
   'feedback_no_dto_in_js.md',
+  'feedback_no_ts_enums.md',
   'feedback_refactor_imports.md',
 ];
 

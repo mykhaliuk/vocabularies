@@ -12,6 +12,7 @@
     ".nuxt",
     ".output",
     "dist",
+    ".claude/rules",
     "db/migrations",
     "bun.lockb",
     "package-lock.json",

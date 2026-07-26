@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { PublicUser } from '~/server/utils/auth.d.ts';
+import type { MeResponse } from '~/server/utils/auth';
 import { PWA_API_CACHE, PWA_AVATARS_CACHE } from '~/shared/pwa-caches';
 
 interface FetchError {
@@ -28,7 +28,7 @@ const {
   data: me,
   error,
   refresh,
-} = await useFetch<PublicUser>('/api/me', { credentials: 'include' });
+} = await useFetch<MeResponse>('/api/me', { credentials: 'include' });
 
 if (error.value) {
   if (error.value.statusCode === 401) {

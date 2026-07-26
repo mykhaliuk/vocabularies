@@ -78,17 +78,20 @@ settled 2026-07-17 (details in the M12 ADR once the spike lands):
   2026-07-21, VKB-80) with per-stage named queues (`vocabu-stage` /
   `vocabu`).
 
-- **Entitlements as capability→roles RBAC** (decided 2026-07-18): each
-  capability maps to the roles that receive it (e.g. `videoUpload: [vip,
-admin, premium]`); a user's roles = plan (`free | essentials | premium`,
-  written by billing) + hand-granted `grants[]` (`vip`, `admin`). One
-  policy module `can(user, capability)`; single server-side enforcement
-  point in the media upload endpoint; UI keeps the video affordance
-  visible with an upsell. One-door rule: nothing reads `user.plan` /
-  `user.grants` except `can()`. The capability→roles map lives in CODE;
-  recorded exit: it moves to a `capability_roles` table (edits without
-  deploy) when that need is real — consumers untouched either way. Beta
-  cohorts / percentage rollouts also land inside `can()` later.
+- **Entitlements as a plan table** (decided 2026-07-18 as capability→roles;
+  inverted 2026-07-25, VKB-91 / ADR-0012): a table keyed by plan
+  (`free | essentials | premium`, written by billing) states what that tier
+  includes — capabilities as booleans, limits as numbers — and hand-granted
+  `grants[]` (`vip`, `admin`) override it. `requireUser` resolves the row it
+  already loads into an `entitlements` object and hands that out instead of
+  the row, so no consumer can reach a raw tier; `GET /api/me` republishes it
+  for the client. The detached media worker, which has no request, resolves
+  the owner's rights at processing time and that outcome stands. `admin` is a
+  grant whose override is typed as the full shape, so a new entitlement is a
+  compile error until its answer for admin is stated. Recorded exits:
+  CASL when authorization becomes per-resource (sharing/following), a
+  `capability_roles` table if access must change without a deploy, Stripe as
+  the eventual source of `plan`.
 
 Linear: VKB-63 (spike) → VKB-64 (schema/API + entitlements) → VKB-65
 (shell) → VKB-66 (feed) → VKB-67 (compose, incl. Plus upsell).

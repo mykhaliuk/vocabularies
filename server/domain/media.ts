@@ -1,9 +1,6 @@
 import { and, eq, ne } from 'drizzle-orm';
 import { media } from '~/db/schema/media';
-import { users } from '~/db/schema/users';
-import { can } from '~/server/utils/entitlements';
 import {
-  MAX_ORIGINAL_BYTES,
   derivedKeys,
   mintMediaId,
   mintOriginalKey,
@@ -13,11 +10,12 @@ import { MediaRejection, processMedia } from '~/server/utils/media-process';
 import { enqueueMediaProcessing } from '~/server/utils/media-queue';
 import { presignPut } from '~/server/utils/storage';
 import { useDb } from '~/server/utils/db';
+import { loadEntitlements } from './entitlements';
 import { DOMAIN_ERROR_CODES, DomainError } from './errors';
 import type { InferSelectModel } from 'drizzle-orm';
+import type { AuthUser } from '~/server/utils/auth';
 import type { MediaManifest } from '~/server/utils/media-process';
 
-type User = InferSelectModel<typeof users>;
 export type MediaRow = InferSelectModel<typeof media>;
 
 const UPLOAD_TTL_SEC = 600;
@@ -47,15 +45,27 @@ const kindOfContentType = (contentType: string): 'audio' | 'video' =>
 // /api/media/upload) — is minted here, so the rest of the pipeline stays
 // role-agnostic.
 export const mintUploadSlot = async (
-  user: User,
+  user: AuthUser,
   input: UploadSlotInput,
   entryId: string | null,
 ): Promise<MintedSlot> => {
   const kind = kindOfContentType(input.contentType);
-  if (kind === 'video' && !can(user, 'videoUpload')) {
+  if (kind === 'video' && !user.entitlements.videoUpload) {
     throw new DomainError(
       DOMAIN_ERROR_CODES.videoUploadForbidden,
       'video upload requires a premium plan',
+    );
+  }
+
+  // Transport validates sizeBytes against the absolute ceiling, which is a
+  // shape check; the plan's own cap is a business rule and belongs here. Today
+  // every plan carries the ceiling, so this never fires — but slot.maxBytes is
+  // reported FROM the plan, and reporting a cap the server would not accept is
+  // exactly the contract drift that appears the day the numbers diverge.
+  if (input.sizeBytes > user.entitlements.maxUploadBytes) {
+    throw new DomainError(
+      DOMAIN_ERROR_CODES.uploadTooLarge,
+      `upload exceeds the ${user.entitlements.maxUploadBytes} byte limit`,
     );
   }
 
@@ -93,19 +103,14 @@ export const mintUploadSlot = async (
   if (!row) throw new Error('[domain.media] insert returned no row');
 
   return {
-    slot: { mediaId, key, uploadUrl, maxBytes: MAX_ORIGINAL_BYTES },
+    slot: {
+      mediaId,
+      key,
+      uploadUrl,
+      maxBytes: user.entitlements.maxUploadBytes,
+    },
     row,
   };
-};
-
-const ownerCanUploadVideo = async (userId: string): Promise<boolean> => {
-  const db = useDb();
-  const [owner] = await db
-    .select({ plan: users.plan, grants: users.grants })
-    .from(users)
-    .where(eq(users.id, userId))
-    .limit(1);
-  return owner !== undefined && can(owner, 'videoUpload');
 };
 
 export const getOwnMedia = async (
@@ -214,8 +219,15 @@ export const processUploadedMedia = async (
     // the entitlement on the probed kind so the mint gate cannot be
     // bypassed. Runs on every delivery: an at-least-once redelivery must
     // not resurrect a row this check has failed.
-    if (manifest.kind === 'video' && !(await ownerCanUploadVideo(userId))) {
-      throw new MediaRejection('video moments require a premium plan');
+    //
+    // The owner load stays inside the branch: audio is the common path (a free
+    // user cannot upload video at all), and hoisting it would spend a query
+    // per audio upload on a result nothing reads.
+    if (manifest.kind === 'video') {
+      const owner = await loadEntitlements(userId);
+      if (!owner.videoUpload) {
+        throw new MediaRejection('video moments require a premium plan');
+      }
     }
     await recordMediaReady(userId, mediaId, manifest);
     return manifest;

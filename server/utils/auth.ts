@@ -9,16 +9,37 @@ import { jwtVerify, SignJWT } from 'jose';
 import { sessions } from '~/db/schema/sessions';
 import { users } from '~/db/schema/users';
 import { useDb } from './db';
+import { entitlementsOf } from './entitlements';
 import type { InferSelectModel } from 'drizzle-orm';
 import type { H3Event } from 'h3';
+import type { Entitlements } from './entitlements';
 
-type User = InferSelectModel<typeof users>;
 type Session = InferSelectModel<typeof sessions>;
+
+// The authenticated caller as the rest of the server sees them: identity plus
+// already-resolved rights. The `users` row is consumed inside requireUser and
+// never handed out, so no consumer can read a raw tier — the invariant lives in
+// this type instead of in a convention (ADR-0012).
+export interface AuthUser {
+  id: string;
+  email: string;
+  displayName: string | null;
+  avatarKey: string | null;
+  entitlements: Entitlements;
+}
 
 export interface PublicUser {
   email: string;
   displayName: string | null;
   hasAvatar: boolean;
+}
+
+// GET /api/me is the one endpoint that also carries the caller's rights
+// (VKB-91) — the compose picker branches on them. Sign-in and avatar confirm
+// keep returning the plain profile: they have no use for entitlements, and the
+// client refetches /api/me anyway.
+export interface MeResponse extends PublicUser {
+  entitlements: Entitlements;
 }
 
 const COOKIE_NAME = 'vocabu_session';
@@ -66,7 +87,9 @@ export const safeEqualHashes = (a: Buffer, b: Buffer) => {
   return timingSafeEqual(a, b);
 };
 
-export const toPublicUser = (user: User): PublicUser => ({
+export const toPublicUser = (
+  user: Pick<AuthUser, 'email' | 'displayName' | 'avatarKey'>,
+): PublicUser => ({
   email: user.email,
   displayName: user.displayName,
   hasAvatar: Boolean(user.avatarKey),
@@ -139,15 +162,25 @@ export const requireUser = async (event: H3Event) => {
     throw createError({ statusCode: 401, statusMessage: 'session expired' });
   }
 
-  const [user] = await db
+  const [row] = await db
     .select()
     .from(users)
     .where(eq(users.id, session.userId))
     .limit(1);
 
-  if (!user) {
+  if (!row) {
     throw createError({ statusCode: 401, statusMessage: 'user not found' });
   }
+
+  // The row dies here. What leaves is identity plus resolved rights, so the
+  // tier is unreachable downstream by construction.
+  const user: AuthUser = {
+    id: row.id,
+    email: row.email,
+    displayName: row.displayName,
+    avatarKey: row.avatarKey,
+    entitlements: entitlementsOf(row),
+  };
 
   return { user, session };
 };
