@@ -1,3 +1,4 @@
+import type { Locator } from '@playwright/test';
 import { expect, test } from '@playwright/test';
 
 // Alpha of a computed CSS color. Chromium serializes computed colors as
@@ -68,6 +69,26 @@ test.describe('login', () => {
   });
 });
 
+// The landing is prerendered (ADR-0006) and the theme toggle hydrates as an
+// island on top of it, so every button sits in the static HTML with no
+// @click listener yet. Playwright's actionability checks (visible, stable,
+// enabled, receives events) all pass on that dead markup, so a click racing
+// hydration is dispatched and silently dropped — setThemeMode never runs.
+// Waiting on `load` (goto's default) does not help: `load` means the scripts
+// arrived, not that they executed. So re-issue the click until its own effect
+// shows up. setThemeMode is idempotent, which makes a repeated click harmless.
+//
+// Confirming every step matters beyond the flake: clicking "system" cannot be
+// confirmed on its own (an absent data-theme is also the pre-click state), so
+// an unconfirmed earlier click would let the "system clears the override" test
+// pass without ever setting an override.
+const clickUntil = async (button: Locator, effect: () => Promise<void>) => {
+  await expect(async () => {
+    await button.click();
+    await effect();
+  }).toPass({ timeout: 15_000 });
+};
+
 test.describe('theme toggle', () => {
   test('light and dark set data-theme and persist to localStorage', async ({
     page,
@@ -75,14 +96,16 @@ test.describe('theme toggle', () => {
     await page.goto('/');
     const html = page.locator('html');
 
-    await page.getByRole('button', { name: /light theme/i }).click();
-    await expect(html).toHaveAttribute('data-theme', 'light');
+    await clickUntil(page.getByRole('button', { name: /light theme/i }), () =>
+      expect(html).toHaveAttribute('data-theme', 'light', { timeout: 1000 }),
+    );
     await expect
       .poll(() => page.evaluate(() => localStorage.getItem('vocabu-theme')))
       .toBe('light');
 
-    await page.getByRole('button', { name: /dark theme/i }).click();
-    await expect(html).toHaveAttribute('data-theme', 'dark');
+    await clickUntil(page.getByRole('button', { name: /dark theme/i }), () =>
+      expect(html).toHaveAttribute('data-theme', 'dark', { timeout: 1000 }),
+    );
     await expect
       .poll(() => page.evaluate(() => localStorage.getItem('vocabu-theme')))
       .toBe('dark');
@@ -95,10 +118,15 @@ test.describe('theme toggle', () => {
     await page.goto('/');
     const html = page.locator('html');
 
-    await page.getByRole('button', { name: /dark theme/i }).click();
-    await page.getByRole('button', { name: /system theme/i }).click();
+    // The override must be confirmed applied before "system" can be shown to
+    // clear it — otherwise both assertions below hold trivially.
+    await clickUntil(page.getByRole('button', { name: /dark theme/i }), () =>
+      expect(html).toHaveAttribute('data-theme', 'dark', { timeout: 1000 }),
+    );
+    await clickUntil(page.getByRole('button', { name: /system theme/i }), () =>
+      expect(html).not.toHaveAttribute('data-theme', /.+/, { timeout: 1000 }),
+    );
 
-    await expect(html).not.toHaveAttribute('data-theme', /.+/);
     await expect
       .poll(() => page.evaluate(() => localStorage.getItem('vocabu-theme')))
       .toBeNull();
