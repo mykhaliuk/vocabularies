@@ -16,6 +16,7 @@
     "db/migrations",
     "bun.lockb",
     "package-lock.json",
-    "docs/design"
+    "docs/design",
+    "docs/capability-graph.md"
   ]
 }

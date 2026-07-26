@@ -28,6 +28,8 @@
     "ds:check": "node scripts/ds-check.js",
     "i18n:check": "node scripts/i18n-check.js",
     "layering:check": "node scripts/layering-check.js",
+    "graph:build": "node scripts/capability-graph.js build",
+    "graph:check": "node scripts/capability-graph.js check",
     "proto:check": "node scripts/proto-check.js",
     "proto:pull": "node scripts/proto-pull.js",
     "proto:update": "node scripts/proto-pull.js && node scripts/proto-check.js",

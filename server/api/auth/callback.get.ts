@@ -1,3 +1,5 @@
+// graph-allow-orphan: reached by browser navigation from the emailed
+// magic link, never by a client fetch.
 import { and, eq, isNull, lt, sql } from 'drizzle-orm';
 import { magicLinkTokens } from '~/db/schema/magic-link-tokens';
 import { sessions } from '~/db/schema/sessions';

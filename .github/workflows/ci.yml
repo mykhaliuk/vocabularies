@@ -36,6 +36,9 @@ jobs:
       - name: Server layering
         run: bun run layering:check
 
+      - name: Capability graph freshness
+        run: bun run graph:check
+
       - name: Lint
         run: bun run lint
 
