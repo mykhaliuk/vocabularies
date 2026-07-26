@@ -20,7 +20,6 @@ across an extra layer for zero benefit. The user explicitly rejects this:
 "DTO в JavaScript избыточен. Мы же не в Java. Зачем нам DTO?"
 
 **How to apply:**
-
 - At input boundaries, validate with a **zod schema**, not a DTO class. The
   parsed object IS the typed input.
 - At output boundaries, a **single plain projection function** (e.g.
