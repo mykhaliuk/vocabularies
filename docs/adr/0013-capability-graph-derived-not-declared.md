@@ -44,6 +44,14 @@ Legitimate non-client callers (a queue callback, an emailed link) are
 declared in the file itself with `graph-allow-orphan: <reason>`, mirroring
 `ds-allow-hex`; the reason lives next to the code and dies with it.
 
+A known gap is a different claim from a permanent one, and collapsing the
+two is how a real gap gets silenced for good — so `graph-pending: VKB-<n>`
+is a separate annotation that **requires an issue**, lists the route in a
+Pending wiring section rather than under findings, and is itself reported
+once callers appear. The findings list stays empty when nothing is wrong,
+which is the only state in which a new finding is noticeable; the gaps it
+excludes stay on the page with the ticket that will close them.
+
 Admitted debt: entity edges are per module, not per operation. Splitting
 them means guessing where a function body ends, which misattributes
 silently once a helper appears between exports. Exit condition: when a

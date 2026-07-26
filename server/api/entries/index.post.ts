@@ -1,3 +1,4 @@
+// graph-pending: VKB-67 — the compose sheet creates entries through this.
 import { z } from 'zod';
 import { createEntry } from '~/server/domain/entries';
 import { requireUser } from '~/server/utils/auth';

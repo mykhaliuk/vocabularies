@@ -147,10 +147,21 @@ drifts from the code.
   entity is a dependency to file, not a mid-implementation surprise. The
   layering above is what makes this extractable at all.
 - **Findings are actionable, observations are not.** An `ORPHAN ROUTE`
-  means a route nothing calls: wire it, delete it, or — when the caller
-  is not a client at all (a queue callback, an emailed link) — annotate
-  the file `// graph-allow-orphan: <reason>`. A client surface with no
-  API call is only listed, never flagged; placeholders are legitimate.
+  means a route nothing calls. Wire it, delete it, or declare why —
+  with the annotation that tells the truth, because the two are not
+  interchangeable:
+  - `// graph-allow-orphan: <reason>` — no client will EVER call it (a
+    queue callback, an emailed link).
+  - `// graph-pending: VKB-<n> — <reason>` — a client will, once that
+    issue lands. The ticket is required; a pending gap without one is an
+    excuse, not a plan. These move to a **Pending wiring** section:
+    still visible, just not drowning the findings list.
+
+  Both go stale on their own: once callers appear, the annotation itself
+  becomes a finding, so it cannot outlive the gap it describes. A client
+  surface with no API call is only listed, never flagged; placeholders
+  are legitimate.
+
 - **A computed endpoint** (`$fetch(url)`) cannot be read lexically and is
   reported as `UNRESOLVED`; declare it with `// graph-endpoint: /api/…`.
 - **Regenerate and commit** whenever the diff moves an API call, a route,

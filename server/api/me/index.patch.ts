@@ -1,3 +1,5 @@
+// graph-pending: VKB-94 — /me reads displayName but offers no way to
+// edit it.
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { users } from '~/db/schema/users';

@@ -65,17 +65,27 @@ const HTTP_METHODS = ['get', 'post', 'put', 'patch', 'delete', 'head'];
 const API_CALLERS = ['$fetch', 'useFetch', 'useLazyFetch'];
 const LOOSE_CALLERS = ['fetch'];
 
-const ALLOW_ORPHAN_RE = /^\s*\/\/\s*graph-allow-orphan:\s*(\S.*?)\s*$/;
 const COMMENT_LINE_RE = /^\s*\/\/\s?(.*)$/;
 const ENDPOINT_HINT_RE = /graph-endpoint:\s*(\S+)/g;
+const TICKET_RE = /\bVKB-\d+\b/;
+
+/* Two annotations answer "why does this route have no caller?", and they
+   are not interchangeable:
+     graph-allow-orphan  no client will EVER call it (queue, emailed link)
+     graph-pending       a client will, once <ticket> lands
+   Collapsing the second into the first is how a real gap gets silenced
+   for good, so `pending` demands a ticket and goes stale on wiring. */
+const ANNOTATION_RE = (key) =>
+  new RegExp(`^\\s*//\\s*graph-${key}:\\s*(\\S.*?)\\s*$`);
 
 /* The reason may wrap across following comment lines — the 80-column
    limit makes that the common case, and a reason truncated at the first
    newline reads as a broken sentence in the report. */
-const readAllowOrphan = (source) => {
+const readAnnotation = (source, key) => {
+  const pattern = ANNOTATION_RE(key);
   const lines = source.split('\n');
   for (let i = 0; i < lines.length; i++) {
-    const start = lines[i].match(ALLOW_ORPHAN_RE);
+    const start = lines[i].match(pattern);
     if (!start) continue;
     const parts = [start[1]];
     for (let j = i + 1; j < lines.length; j++) {
@@ -426,7 +436,9 @@ const buildGraph = async () => {
   const routes = routeFiles.map((relFile) => {
     const source = read(relFile);
     const text = maskComments(source);
-    const allow = readAllowOrphan(source);
+    const allow = readAnnotation(source, 'allow-orphan');
+    const pendingText = readAnnotation(source, 'pending');
+    const ticket = pendingText === null ? null : pendingText.match(TICKET_RE);
     const operations = collectDomainOperations(text, relFile);
     // Transport must not touch the db (ADR-0010), but the grandfathered
     // auth routes still do. Recording those edges keeps the graph honest
@@ -440,6 +452,8 @@ const buildGraph = async () => {
       operations: operations.sort(),
       legacyEntities: legacyEntities.sort(),
       allowOrphan: allow,
+      pending: pendingText,
+      pendingTicket: ticket === null ? null : ticket[0],
       callers: [],
     };
   });
@@ -508,22 +522,45 @@ const buildGraph = async () => {
 const collectFindings = (graph) => {
   const findings = [];
   for (const route of graph.routes) {
-    if (route.callers.length === 0 && route.allowOrphan === null) {
+    const declared = route.allowOrphan !== null || route.pending !== null;
+    if (route.callers.length === 0 && !declared) {
       findings.push({
         kind: 'ORPHAN ROUTE',
         where: route.file,
         detail:
           `${route.method} ${route.path} has no client caller — wire it, ` +
-          'delete it, or annotate `graph-allow-orphan: <reason>`',
+          'delete it, annotate `graph-allow-orphan: <reason>` when no ' +
+          'client ever will, or `graph-pending: VKB-<n> — <reason>` when ' +
+          'one is coming',
       });
     }
-    if (route.callers.length > 0 && route.allowOrphan !== null) {
+    if (route.callers.length > 0 && declared) {
+      const key = route.allowOrphan !== null ? 'allow-orphan' : 'pending';
       findings.push({
         kind: 'STALE ANNOTATION',
         where: route.file,
         detail:
           `${route.method} ${route.path} now has callers — remove the ` +
-          '`graph-allow-orphan` annotation',
+          `\`graph-${key}\` annotation`,
+      });
+    }
+    // A pending gap without a ticket is an excuse, not a plan.
+    if (route.pending !== null && route.pendingTicket === null) {
+      findings.push({
+        kind: 'PENDING WITHOUT TICKET',
+        where: route.file,
+        detail:
+          `${route.method} ${route.path} is marked pending but names no ` +
+          'VKB-<n> issue — file one or use `graph-allow-orphan`',
+      });
+    }
+    if (route.allowOrphan !== null && route.pending !== null) {
+      findings.push({
+        kind: 'CONFLICTING ANNOTATION',
+        where: route.file,
+        detail:
+          `${route.method} ${route.path} claims both never-called and ` +
+          'pending — keep one',
       });
     }
   }
@@ -695,9 +732,11 @@ const renderMarkdown = (graph, findings) => {
     const callers =
       route.callers.length > 0
         ? route.callers.map((file) => `\`${file}\``).join('<br>')
-        : route.allowOrphan
+        : route.allowOrphan !== null
           ? `_none — ${route.allowOrphan}_`
-          : '**none**';
+          : route.pendingTicket !== null
+            ? `_none yet — ${route.pendingTicket}_`
+            : '**none**';
     const legacy = route.legacyEntities.map((name) => `\`${name}\``).join(', ');
     const operations =
       route.operations.length > 0
@@ -716,6 +755,34 @@ const renderMarkdown = (graph, findings) => {
     '`scripts/layering-check.js`; the list only shrinks.',
   );
   out.push('');
+
+  const pending = graph.routes.filter(
+    (route) => route.pending !== null && route.callers.length === 0,
+  );
+  if (pending.length > 0) {
+    out.push('## Pending wiring');
+    out.push('');
+    out.push(
+      'Real gaps with a ticket: the endpoint exists, the screen that will',
+      'call it does not. Kept out of Findings so a NEW gap stands out —',
+      'not hidden. Wiring one makes its annotation stale, which is a',
+      'finding, so the note cannot outlive the gap.',
+    );
+    out.push('');
+    out.push('| Route | Tracked by | Note |');
+    out.push('| --- | --- | --- |');
+    for (const route of pending) {
+      const note = route.pending
+        .replace(TICKET_RE, '')
+        .replace(/^\s*[—-]\s*/, '')
+        .trim();
+      out.push(
+        `| \`${route.method} ${route.path}\` | ` +
+          `${route.pendingTicket ?? '**no ticket**'} | ${note} |`,
+      );
+    }
+    out.push('');
+  }
 
   out.push('## Client surfaces without API calls');
   out.push('');

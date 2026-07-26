@@ -7,13 +7,7 @@ runs `bun run graph:check` to keep it honest.
 
 ## Findings
 
-| Kind | Where | Detail |
-| --- | --- | --- |
-| ORPHAN ROUTE | `server/api/entries/[id].delete.ts` | DELETE /api/entries/:id has no client caller — wire it, delete it, or annotate `graph-allow-orphan: <reason>` |
-| ORPHAN ROUTE | `server/api/entries/[id].get.ts` | GET /api/entries/:id has no client caller — wire it, delete it, or annotate `graph-allow-orphan: <reason>` |
-| ORPHAN ROUTE | `server/api/entries/index.get.ts` | GET /api/entries has no client caller — wire it, delete it, or annotate `graph-allow-orphan: <reason>` |
-| ORPHAN ROUTE | `server/api/entries/index.post.ts` | POST /api/entries has no client caller — wire it, delete it, or annotate `graph-allow-orphan: <reason>` |
-| ORPHAN ROUTE | `server/api/me/index.patch.ts` | PATCH /api/me has no client caller — wire it, delete it, or annotate `graph-allow-orphan: <reason>` |
+None — every route has a caller and every call resolves.
 
 ## Wiring
 
@@ -25,13 +19,13 @@ runs `bun run graph:check` to keep it honest.
 | `POST /api/auth/magic-link` | `composables/useMagicLink.ts` | _direct db (ADR-0010 legacy):_ `magicLinkTokens`, `signinClaims` |
 | `POST /api/auth/poll` | `composables/useSigninPoll.ts` | _direct db (ADR-0010 legacy):_ `signinClaims` |
 | `GET /api/dev/error` | `pages/me.vue` | _inline_ |
-| `GET /api/entries` | **none** | `entries.getFeedPage` |
-| `POST /api/entries` | **none** | `entries.createEntry` |
-| `DELETE /api/entries/:id` | **none** | `entries.deleteOwnEntry` |
-| `GET /api/entries/:id` | **none** | `entries.getOwnEntry` |
+| `GET /api/entries` | _none yet — VKB-66_ | `entries.getFeedPage` |
+| `POST /api/entries` | _none yet — VKB-67_ | `entries.createEntry` |
+| `DELETE /api/entries/:id` | _none yet — VKB-95_ | `entries.deleteOwnEntry` |
+| `GET /api/entries/:id` | _none yet — VKB-66_ | `entries.getOwnEntry` |
 | `GET /api/health` | `pages/offline.vue` | _inline_ |
 | `GET /api/me` | `composables/useSession.ts`<br>`middleware/auth.ts`<br>`pages/me.vue` | _inline_ |
-| `PATCH /api/me` | **none** | _direct db (ADR-0010 legacy):_ `users` |
+| `PATCH /api/me` | _none yet — VKB-94_ | _direct db (ADR-0010 legacy):_ `users` |
 | `POST /api/me/avatar` | `pages/me.vue` | _inline_ |
 | `GET /api/me/avatar-url` | `pages/me.vue` | _inline_ |
 | `POST /api/me/avatar/confirm` | `pages/me.vue` | _direct db (ADR-0010 legacy):_ `users` |
@@ -43,6 +37,21 @@ runs `bun run graph:check` to keep it honest.
 Routes marked _direct db_ reach tables from transport instead of a
 domain operation. They are the grandfathered set in
 `scripts/layering-check.js`; the list only shrinks.
+
+## Pending wiring
+
+Real gaps with a ticket: the endpoint exists, the screen that will
+call it does not. Kept out of Findings so a NEW gap stands out —
+not hidden. Wiring one makes its annotation stale, which is a
+finding, so the note cannot outlive the gap.
+
+| Route | Tracked by | Note |
+| --- | --- | --- |
+| `GET /api/entries` | VKB-66 | the feed screen consumes this page cursor. |
+| `POST /api/entries` | VKB-67 | the compose sheet creates entries through this. |
+| `DELETE /api/entries/:id` | VKB-95 | no delete affordance exists yet; neither the feed nor compose ticket covers it. |
+| `GET /api/entries/:id` | VKB-66 | single-entry read for the feed card and any detail view built on it. |
+| `PATCH /api/me` | VKB-94 | /me reads displayName but offers no way to edit it. |
 
 ## Client surfaces without API calls
 
