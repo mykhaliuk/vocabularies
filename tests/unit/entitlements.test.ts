@@ -5,9 +5,9 @@ import {
   MAX_ORIGINAL_BYTES,
   MAX_VIDEO_DURATION_SEC,
 } from '../../server/utils/media-key';
-import type { GrantRole, PlanTier } from '../../db/schema/users';
+import { planTier, type GrantRole, type PlanTier } from '../../db/schema/users';
 
-const ALL_TIERS: readonly PlanTier[] = ['free', 'essentials', 'premium'];
+const ALL_TIERS = planTier.enumValues;
 
 const roles = (plan: PlanTier, grants: GrantRole[]) => ({ plan, grants });
 
