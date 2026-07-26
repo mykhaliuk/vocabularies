@@ -60,7 +60,13 @@ const ADMIN_ENTITLEMENTS: Entitlements = {
 // omitted, and the merge would then drop that grant SILENTLY — a user holding
 // it would behave exactly like a user without it. As a Record it is a compile
 // error until ranked.
-const GRANT_RANK: Record<GrantRole, number> = { vip: 1, admin: 2 };
+//
+// A Record enforces that every role HAS a rank, not that the ranks DIFFER, and
+// Array.prototype.sort is stable — so two roles sharing a rank would fall back
+// to exactly the column order this rank exists to eliminate. Distinctness is
+// not expressible in the type, so it is pinned by a test, which is what this
+// export is for.
+export const GRANT_RANK: Record<GrantRole, number> = { vip: 1, admin: 2 };
 
 const GRANTS: Record<GrantRole, Partial<Entitlements>> = {
   vip: { videoUpload: true },
@@ -79,9 +85,10 @@ export const entitlementsOf = (user: UserRoles): Entitlements => {
     throw new Error(`[entitlements] no plan entitlements for '${user.plan}'`);
   }
   // An unrecognized grant is dropped rather than thrown on: dropping it adds
-  // no rights, so it fails closed.
+  // no rights, so it fails closed. hasOwn rather than `in`, which also accepts
+  // inherited keys such as 'constructor'.
   const ranked = user.grants
-    .filter((role) => role in GRANT_RANK)
+    .filter((role) => Object.hasOwn(GRANT_RANK, role))
     .sort((left, right) => GRANT_RANK[left] - GRANT_RANK[right]);
   return ranked.reduce(
     (entitlements, role) => ({ ...entitlements, ...GRANTS[role] }),

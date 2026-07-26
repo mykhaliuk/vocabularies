@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { entitlementsOf } from '../../server/utils/entitlements';
+import { GRANT_RANK, entitlementsOf } from '../../server/utils/entitlements';
 import {
   MAX_AUDIO_DURATION_SEC,
   MAX_ORIGINAL_BYTES,
@@ -35,6 +35,22 @@ describe('entitlementsOf', () => {
     expect(entitlementsOf(roles('free', ['vip', 'admin']))).toEqual(
       entitlementsOf(roles('free', ['admin', 'vip'])),
     );
+  });
+
+  // The Record above enforces that every role HAS a rank, not that the ranks
+  // DIFFER, and sort is stable — so a shared rank silently restores the column
+  // dependence the previous test forbids, while that test keeps passing for as
+  // long as the two grants happen to agree on every field. This is the only
+  // guard on the property.
+  test('grant ranks are distinct', () => {
+    const ranks = Object.values(GRANT_RANK);
+    expect(new Set(ranks).size).toBe(ranks.length);
+  });
+
+  // Pins the direction declaratively. Behaviour cannot express it today: vip
+  // and admin agree wherever both set a field, so no merge order is observable.
+  test('admin outranks vip', () => {
+    expect(GRANT_RANK.admin).toBeGreaterThan(GRANT_RANK.vip);
   });
 
   // Availability is the boolean; a null limit would be a second encoding of

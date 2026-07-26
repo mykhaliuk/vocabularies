@@ -57,6 +57,14 @@ that object; nothing reads a tier.
   would let a newly added grant role be omitted and then dropped _silently_ by
   the merge, so a user holding it would behave like a user without it. An
   override may raise or lower a value; both are visible in the table.
+  **Where the Record stops:** it enforces that every role _has_ a rank, not that
+  the ranks _differ_, and `Array.prototype.sort` is stable — so a shared rank
+  would silently restore the column dependence the rank exists to remove, and
+  the order-independence test would not catch it for as long as the tied grants
+  agree on every field. Distinctness is not expressible in the type, so
+  `GRANT_RANK` is exported and a test pins it. The general rule this module
+  follows: the type checker covers key presence, while relations _between_
+  values are a test's job.
 - **Asymmetric handling of values the tables do not know**, reachable only
   through an out-of-band `ALTER TYPE`: an unknown **plan throws**, because
   spreading a missing row yields a half object whose undefined limits reach the
