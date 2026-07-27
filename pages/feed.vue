@@ -173,6 +173,14 @@ watch(
   { immediate: true },
 );
 
+// A word composed via the sheet lands as a processing entry; pull it into
+// view right away. The merge changes the processing set, so the watcher
+// above restarts the poll with a fresh attempt budget.
+const { postedVersion } = useCompose();
+watch(postedVersion, () => {
+  void mergeFirstPage();
+});
+
 onUnmounted(stopPolling);
 </script>
 

@@ -7,6 +7,7 @@
       <slot />
     </main>
     <AppBottomNav />
+    <ComposeSheet />
   </div>
 </template>
 

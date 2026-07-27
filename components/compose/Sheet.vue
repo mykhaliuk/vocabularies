@@ -1,0 +1,440 @@
+<script setup lang="ts">
+import { Loader2 } from 'lucide-vue-next';
+
+// Compose bottom sheet (prototype compose.jsx / compose-dark screenshot),
+// adapted to upload-first (VKB-67). Rises over the blurred app behind it.
+const { t } = useI18n();
+const { isOpen, close, notifyPosted } = useCompose();
+const { phase, progress, errorMessage, errorCode, submit, reset, cancel } =
+  useMediaUpload();
+// Shapes the picker only — the server stays the gate (ADR-0012).
+const { entitlements } = useEntitlements();
+
+const premiumOpen = ref(false);
+
+const videoLimitLabel = computed(() => {
+  const seconds = entitlements.value?.maxVideoDurationSec;
+  return seconds === undefined
+    ? ''
+    : t('app.compose.media.seconds', { n: seconds });
+});
+
+const word = ref('');
+const speaker = ref('');
+const gloss = ref('');
+const story = ref('');
+const file = ref<File | null>(null);
+const wordInput = ref<HTMLInputElement | null>(null);
+
+const isBusy = computed(
+  () =>
+    phase.value === 'creating' ||
+    phase.value === 'uploading' ||
+    phase.value === 'finalizing',
+);
+const canPost = computed(() => word.value.trim().length > 0 && !isBusy.value);
+
+// Async progress is otherwise invisible to a screen reader: the button label
+// and the progress bar both change without moving focus.
+const liveStatus = computed(() => {
+  if (phase.value === 'uploading') {
+    return t('app.compose.media.uploading', { pct: progress.value });
+  }
+  if (phase.value === 'finalizing') return t('app.compose.media.finalizing');
+  return '';
+});
+
+const resetForm = () => {
+  word.value = '';
+  speaker.value = '';
+  gloss.value = '';
+  story.value = '';
+  file.value = null;
+  reset();
+};
+
+// Reset + focus when the sheet opens; the fields never carry over between
+// words. The timer is cleared on close so focus is never moved into a sheet
+// that has already gone inert.
+let focusTimer: ReturnType<typeof setTimeout> | null = null;
+
+watch(isOpen, (open) => {
+  if (focusTimer !== null) clearTimeout(focusTimer);
+  if (!open) return;
+  resetForm();
+  focusTimer = setTimeout(() => wordInput.value?.focus(), 280);
+});
+
+// Cancelling mid-upload aborts the request rather than trapping the user in a
+// modal with no way out; the entry itself is already saved and will show up
+// without its media until they retry.
+const onCancel = () => {
+  if (isBusy.value) cancel();
+  close();
+};
+
+const onKeydown = (event: KeyboardEvent) => {
+  if (event.key === 'Escape' && isOpen.value) onCancel();
+};
+
+onMounted(() => window.addEventListener('keydown', onKeydown));
+onBeforeUnmount(() => {
+  if (focusTimer !== null) clearTimeout(focusTimer);
+  window.removeEventListener('keydown', onKeydown);
+});
+
+const onKeep = async () => {
+  if (!canPost.value) return;
+  const result = await submit({
+    word: word.value,
+    gloss: gloss.value,
+    speaker: speaker.value,
+    story: story.value,
+    file: file.value,
+  });
+  if (!result) return; // phase === 'error', errorMessage shown inline
+  notifyPosted();
+  close();
+  resetForm();
+  await navigateTo('/feed');
+};
+</script>
+
+<template>
+  <!-- `inert` (not just aria-hidden) so the closed sheet's fields and buttons
+       leave the tab order entirely — aria-hidden alone would keep them
+       keyboard-focusable inside a hidden subtree. -->
+  <div
+    class="compose"
+    :class="{ 'compose--open': isOpen }"
+    :aria-hidden="!isOpen"
+    :inert="!isOpen"
+  >
+    <div class="compose__scrim" @click="onCancel" />
+
+    <section
+      class="compose__sheet"
+      role="dialog"
+      aria-modal="true"
+      :aria-label="t('app.compose.title')"
+    >
+      <div class="compose__handle" aria-hidden="true" />
+
+      <header class="compose__header">
+        <button type="button" class="compose__cancel" @click="onCancel">
+          {{ t('app.compose.cancel') }}
+        </button>
+        <span class="compose__title">{{ t('app.compose.title') }}</span>
+        <span class="compose__header-spacer" aria-hidden="true" />
+      </header>
+
+      <div class="compose__body">
+        <label class="compose__field-label" for="compose-word">
+          {{ t('app.compose.wordLabel') }}
+        </label>
+        <input
+          id="compose-word"
+          ref="wordInput"
+          v-model="word"
+          class="compose__word"
+          :class="{ 'compose__word--filled': word.length > 0 }"
+          :placeholder="t('app.compose.wordPlaceholder')"
+          autocomplete="off"
+        />
+
+        <div class="compose__pair">
+          <div class="compose__field">
+            <label class="compose__field-label" for="compose-speaker">
+              {{ t('app.compose.speakerLabel') }}
+            </label>
+            <input
+              id="compose-speaker"
+              v-model="speaker"
+              class="compose__input"
+              :placeholder="t('app.compose.speakerPlaceholder')"
+              autocomplete="off"
+            />
+          </div>
+          <div class="compose__field">
+            <label class="compose__field-label" for="compose-gloss">
+              {{ t('app.compose.glossLabel') }}
+            </label>
+            <input
+              id="compose-gloss"
+              v-model="gloss"
+              class="compose__input"
+              :placeholder="t('app.compose.glossPlaceholder')"
+              autocomplete="off"
+            />
+          </div>
+        </div>
+
+        <div class="compose__field">
+          <label class="compose__field-label" for="compose-story">
+            {{ t('app.compose.storyLabel') }}
+          </label>
+          <textarea
+            id="compose-story"
+            v-model="story"
+            class="compose__input compose__textarea"
+            rows="3"
+            :placeholder="t('app.compose.storyPlaceholder')"
+          />
+        </div>
+
+        <ComposeMediaAttach
+          :file="file"
+          :phase="phase"
+          :progress="progress"
+          :entitlements="entitlements"
+          :error-code="errorCode"
+          :error-message="errorMessage"
+          @update:file="file = $event"
+          @retry="onKeep"
+          @reset="reset"
+          @see-premium="premiumOpen = true"
+        />
+
+        <!-- Only form-level failures: a media failure is reported inside the
+             picker, next to the file it is about. -->
+        <p
+          v-if="phase === 'error' && errorMessage && !file"
+          class="compose__error"
+          role="alert"
+        >
+          {{ errorMessage }}
+        </p>
+      </div>
+
+      <!-- Primary action in the thumb zone (prototype compose.jsx): a filled
+           --primary-action surface, so the accent never has to carry text
+           contrast on its own. -->
+      <div class="compose__footer">
+        <VButton full size="lg" :disabled="!canPost" @click="onKeep">
+          <template v-if="isBusy" #left>
+            <Loader2 :size="16" class="compose__spin" />
+          </template>
+          {{ isBusy ? t('app.compose.keeping') : t('app.compose.keep') }}
+        </VButton>
+      </div>
+
+      <span class="compose__live" role="status" aria-live="polite">
+        {{ liveStatus }}
+      </span>
+    </section>
+
+    <ComposePremiumSheet
+      :open="premiumOpen"
+      :video-limit-label="videoLimitLabel"
+      @close="premiumOpen = false"
+    />
+  </div>
+</template>
+
+<style scoped>
+.compose {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+}
+.compose--open {
+  pointer-events: auto;
+}
+
+.compose__scrim {
+  position: absolute;
+  inset: 0;
+  background: var(--scrim);
+  opacity: 0;
+  backdrop-filter: blur(0);
+  -webkit-backdrop-filter: blur(0);
+  transition:
+    opacity var(--dur-base) var(--ease-out),
+    backdrop-filter var(--dur-base);
+}
+.compose--open .compose__scrim {
+  opacity: 1;
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+}
+
+.compose__sheet {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  max-height: 94%;
+  background: var(--surface);
+  border-top-left-radius: var(--r-xl);
+  border-top-right-radius: var(--r-xl);
+  box-shadow: var(--shadow-lg);
+  transform: translateY(110%);
+  transition: transform var(--dur-slow) var(--ease-out);
+}
+.compose--open .compose__sheet {
+  transform: translateY(0);
+}
+
+.compose__handle {
+  width: 40px;
+  height: 4px;
+  margin: 10px auto 0;
+  border-radius: var(--r-pill);
+  background: var(--hairline-2);
+}
+
+.compose__header {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 18px 12px;
+  border-bottom: 1px solid var(--hairline);
+}
+.compose__title {
+  font-family: var(--font-sans);
+  font-size: 16px;
+  font-weight: var(--w-bold);
+  color: var(--ink);
+}
+.compose__cancel {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap-min);
+  border: 0;
+  background: transparent;
+  padding: 8px 4px;
+  font-family: var(--font-sans);
+  font-size: 15px;
+  font-weight: var(--w-medium);
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.compose__cancel:disabled {
+  color: var(--ink-3);
+  cursor: default;
+}
+
+/* Balances the cancel button so the title stays optically centred. */
+.compose__header-spacer {
+  width: 62px;
+}
+
+.compose__footer {
+  flex: 0 0 auto;
+  padding: 12px 18px calc(14px + var(--safe-bottom));
+  border-top: 1px solid var(--hairline);
+  background: var(--surface);
+}
+
+/* Visually hidden, but announced: upload/processing progress for AT. */
+.compose__live {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+.compose__spin {
+  animation: vspin 0.8s linear infinite;
+}
+
+.compose__body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 18px 18px 20px;
+}
+
+.compose__field-label {
+  display: block;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: var(--w-bold);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.compose__word {
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 6px;
+  padding: 6px 2px 12px;
+  border: 0;
+  border-bottom: 2px solid var(--hairline-2);
+  outline: 0;
+  background: transparent;
+  font-family: var(--font-sans);
+  font-size: 26px;
+  font-weight: var(--w-bold);
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  transition: border-color var(--dur-fast);
+}
+.compose__word:focus,
+.compose__word--filled {
+  border-bottom-color: var(--primary);
+}
+
+.compose__pair {
+  display: flex;
+  gap: 12px;
+  margin-top: 18px;
+}
+.compose__pair .compose__field {
+  flex: 1;
+  min-width: 0;
+  margin-top: 0;
+}
+
+.compose__field {
+  margin-top: 18px;
+}
+
+.compose__input {
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 7px;
+  padding: 13px 14px;
+  border: 1.5px solid var(--hairline-2);
+  border-radius: var(--r-sm);
+  outline: 0;
+  background: var(--surface);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  color: var(--ink);
+  transition: border-color var(--dur-fast);
+}
+.compose__input:focus {
+  border-color: var(--primary);
+}
+.compose__textarea {
+  resize: none;
+  line-height: var(--leading-normal);
+}
+
+.compose__error {
+  margin: 14px 0 0;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  color: var(--danger);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .compose__sheet,
+  .compose__scrim,
+  .compose__word {
+    transition: none;
+  }
+  .compose__spin {
+    animation: none;
+  }
+}
+</style>

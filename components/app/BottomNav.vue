@@ -2,6 +2,7 @@
 import { Bookmark, Feather, Home, Search, User } from 'lucide-vue-next';
 
 const { t } = useI18n();
+const { open } = useCompose();
 
 const tabs = computed(() => [
   { to: '/feed', icon: Home, label: t('app.nav.feed') },
@@ -28,12 +29,12 @@ const tabs = computed(() => [
         <span class="bottom-nav__dot" aria-hidden="true" />
       </NuxtLink>
       <div class="bottom-nav__fab-slot">
-        <!-- Visual + layout contract only for now: the compose sheet it
-             opens lands with VKB-67. -->
+        <!-- Opens the compose sheet mounted in the app layout (VKB-67). -->
         <button
           type="button"
           class="bottom-nav__fab"
           :aria-label="t('app.nav.compose')"
+          @click="open"
         >
           <Feather :size="24" />
         </button>
