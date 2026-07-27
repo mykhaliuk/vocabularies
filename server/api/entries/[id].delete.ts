@@ -1,3 +1,5 @@
+// graph-pending: VKB-95 — no delete affordance exists yet; neither the
+// feed nor compose ticket covers it.
 import { z } from 'zod';
 import { deleteOwnEntry } from '~/server/domain/entries';
 import { requireUser } from '~/server/utils/auth';

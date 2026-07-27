@@ -134,6 +134,39 @@ Rules that keep it honest:
   `scripts/layering-check.js`. Never add a file to that list; remove
   entries as legacy routes migrate (opportunistically, when touched).
 
+### Capability graph (ADR-0013)
+
+`docs/capability-graph.md` is the derived map of what the product can
+actually do today: client file → route → domain operation → entity, plus
+every entity's columns. It is **generated** (`bun run graph:build`), never
+hand-edited, and `bun run graph:check` fails CI when the committed file
+drifts from the code.
+
+- **Read it when scoping a ticket.** Name the path the feature needs and
+  check it against the graph; a missing route, operation, column or
+  entity is a dependency to file, not a mid-implementation surprise. The
+  layering above is what makes this extractable at all.
+- **Findings are actionable, observations are not.** An `ORPHAN ROUTE`
+  means a route nothing calls. Wire it, delete it, or declare why —
+  with the annotation that tells the truth, because the two are not
+  interchangeable:
+  - `// graph-allow-orphan: <reason>` — no client will EVER call it (a
+    queue callback, an emailed link).
+  - `// graph-pending: VKB-<n> — <reason>` — a client will, once that
+    issue lands. The ticket is required; a pending gap without one is an
+    excuse, not a plan. These move to a **Pending wiring** section:
+    still visible, just not drowning the findings list.
+
+  Both go stale on their own: once callers appear, the annotation itself
+  becomes a finding, so it cannot outlive the gap it describes. A client
+  surface with no API call is only listed, never flagged; placeholders
+  are legitimate.
+
+- **A computed endpoint** (`$fetch(url)`) cannot be read lexically and is
+  reported as `UNRESOLVED`; declare it with `// graph-endpoint: /api/…`.
+- **Regenerate and commit** whenever the diff moves an API call, a route,
+  a domain operation or a column.
+
 ## Project management — Linear
 
 Work is tracked in Linear: team **Vocabu team** (prefix `VKB`), project

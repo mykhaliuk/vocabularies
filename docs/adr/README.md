@@ -51,3 +51,6 @@ Format: `NNNN-short-slug.md`, template in [0000-template.md](0000-template.md).
   resolved once into rights: enum-backed plan/grants, `requireUser` hands back
   entitlements instead of the row, `admin` a full-shape grant override so its
   rights cannot drift unnoticed
+- [ADR-0013](0013-capability-graph-derived-not-declared.md) — the UI ↔ API ↔
+  domain ↔ entity map is derived from the source tree and committed, with
+  `graph:check` failing CI when it drifts; never hand-maintained

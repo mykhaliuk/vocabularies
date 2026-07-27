@@ -14,6 +14,11 @@ requires it for agent-authored work.
 - [ ] If a ticket says it must not ride along with other work, believe it
       literally, even when sharing a branch is convenient.
 - [ ] Follow-up ideas go to new Linear issues, not into the diff.
+- [ ] Read `docs/capability-graph.md` and name the path the ticket needs:
+      screen → route → domain operation → entity (and the columns it
+      reads). Anything on that path that does not exist yet is a
+      dependency to file as a blocking issue, not a surprise to discover
+      halfway through the implementation.
 
 ## Failure paths — for every new statement in a request handler
 
@@ -85,6 +90,11 @@ requires it for agent-authored work.
 - [ ] `bun run lint && bun run fmt:check && bun run ds:check` (+
       `proto:check` when design files changed, `i18n:check` when locale
       files changed).
+- [ ] `bun run graph:build` when the diff adds or removes an API call, a
+      route, a domain operation or a schema column — then commit the
+      regenerated `docs/capability-graph.md`. `graph:check` fails CI when
+      it is stale, and the regenerated diff is where a reviewer sees the
+      wiring change.
 - [ ] `bun run test:e2e` when covered flows are touched; new behavior gets
       new coverage (including the negative case: query params, explicit
       refusals).

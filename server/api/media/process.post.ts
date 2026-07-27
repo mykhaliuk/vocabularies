@@ -1,3 +1,5 @@
+// graph-allow-orphan: QStash worker callback; the caller is the queue,
+// never the client.
 import { Receiver } from '@upstash/qstash';
 import { z } from 'zod';
 import { processUploadedMedia } from '~/server/domain/media';
