@@ -37,13 +37,18 @@ const barHeight = (amplitude: number) => `${16 + amplitude * 84}%`;
 
 // Lazily-created element: audio is only fetched + built on the first play,
 // kept as a plain (non-reactive) ref so timeupdate churn does not trigger
-// component re-renders beyond the two reactive refs below.
+// component re-renders beyond the reactive refs below.
 let audioEl: HTMLAudioElement | null = null;
-let hasRetried = false;
+// Guards the async gap between "resolve the signed URL" and "assign audioEl":
+// without it a second tap during that round-trip builds a second element and
+// orphans the first (which keeps playing, unreachable, past unmount).
+let starting = false;
+let retrying = false;
 
 const playing = ref(false);
 const playedFraction = ref(0);
 const elementDurationSec = ref<number | null>(null);
+const failed = ref(false);
 
 const clipInset = computed(
   () => `inset(0 ${(1 - playedFraction.value) * 100}% 0 0)`,
@@ -88,45 +93,61 @@ const resolveUrl = async (forceRefresh: boolean): Promise<string | null> => {
   }
 };
 
-// A stale/expired signed URL surfaces as an 'error' event: refresh it once
-// and retry, then give up so a genuinely broken source cannot loop.
+// Signed playback URLs expire (~1h), which surfaces as an 'error' event on the
+// element. Refresh once per failure and retry; `retrying` only guards against
+// looping within a single attempt, so a later expiry is still recoverable.
 const onError = async () => {
-  if (hasRetried || !audioEl) {
+  if (retrying || !audioEl) {
     playing.value = false;
     return;
   }
-  hasRetried = true;
-  const url = await resolveUrl(true);
-  if (!url) {
-    playing.value = false;
-    return;
-  }
-  audioEl.src = url;
+  retrying = true;
   try {
+    const url = await resolveUrl(true);
+    if (!url || !audioEl) {
+      playing.value = false;
+      failed.value = true;
+      return;
+    }
+    audioEl.src = url;
     await audioEl.play();
     playing.value = true;
+    failed.value = false;
   } catch (error) {
     console.error('[FeedAudioPlayer] retry playback failed', error);
     playing.value = false;
+    failed.value = true;
+  } finally {
+    retrying = false;
   }
 };
 
 const startPlayback = async () => {
-  if (!audioEl) {
-    const url = await resolveUrl(false);
-    if (!url) return;
-    audioEl = new Audio(url);
-    audioEl.addEventListener('loadedmetadata', onLoadedMetadata);
-    audioEl.addEventListener('timeupdate', onTimeUpdate);
-    audioEl.addEventListener('ended', onEnded);
-    audioEl.addEventListener('error', onError);
-  }
+  if (starting) return;
+  starting = true;
   try {
+    if (!audioEl) {
+      const url = await resolveUrl(false);
+      if (!url) {
+        failed.value = true;
+        return;
+      }
+      const element = new Audio(url);
+      element.addEventListener('loadedmetadata', onLoadedMetadata);
+      element.addEventListener('timeupdate', onTimeUpdate);
+      element.addEventListener('ended', onEnded);
+      element.addEventListener('error', onError);
+      audioEl = element;
+    }
     await audioEl.play();
     playing.value = true;
+    failed.value = false;
   } catch (error) {
     console.error('[FeedAudioPlayer] playback failed', error);
     playing.value = false;
+    failed.value = true;
+  } finally {
+    starting = false;
   }
 };
 
@@ -153,54 +174,76 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="audio">
+    <!-- The whole row is the control (as in the prototype), so the tap target
+         clears --tap-min even though the glyph box is 38px. -->
     <button
       type="button"
-      class="audio__btn"
-      :class="{ 'audio__btn--playing': playing }"
+      class="audio__row"
       :aria-label="playing ? t('app.feed.audioPause') : t('app.feed.audioPlay')"
       @click="toggle"
     >
-      <Pause v-if="playing" :size="16" :fill="'currentColor'" />
-      <Play v-else :size="16" :fill="'currentColor'" />
+      <span class="audio__btn" :class="{ 'audio__btn--playing': playing }">
+        <Pause v-if="playing" :size="16" :fill="'currentColor'" />
+        <Play v-else :size="16" :fill="'currentColor'" />
+      </span>
+
+      <span class="audio__wave">
+        <span class="audio__bars" aria-hidden="true">
+          <span
+            v-for="(amplitude, index) in bars"
+            :key="index"
+            class="audio__bar"
+            :style="{ height: barHeight(amplitude) }"
+          />
+        </span>
+        <span
+          class="audio__bars audio__bars--played"
+          aria-hidden="true"
+          :style="{ clipPath: clipInset }"
+        >
+          <span
+            v-for="(amplitude, index) in bars"
+            :key="index"
+            class="audio__bar audio__bar--played"
+            :style="{ height: barHeight(amplitude) }"
+          />
+        </span>
+      </span>
+
+      <span class="audio__time">{{ durationLabel }}</span>
     </button>
 
-    <div class="audio__wave">
-      <div class="audio__bars" aria-hidden="true">
-        <span
-          v-for="(amplitude, index) in bars"
-          :key="index"
-          class="audio__bar"
-          :style="{ height: barHeight(amplitude) }"
-        />
-      </div>
-      <div
-        class="audio__bars audio__bars--played"
-        aria-hidden="true"
-        :style="{ clipPath: clipInset }"
-      >
-        <span
-          v-for="(amplitude, index) in bars"
-          :key="index"
-          class="audio__bar audio__bar--played"
-          :style="{ height: barHeight(amplitude) }"
-        />
-      </div>
-    </div>
-
-    <span class="audio__time">{{ durationLabel }}</span>
+    <p v-if="failed" class="audio__failed" role="status">
+      {{ t('app.feed.audioUnavailable') }}
+    </p>
   </div>
 </template>
 
 <style scoped>
 .audio {
-  display: flex;
-  align-items: center;
-  gap: 12px;
   width: 100%;
   max-width: 340px;
   margin: 0 auto;
 }
 
+.audio__row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: var(--tap-min);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+
+  &:active .audio__btn {
+    transform: scale(0.96);
+  }
+}
+
+/* Rounded rect, not a pill — buttons carry --r-btn per the brand rules. */
 .audio__btn {
   flex: 0 0 auto;
   display: flex;
@@ -209,17 +252,12 @@ onBeforeUnmount(() => {
   width: 38px;
   height: 38px;
   border: 1.5px solid var(--blue-300);
-  border-radius: var(--r-pill);
+  border-radius: var(--r-btn);
   background: transparent;
   color: var(--secondary);
-  cursor: pointer;
   transition:
     background var(--dur-fast) var(--ease-out),
     transform var(--dur-fast) var(--ease-out);
-
-  &:active {
-    transform: scale(0.96);
-  }
 }
 
 .audio__btn--playing {
@@ -248,15 +286,26 @@ onBeforeUnmount(() => {
   transition: clip-path var(--dur-base) linear;
 }
 
+/* --blue-100 (not -200) for the untouched track: the DS re-themes the -50/-100
+   steps for dark but deliberately leaves -200 at its light value, which would
+   make the unplayed bars outshine the played ones on a dark canvas. */
 .audio__bar {
   flex: 1;
   min-width: 2px;
   border-radius: 3px;
-  background: var(--blue-200);
+  background: var(--blue-100);
 }
 
 .audio__bar--played {
   background: var(--secondary);
+}
+
+.audio__failed {
+  margin: 8px 0 0;
+  text-align: center;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--ink-3);
 }
 
 .audio__time {

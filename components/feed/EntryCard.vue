@@ -35,14 +35,26 @@ const speakerParts = computed(() => {
 });
 
 // The headword shrinks as the phrase grows so a single long word never
-// overflows the centered card.
+// overflows the centered card. The ladder is the prototype's (feed.jsx
+// WordText) scaled by its handwritten branch: Caveat's x-height is far
+// smaller than Hanken's, so the design multiplies the step by 1.32
+// (app.jsx --word-scale) — the rest of that branch (zero tracking, 1.2
+// leading, descender padding) lives in the stylesheet below.
+const HAND_SCALE = 1.32;
+
 const headwordSize = computed(() => {
   const length = props.entry.word.length;
-  if (length <= 13) return 40;
-  if (length <= 20) return 33;
-  if (length <= 30) return 27;
-  if (length <= 44) return 22;
-  return 19;
+  const step =
+    length <= 13
+      ? 40
+      : length <= 20
+        ? 33
+        : length <= 30
+          ? 27
+          : length <= 44
+            ? 22
+            : 19;
+  return Math.round(step * HAND_SCALE);
 });
 </script>
 
@@ -99,13 +111,17 @@ const headwordSize = computed(() => {
   color: var(--ink-3);
 }
 
+/* Handwritten branch of the prototype's word style (app.jsx): Caveat wants
+   no negative tracking, a looser 1.2 leading, and bottom padding so its long
+   descenders are not clipped. */
 .entry__word {
   align-self: stretch;
   margin: 0;
+  padding-bottom: 0.14em;
   font-family: var(--font-hand);
   font-weight: var(--w-semibold);
-  line-height: 1.16;
-  letter-spacing: -0.02em;
+  line-height: 1.2;
+  letter-spacing: 0;
   text-align: center;
   color: var(--ink);
   overflow-wrap: break-word;

@@ -81,6 +81,8 @@
       },
       "end": "c'est tous les mots pour l'instant.",
       "loadMore": "voir plus",
+      "loadMoreRetry": "ça n'a pas chargé — réessayer",
+      "audioUnavailable": "impossible de lire celui-ci pour l'instant.",
       "processing": "traitement…",
       "failed": "impossible de traiter celui-ci",
       "loadError": "impossible de charger vos mots pour l'instant.",

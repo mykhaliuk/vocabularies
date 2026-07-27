@@ -81,6 +81,8 @@
       },
       "end": "that's every word for now.",
       "loadMore": "show more",
+      "loadMoreRetry": "that didn't load — try again",
+      "audioUnavailable": "this one won't play right now.",
       "processing": "processing…",
       "failed": "couldn't process this one",
       "loadError": "we couldn't load your words just now.",

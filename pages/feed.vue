@@ -33,7 +33,10 @@ useHead(() => ({ title: t('app.feed.pageTitle') }));
 
 // While any entry is still transcoding, re-poll the first page so a
 // just-composed word flips from processing to ready without a manual refresh.
+// Bounded: an abandoned upload leaves its row 'processing' forever (the bytes
+// were never confirmed), and that must not pin the page to an endless loop.
 const POLL_INTERVAL_MS = 4000;
+const POLL_MAX_ATTEMPTS = 75; // ~5 minutes, matching the worker's own ceiling
 
 const entries = ref<FeedEntry[]>([]);
 const nextCursor = ref<string | null>(null);
@@ -72,10 +75,13 @@ const retry = async () => {
   }
 };
 
+const loadMoreFailed = ref(false);
+
 const loadMore = async () => {
   const cursor = nextCursor.value;
   if (!cursor || loadingMore.value) return;
   loadingMore.value = true;
+  loadMoreFailed.value = false;
   try {
     const res = await $fetch<FeedResponse>(
       '/api/entries?cursor=' + encodeURIComponent(cursor),
@@ -85,6 +91,7 @@ const loadMore = async () => {
     nextCursor.value = res.nextCursor;
   } catch (error) {
     console.error('feed loadMore failed', error);
+    loadMoreFailed.value = true;
   } finally {
     loadingMore.value = false;
   }
@@ -97,7 +104,13 @@ const hasProcessing = computed(() =>
 // Merge the freshest first page into local state: update media/status on
 // entries we already show and prepend any entries composed since last load,
 // while preserving the order of pages the user has already paged in.
+// Single-flight: overlapping polls could otherwise land out of order and let
+// an older response push a 'ready' entry back to 'processing'.
+let merging = false;
+
 const mergeFirstPage = async () => {
+  if (merging) return;
+  merging = true;
   try {
     const res = await $fetch<FeedResponse>('/api/entries', {
       credentials: 'include',
@@ -114,10 +127,13 @@ const mergeFirstPage = async () => {
     entries.value = [...prepended, ...updated];
   } catch (error) {
     console.error('feed poll failed', error);
+  } finally {
+    merging = false;
   }
 };
 
 let pollTimer: ReturnType<typeof setInterval> | null = null;
+let pollAttempts = 0;
 
 const stopPolling = () => {
   if (pollTimer !== null) {
@@ -128,7 +144,15 @@ const stopPolling = () => {
 
 const startPolling = () => {
   if (!import.meta.client || pollTimer !== null) return;
-  pollTimer = setInterval(mergeFirstPage, POLL_INTERVAL_MS);
+  pollAttempts = 0;
+  pollTimer = setInterval(() => {
+    pollAttempts += 1;
+    if (pollAttempts > POLL_MAX_ATTEMPTS) {
+      stopPolling();
+      return;
+    }
+    void mergeFirstPage();
+  }, POLL_INTERVAL_MS);
 };
 
 watch(
@@ -173,7 +197,11 @@ onUnmounted(stopPolling);
           :disabled="loadingMore"
           @click="loadMore"
         >
-          {{ $t('app.feed.loadMore') }}
+          {{
+            loadMoreFailed
+              ? $t('app.feed.loadMoreRetry')
+              : $t('app.feed.loadMore')
+          }}
         </button>
         <p v-else-if="entries.length > 0" class="feed__end">
           {{ $t('app.feed.end') }}
