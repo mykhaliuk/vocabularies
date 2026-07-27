@@ -1,4 +1,4 @@
-/* global React, ReactDOM, FeedScreen, DiscoverScreen, SavedScreen, ProfileScreen, DetailScreen, SettingsScreen, Compose, LoginScreen, OfflineScreen, TopBar, BottomNav, useTweaks, TweaksPanel, TweakSection, TweakRadio, TweakToggle, window */
+/* global React, ReactDOM, FeedScreen, DiscoverScreen, SavedScreen, ProfileScreen, PeopleScreen, DetailScreen, SettingsScreen, Compose, LoginScreen, OfflineScreen, TopBar, BottomNav, useTweaks, TweaksPanel, TweakSection, TweakRadio, TweakToggle, window */
 // Vocabu — app shell + Tweaks.
 
 const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
@@ -28,7 +28,15 @@ function App() {
   const [detail, setDetail] = React.useState(null);
   const [composeOpen, setComposeOpen] = React.useState(false);
   const [settingsOpen, setSettingsOpen] = React.useState(false);
+  const [peopleOpen, setPeopleOpen] = React.useState(false);
+  const [speakers, setSpeakersState] = React.useState(window.VOCABU_SPEAKERS);
   const [entries, setEntries] = React.useState(window.VOCABU_ENTRIES);
+
+  // keep the global in step so the feed/detail can resolve a speaker without prop-drilling.
+  const setSpeakers = (next) => { window.VOCABU_SPEAKERS = next; setSpeakersState(next); };
+  const addSpeaker = (sp) => setSpeakers([...speakers, sp]);
+  const saveSpeaker = (sp) => setSpeakers(speakers.map((s) => (s.id === sp.id ? sp : s)));
+  const deleteSpeaker = (sp) => setSpeakers(speakers.filter((s) => s.id !== sp.id));
   const [authed, setAuthed] = React.useState(() => { try { return localStorage.getItem("vocabu_authed") === "1"; } catch (e) { return false; } });
   const [offline, setOffline] = React.useState(() => typeof navigator !== "undefined" && navigator.onLine === false);
   const scrollRef = React.useRef(null);
@@ -56,10 +64,14 @@ function App() {
 
   const open = (m) => m && setDetail(m);
 
-  const post = ({ word, speaker, rel, gloss, story, collection, audio, video }) => {
+  const post = ({ word, speakerId, gloss, story, collection, audio, video }) => {
     setTweak("emptyFeed", false);
+    const sp = speakers.find((s) => s.id === speakerId);
+    // most recently used floats to the front of the chip row — but only after the sheet closes.
+    if (sp) setSpeakers([sp, ...speakers.filter((s) => s.id !== sp.id)]);
     const m = {
-      id: "n" + Date.now(), speaker, tone: "rose", rel: rel || "just now",
+      id: "n" + Date.now(), sid: sp ? sp.id : null, saidAt: new Date().toISOString().slice(0, 10),
+      speaker: sp ? sp.name : "You", tone: sp ? sp.tone : "rose", rel: sp ? null : "just now",
       word, gloss, desc: story || "you kept this just now.",
       audio: audio && audio.wave ? audio : null,
       video: video || null,
@@ -69,6 +81,11 @@ function App() {
     setComposeOpen(false);
     setTab("feed");
     if (scrollRef.current) scrollRef.current.scrollTop = 0;
+  };
+
+  const setSaidAt = (m, date) => {
+    setEntries((arr) => arr.map((e) => (e.id === m.id ? { ...e, saidAt: date } : e)));
+    setDetail((d) => (d && d.id === m.id ? { ...d, saidAt: date } : d));
   };
 
   React.useEffect(() => { if (scrollRef.current) scrollRef.current.scrollTop = 0; }, [tab]);
@@ -114,14 +131,15 @@ function App() {
         )}
         {tab === "discover" && <DiscoverScreen />}
         {tab === "saved" && <SavedScreen collections={window.VOCABU_COLLECTIONS} entries={entries} onOpen={open} />}
-        {tab === "profile" && <ProfileScreen entries={entries} onOpen={open} onSettings={() => setSettingsOpen(true)} />}
+        {tab === "profile" && <ProfileScreen entries={entries} speakers={speakers} onOpen={open} onSettings={() => setSettingsOpen(true)} onPeople={() => setPeopleOpen(true)} />}
       </div>
 
       <BottomNav active={tab} onNav={setTab} onCompose={() => setComposeOpen(true)} />
 
-      {detail && <DetailScreen m={detail} onBack={() => setDetail(null)} media={mediaTweaks} />}
+      {detail && <DetailScreen m={detail} onBack={() => setDetail(null)} media={mediaTweaks} onSaidAt={setSaidAt} />}
+      {peopleOpen && <PeopleScreen speakers={speakers} entries={entries} onBack={() => setPeopleOpen(false)} onSave={saveSpeaker} onCreate={addSpeaker} onDelete={deleteSpeaker} />}
       {settingsOpen && <SettingsScreen theme={t.theme} onTheme={(v) => setTweak("theme", v)} onBack={() => setSettingsOpen(false)} onSignOut={signOut} />}
-      <Compose open={composeOpen} onClose={() => setComposeOpen(false)} onPost={post} plan={t.plan} picker={t.picker} />
+      <Compose open={composeOpen} onClose={() => setComposeOpen(false)} onPost={post} plan={t.plan} picker={t.picker} speakers={speakers} onAddSpeaker={addSpeaker} />
 
       {!authed && <LoginScreen onSignedIn={signIn} />}
       {(offline || t.previewOffline) && <OfflineScreen onRetry={() => setOffline(typeof navigator !== "undefined" && navigator.onLine === false)} />}

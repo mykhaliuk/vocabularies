@@ -1,4 +1,4 @@
-/* global React, Icon, Button, Chip, MediaChips, MediaAttach, UpgradeSheet, window */
+/* global React, Icon, Button, Chip, MediaChips, MediaAttach, UpgradeSheet, SpeakerPicker, window */
 // Vocabu — Compose: a bottom sheet that rises over the blurred feed.
 // Word/phrase first, then who said it; meaning / story / voice / collection as add-chips.
 
@@ -22,11 +22,11 @@ const composeInput = {
   fontSize: 16, color: "var(--ink)", width: "100%", boxSizing: "border-box",
 };
 
-function Compose({ open, onClose, onPost, plan = "free", picker = "by plan" }) {
+function Compose({ open, onClose, onPost, plan = "free", picker = "by plan", speakers = [], onAddSpeaker }) {
   // free → two affordances (voice + locked video); premium → one combined control.
   const mode = picker === "by plan" ? (plan === "premium" ? "combined" : "separate") : picker;
   const [word, setWord] = useC("");
-  const [speaker, setSpeaker] = useC("");
+  const [speakerId, setSpeakerId] = useC(null);
   const [gloss, setGloss] = useC("");
   const [story, setStory] = useC("");
   const [collection, setCollection] = useC(null);
@@ -42,7 +42,7 @@ function Compose({ open, onClose, onPost, plan = "free", picker = "by plan" }) {
 
   useCE(() => {
     if (open) {
-      setWord(""); setSpeaker(""); setGloss(""); setStory(""); setCollection(null);
+      setWord(""); setSpeakerId(null); setGloss(""); setStory(""); setCollection(null);
       setShow({ meaning: false, story: false, collection: false });
       setAttach(null); setMedia(null); setUpsell(false);
       setCustomColls([]); setCreatingColl(false); setNewCollName("");
@@ -97,7 +97,7 @@ function Compose({ open, onClose, onPost, plan = "free", picker = "by plan" }) {
             }} />
 
           <ComposeField label="Who said it">
-            <input value={speaker} onChange={(e) => setSpeaker(e.target.value)} placeholder="Mira · my daughter" style={composeInput} />
+            <SpeakerPicker speakers={speakers} value={speakerId} onChange={setSpeakerId} onCreate={onAddSpeaker} />
           </ComposeField>
 
           {/* revealed optional fields */}
@@ -168,11 +168,8 @@ function Compose({ open, onClose, onPost, plan = "free", picker = "by plan" }) {
           <Button full size="lg" disabled={!canPost}
             onClick={() => {
               if (!canPost) return;
-              const parts = speaker.split("·").map((s) => s.trim()).filter(Boolean);
               onPost({
-                word: word.trim(),
-                speaker: parts[0] || "You",
-                rel: parts.length > 1 ? parts.slice(1).join(" · ") : null,
+                word: word.trim(), speakerId,
                 gloss: gloss.trim() || null, story: story.trim(), collection,
                 audio: media && media.kind === "audio" ? media.audio : null,
                 video: media && media.kind === "video" ? media.video : null,

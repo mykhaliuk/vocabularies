@@ -124,7 +124,7 @@ function Entry({ m, onOpen, media }) {
       }}>
       <div style={{ fontFamily: "var(--font-sans)", fontSize: 13.5, lineHeight: 1.3, whiteSpace: "nowrap" }}>
         <span style={{ fontWeight: 600, color: "var(--ink)" }}>{m.speaker}</span>
-        {m.rel && <span style={{ color: "var(--ink-3)", fontWeight: 400 }}> · {m.rel}</span>}
+        {window.vocabuRel(m) && <span style={{ color: "var(--ink-3)", fontWeight: 400 }}> · {window.vocabuRel(m)}</span>}
       </div>
 
       <WordText word={m.word} />

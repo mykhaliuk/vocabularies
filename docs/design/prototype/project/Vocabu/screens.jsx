@@ -136,7 +136,7 @@ function SavedScreen({ collections, entries, onOpen }) {
 }
 
 /* ---------------- PROFILE — my dictionary ---------------- */
-function ProfileScreen({ entries, onOpen, onSettings }) {
+function ProfileScreen({ entries, speakers = [], onOpen, onSettings, onPeople }) {
   return (
     <div>
       <div style={{ position: "sticky", top: 0, zIndex: 20, height: 54, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 8px", ...sBarBg }}>
@@ -154,10 +154,33 @@ function ProfileScreen({ entries, onOpen, onSettings }) {
             keeping the way the people I love actually talk.
           </p>
           <div style={{ display: "flex", alignItems: "baseline", gap: 8, fontFamily: "var(--font-sans)", color: "var(--ink-3)", fontSize: 14 }}>
-            <span><b style={{ color: "var(--ink)", fontWeight: 700 }}>61</b> words</span>
+            <span><b style={{ color: "var(--ink)", fontWeight: 700 }}>{speakers.reduce((n, s) => n + (s.words || 0), 0) + entries.filter((e) => !e.band && String(e.id).charAt(0) === "n").length}</b> words</span>
             <span>·</span>
-            <span><b style={{ color: "var(--ink)", fontWeight: 700 }}>5</b> voices</span>
+            <span><b style={{ color: "var(--ink)", fontWeight: 700 }}>{speakers.length}</b> voices</span>
           </div>
+        </div>
+
+        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 12 }}>
+          <div style={sEyebrow}>your people</div>
+          <button onClick={onPeople} style={{ border: 0, background: "transparent", cursor: "pointer", fontFamily: "var(--font-sans)", fontSize: 13.5, fontWeight: 600, color: "var(--link)", padding: "4px 0" }}>manage</button>
+        </div>
+        <div style={{ display: "flex", gap: 14, overflowX: "auto", padding: "0 0 4px", marginBottom: 26 }}>
+          {speakers.map((s) => {
+            const age = window.vocabuAge(s.birthday);
+            return (
+              <button key={s.id} onClick={onPeople} style={{ border: 0, background: "transparent", cursor: "pointer", padding: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 6, width: 64, flex: "0 0 auto" }}>
+                <Avatar name={s.name} tone={s.tone} size={54} />
+                <div style={{ fontFamily: "var(--font-sans)", fontSize: 12.5, fontWeight: 600, color: "var(--ink)", maxWidth: 64, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.name}</div>
+                {age && <div style={{ fontFamily: "var(--font-sans)", fontSize: 11.5, color: "var(--ink-3)", marginTop: -4 }}>{age}</div>}
+              </button>
+            );
+          })}
+          <button onClick={onPeople} style={{ border: 0, background: "transparent", cursor: "pointer", padding: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 6, width: 64, flex: "0 0 auto" }}>
+            <span style={{ width: 54, height: 54, borderRadius: "50%", border: "1.5px dashed var(--hairline-2)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--ink-3)" }}>
+              <Icon name="plus" size={21} />
+            </span>
+            <div style={{ fontFamily: "var(--font-sans)", fontSize: 12.5, fontWeight: 600, color: "var(--ink-3)" }}>add</div>
+          </button>
         </div>
 
         <div style={{ ...sEyebrow, marginBottom: 12 }}>your collections</div>
