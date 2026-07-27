@@ -33,6 +33,8 @@ None — every route has a caller and every call resolves.
 | `POST /api/media/process` | _none — QStash worker callback; the caller is the queue, never the client._ | `media.processUploadedMedia` |
 | `GET /api/media/status` | `pages/dev/media-spike.vue` | `media.getOwnMedia` |
 | `POST /api/media/upload` | `pages/dev/media-spike.vue` | `media.mintUploadSlot` |
+| `GET /api/speakers` | `components/compose/Sheet.vue` | `speakers.listSpeakers` |
+| `POST /api/speakers` | `components/compose/SpeakerChips.vue` | `speakers.createSpeaker` |
 
 Routes marked _direct db_ reach tables from transport instead of a
 domain operation. They are the grandfathered set in
@@ -62,7 +64,6 @@ placeholder awaiting its ticket.
 - `components/app/TopBar.vue`
 - `components/compose/MediaAttach.vue`
 - `components/compose/PremiumSheet.vue`
-- `components/compose/Sheet.vue`
 - `components/feed/AudioPlayer.vue`
 - `components/feed/EmptyState.vue`
 - `components/feed/EntryCard.vue`
@@ -90,21 +91,23 @@ placeholder awaiting its ticket.
 - `shared/magic-link.ts`
 - `shared/media-types.ts`
 - `shared/pwa-caches.ts`
+- `shared/speaker-age.ts`
 
 ## Domain and infra modules
 
 | Module | Layer | Operations | Entities | Calls |
 | --- | --- | --- | --- | --- |
 | `server/domain/entitlements.ts` | domain | `loadEntitlements` | `users` | — |
-| `server/domain/entries.ts` | domain | `createEntry`<br>`deleteOwnEntry`<br>`getFeedPage`<br>`getOwnEntry` | `entries`, `media` | `media.mintUploadSlot` |
+| `server/domain/entries.ts` | domain | `createEntry`<br>`deleteOwnEntry`<br>`getFeedPage`<br>`getOwnEntry` | `entries`, `media`, `speakers` | `media.mintUploadSlot`<br>`speakers.getOwnSpeaker` |
 | `server/domain/media.ts` | domain | `confirmMediaUpload`<br>`getOwnMedia`<br>`mintUploadSlot`<br>`processUploadedMedia` | `media` | `entitlements.loadEntitlements` |
+| `server/domain/speakers.ts` | domain | `createSpeaker`<br>`getOwnSpeaker`<br>`listSpeakers` | `entries`, `speakers` | — |
 | `server/utils/auth.ts` | infra | — | `sessions`, `users` | — |
 
 ## Entities
 
 ### `entries`
 
-`collection`, `createdAt`, `gloss`, `id`, `ownerId`, `speaker`, `story`, `updatedAt`, `word`
+`collection`, `createdAt`, `gloss`, `id`, `ownerId`, `saidAt`, `sid`, `speaker`, `story`, `tone`, `updatedAt`, `word`
 
 ### `magicLinkTokens`
 
@@ -122,6 +125,10 @@ placeholder awaiting its ticket.
 
 `claimedAt`, `confirmAttempts`, `confirmCodeHash`, `confirmExpiresAt`, `createdAt`, `expiresAt`, `id`, `pollKeyHash`, `userId`
 
+### `speakers`
+
+`birthday`, `createdAt`, `id`, `name`, `ownerId`, `rel`, `tone`, `updatedAt`
+
 ### `users`
 
 `avatarKey`, `createdAt`, `displayName`, `email`, `grants`, `id`, `plan`
@@ -133,6 +140,8 @@ Rounded transport nodes have no client caller.
 ```mermaid
 flowchart LR
   subgraph client
+    c_components_compose_Sheet_vue["components/compose/Sheet.vue"]
+    c_components_compose_SpeakerChips_vue["components/compose/SpeakerChips.vue"]
     c_composables_useEntitlements_ts["composables/useEntitlements.ts"]
     c_composables_useEntryPlayback_ts["composables/useEntryPlayback.ts"]
     c_composables_useMagicLink_ts["composables/useMagicLink.ts"]
@@ -166,6 +175,8 @@ flowchart LR
     r_POST__api_media_process("POST /api/media/process")
     r_GET__api_media_status["GET /api/media/status"]
     r_POST__api_media_upload["POST /api/media/upload"]
+    r_GET__api_speakers["GET /api/speakers"]
+    r_POST__api_speakers["POST /api/speakers"]
   end
   subgraph domain
     o_entitlements_loadEntitlements["entitlements.loadEntitlements"]
@@ -177,6 +188,9 @@ flowchart LR
     o_media_getOwnMedia["media.getOwnMedia"]
     o_media_mintUploadSlot["media.mintUploadSlot"]
     o_media_processUploadedMedia["media.processUploadedMedia"]
+    o_speakers_createSpeaker["speakers.createSpeaker"]
+    o_speakers_getOwnSpeaker["speakers.getOwnSpeaker"]
+    o_speakers_listSpeakers["speakers.listSpeakers"]
   end
   subgraph infra
     i_auth["server/utils/auth.ts"]
@@ -187,6 +201,7 @@ flowchart LR
     e_media[("media")]
     e_sessions[("sessions")]
     e_signinClaims[("signinClaims")]
+    e_speakers[("speakers")]
     e_users[("users")]
   end
   r_GET__api_auth_callback -.-> e_magicLinkTokens
@@ -230,6 +245,10 @@ flowchart LR
   r_GET__api_media_status --> o_media_getOwnMedia
   c_pages_dev_media_spike_vue --> r_POST__api_media_upload
   r_POST__api_media_upload --> o_media_mintUploadSlot
+  c_components_compose_Sheet_vue --> r_GET__api_speakers
+  r_GET__api_speakers --> o_speakers_listSpeakers
+  c_components_compose_SpeakerChips_vue --> r_POST__api_speakers
+  r_POST__api_speakers --> o_speakers_createSpeaker
   o_entitlements_loadEntitlements --> e_users
   o_entries_createEntry --> e_entries
   o_entries_deleteOwnEntry --> e_entries
@@ -239,10 +258,20 @@ flowchart LR
   o_entries_deleteOwnEntry --> e_media
   o_entries_getFeedPage --> e_media
   o_entries_getOwnEntry --> e_media
+  o_entries_createEntry --> e_speakers
+  o_entries_deleteOwnEntry --> e_speakers
+  o_entries_getFeedPage --> e_speakers
+  o_entries_getOwnEntry --> e_speakers
   o_media_confirmMediaUpload --> e_media
   o_media_getOwnMedia --> e_media
   o_media_mintUploadSlot --> e_media
   o_media_processUploadedMedia --> e_media
+  o_speakers_createSpeaker --> e_entries
+  o_speakers_getOwnSpeaker --> e_entries
+  o_speakers_listSpeakers --> e_entries
+  o_speakers_createSpeaker --> e_speakers
+  o_speakers_getOwnSpeaker --> e_speakers
+  o_speakers_listSpeakers --> e_speakers
   i_auth --> e_sessions
   i_auth --> e_users
 ```

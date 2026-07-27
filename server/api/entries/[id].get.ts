@@ -30,7 +30,7 @@ export default defineEventHandler(async (event) => {
       ? await toMediaPlaybackUrls(found.media)
       : null;
   return {
-    entry: toEntryView(found.entry),
+    entry: toEntryView(found.entry, found.speaker),
     media: mediaView,
     playback,
   };

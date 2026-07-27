@@ -43,6 +43,13 @@
       "when": 1784988337712,
       "tag": "0005_flippant_johnny_blaze",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1785190563732,
+      "tag": "0006_plain_maddog",
+      "breakpoints": true
     }
   ]
 }

@@ -40,8 +40,8 @@ export default defineEventHandler(async (event) => {
   setResponseHeader(event, 'Cache-Control', 'no-store');
   const last = page[page.length - 1];
   return {
-    entries: page.map(({ entry, media }) => ({
-      ...toEntryView(entry),
+    entries: page.map(({ entry, speaker, media }) => ({
+      ...toEntryView(entry, speaker),
       media: media ? toMediaView(media) : null,
     })),
     nextCursor:
