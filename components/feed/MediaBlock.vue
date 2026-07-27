@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Video } from 'lucide-vue-next';
+import { AlertCircle, Loader2, Mic, Video } from 'lucide-vue-next';
 
 type FeedMedia = {
   mediaId: string;
@@ -12,47 +12,55 @@ type FeedMedia = {
   error: string | null;
 };
 
-defineProps<{
+const props = defineProps<{
   media: FeedMedia | null;
   entryId: string;
 }>();
+
+const isVideo = computed(() => props.media?.kind === 'video');
 </script>
 
 <template>
   <div v-if="media" class="media-block">
-    <!-- processing: soft pulsing indicator while the upload normalizes -->
-    <p v-if="media.status === 'processing'" class="media-block__note">
-      <span class="media-block__pulse" aria-hidden="true" />
-      {{ $t('app.feed.processing') }}
-    </p>
+    <!-- processing: the collapsed row's shape, with a spinner where the play
+         control will be. No play affordance is offered until it is real. -->
+    <div v-if="media.status === 'processing'" class="media-block__row">
+      <span class="media-block__slot">
+        <Loader2 :size="14" class="media-block__spin" aria-hidden="true" />
+      </span>
+      <span class="media-block__strip">
+        <Video v-if="isVideo" :size="15" aria-hidden="true" />
+        <Mic v-else :size="15" aria-hidden="true" />
+      </span>
+      <span class="media-block__dur">{{ $t('app.feed.normalizing') }}</span>
+    </div>
 
-    <!-- failed: terse reason, optional server detail on a muted sub-line -->
+    <!-- failed: one warm line, no error codes. There is deliberately no retry
+         control: a failed row is terminal server-side (recordMediaFailure), so
+         the only real way forward is a fresh upload. -->
     <div v-else-if="media.status === 'failed'" class="media-block__failed">
-      <p class="media-block__failed-text">{{ $t('app.feed.failed') }}</p>
-      <p v-if="media.error" class="media-block__failed-detail">
-        {{ media.error }}
+      <AlertCircle :size="17" aria-hidden="true" />
+      <p class="media-block__failed-text">
+        {{ isVideo ? $t('app.feed.videoFailed') : $t('app.feed.failed') }}
       </p>
     </div>
 
     <!-- ready audio: the real waveform player -->
     <FeedAudioPlayer
-      v-else-if="media.status === 'ready' && media.kind === 'audio'"
+      v-else-if="media.status === 'ready' && !isVideo"
       :entry-id="entryId"
       :peaks="media.peaks"
       :duration-sec="media.durationSec"
     />
 
-    <!-- ready video: provisional neutral card — real playback lands with the
-         media-affordance design round (docs/design/proposals/2026-07-24). -->
-    <div
-      v-else-if="media.status === 'ready' && media.kind === 'video'"
-      class="media-block__video"
-    >
-      <Video :size="22" aria-hidden="true" />
-      <span class="media-block__video-text">{{
-        $t('app.feed.videoPending')
-      }}</span>
-    </div>
+    <!-- ready video: collapsed row that expands into an inline frame -->
+    <FeedVideoPlayer
+      v-else-if="media.status === 'ready'"
+      :entry-id="entryId"
+      :duration-sec="media.durationSec"
+      :width="media.width"
+      :height="media.height"
+    />
   </div>
 </template>
 
@@ -62,82 +70,73 @@ defineProps<{
   flex-direction: column;
 }
 
-.media-block__note {
+.media-block__row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: var(--tap-min);
+  padding: 4px 0;
+}
+
+.media-block__slot {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  margin: 0;
-  padding: 6px 0;
-  font-family: var(--font-sans);
-  font-size: 13px;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 auto;
+  border: 1.5px solid var(--hairline-2);
+  border-radius: var(--r-sm);
   color: var(--ink-3);
 }
 
-.media-block__pulse {
-  width: 7px;
-  height: 7px;
+.media-block__spin {
+  animation: vspin 0.8s linear infinite;
+}
+
+.media-block__strip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  height: 36px;
+  border: 1px solid var(--hairline-2);
+  border-radius: var(--r-sm);
+  background: var(--surface-sunk);
+  color: var(--ink-2);
+  overflow: hidden;
+}
+
+.media-block__dur {
   flex: 0 0 auto;
-  border-radius: var(--r-pill);
-  background: currentColor;
-  animation: media-block-pulse 1400ms var(--ease-in-out) infinite;
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
 }
 
 .media-block__failed {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 4px;
-  padding: 6px 0;
-  text-align: center;
-}
-
-.media-block__failed-text {
-  margin: 0;
-  font-family: var(--font-sans);
-  font-size: 13px;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in oklch, var(--danger) 26%, transparent);
+  border-radius: var(--r-sm);
+  background: var(--danger-bg);
   color: var(--danger);
 }
 
-.media-block__failed-detail {
+.media-block__failed-text {
+  flex: 1;
   margin: 0;
   font-family: var(--font-sans);
-  font-size: 12px;
-  color: var(--ink-3);
-}
-
-.media-block__video {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 20px;
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-card);
-  background: var(--surface-sunk);
-  color: var(--ink-3);
-  text-align: center;
-}
-
-.media-block__video-text {
-  font-family: var(--font-sans);
-  font-size: 13px;
-  color: var(--ink-3);
-}
-
-@keyframes media-block-pulse {
-  0%,
-  100% {
-    opacity: 0.3;
-  }
-  50% {
-    opacity: 1;
-  }
+  font-size: 13.5px;
+  line-height: 1.35;
+  color: var(--ink-2);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .media-block__pulse {
+  .media-block__spin {
     animation: none;
   }
 }
