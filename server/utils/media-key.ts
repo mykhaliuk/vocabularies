@@ -1,6 +1,8 @@
+// Relative (not `~/`) so bun's unit-test runner, which loads this module
+// outside the Nuxt resolver, can find it too.
 import { nanoid } from 'nanoid';
-import { EXTENSION_BY_TYPE } from '~/shared/media-types';
-import type { MediaContentType } from '~/shared/media-types';
+import { EXTENSION_BY_TYPE } from '../../shared/media-types';
+import type { MediaContentType } from '../../shared/media-types';
 
 // Spike-scope limits (VKB-63): 250MB covers 20s of 4K60 H.264 with
 // headroom. Duration limits differ by kind — video is capped tight (weight
@@ -16,7 +18,7 @@ export const DURATION_TOLERANCE_SEC = 0.75;
 // The type roster lives in shared/media-types.ts (the compose picker
 // mirrors the same list); re-exported so the transport layer keeps one
 // import site for upload validation.
-export { ALLOWED_MEDIA_CONTENT_TYPES } from '~/shared/media-types';
+export { ALLOWED_MEDIA_CONTENT_TYPES } from '../../shared/media-types';
 
 const ALLOWED_EXTENSIONS: ReadonlySet<string> = new Set(
   Object.values(EXTENSION_BY_TYPE),
