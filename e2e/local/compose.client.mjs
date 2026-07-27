@@ -98,12 +98,84 @@ export const run = async ({ base, findLink }) => {
       return false;
     };
 
-    console.log('\n== text-only happy path ==');
+    console.log('\n== speakers: first run, inline creation, frozen age ==');
     check('the FAB opens the compose sheet', await openSheet());
+    // A fresh account has no speakers: the row must teach the mechanic by
+    // showing only "＋ someone new" (speaker-spec §Edges).
+    check(
+      'first-run chip row shows only someone-new',
+      (await page.locator('.chips__chip').count()) === 1 &&
+        (await page.getByRole('button', { name: /someone new/i }).count()) ===
+          1,
+    );
 
+    await page.getByRole('button', { name: /someone new/i }).click();
+    await page.locator('.chips__panel').waitFor({ timeout: 5000 });
+    check(
+      'add is disabled until the name has content',
+      await page.getByRole('button', { name: /^add$/i }).isDisabled(),
+    );
+    await page.fill('#speaker-name', 'Mira');
+    await page
+      .locator('.chips__suggestions')
+      .getByRole('button', { name: /^my daughter$/i })
+      .click();
+    check(
+      'a suggestion chip fills the relation',
+      (await page.locator('#speaker-rel').inputValue()) === 'my daughter',
+    );
+    const MIRA_BIRTHDAY = '2024-09-14';
+    await page.fill('#speaker-birthday', MIRA_BIRTHDAY);
+    await page.getByRole('button', { name: /^add$/i }).click();
+    let chipSelected = true;
+    try {
+      await page
+        .locator('.chips__chip--active', { hasText: 'Mira' })
+        .waitFor({ timeout: 10000 });
+    } catch {
+      chipSelected = false;
+    }
+    check('add creates the person and selects their chip', chipSelected);
+
+    await page.fill('#compose-word', 'nana-lella');
+    await keep.click();
+    try {
+      await sheet.waitFor({ state: 'hidden', timeout: 10000 });
+    } catch {
+      // assertion reports the state
+    }
+    // The frozen age: whole calendar months against saidAt (= today for a
+    // fresh post), computed here from the same dates so the assertion does
+    // not rot as time passes.
+    const now = new Date();
+    const born = new Date(MIRA_BIRTHDAY + 'T00:00:00Z');
+    let expectMo =
+      (now.getUTCFullYear() - born.getUTCFullYear()) * 12 +
+      (now.getUTCMonth() - born.getUTCMonth());
+    if (now.getUTCDate() < born.getUTCDate()) expectMo -= 1;
+    const expectAge =
+      expectMo < 24 ? `${expectMo} mo` : `${Math.floor(expectMo / 12)} y`;
+    const miraCard = page.locator('.entry', { hasText: 'nana-lella' });
+    let miraMeta = '';
+    try {
+      await miraCard.waitFor({ timeout: 10000 });
+      miraMeta = (await miraCard.locator('.entry__speaker').innerText())
+        .replace(/\s+/g, ' ')
+        .trim();
+    } catch {
+      // assertion reports the meta line
+    }
+    check(
+      'the meta line reads name · relation · frozen age',
+      miraMeta === `Mira · my daughter · ${expectAge}`,
+      miraMeta,
+    );
+
+    console.log('\n== text-only happy path, attributed to You ==');
+    check('the sheet reopens', await openSheet());
     await page.fill('#compose-word', 'appo');
-    await page.fill('#compose-speaker', 'Mira');
     await page.fill('#compose-gloss', 'apple');
+    // No chip selected on purpose: attribution never blocks the word.
     await keep.click();
     try {
       await sheet.waitFor({ state: 'hidden', timeout: 10000 });
@@ -112,15 +184,16 @@ export const run = async ({ base, findLink }) => {
     }
     check('keep closes the sheet', !(await sheet.isVisible()));
     let seen = true;
+    let appoMeta = '';
     try {
-      await page
-        .locator('.entry', { hasText: 'appo' })
-        .first()
-        .waitFor({ timeout: 10000 });
+      const appoCard = page.locator('.entry', { hasText: 'appo' }).first();
+      await appoCard.waitFor({ timeout: 10000 });
+      appoMeta = (await appoCard.locator('.entry__speaker').innerText()).trim();
     } catch {
       seen = false;
     }
     check('the composed word appears in the feed without a reload', seen);
+    check('an unattributed word reads You', appoMeta === 'You', appoMeta);
 
     console.log('\n== voice-clip happy path (small fixture) ==');
     const beforeVoice = feedFetches;
