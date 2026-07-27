@@ -26,6 +26,7 @@ const gloss = ref('');
 const story = ref('');
 const file = ref<File | null>(null);
 const wordInput = ref<HTMLInputElement | null>(null);
+const speakerChips = ref<{ resetPanel: () => void } | null>(null);
 
 // The chip row's people. Fetched on every sheet OPENING, never while it is
 // open: the MRU order settles between sessions, so chips do not move under
@@ -74,6 +75,7 @@ const resetForm = () => {
   gloss.value = '';
   story.value = '';
   file.value = null;
+  speakerChips.value?.resetPanel();
   reset();
 };
 
@@ -177,6 +179,7 @@ const onKeep = async () => {
             {{ t('app.compose.speakerLabel') }}
           </span>
           <ComposeSpeakerChips
+            ref="speakerChips"
             class="compose__chips"
             :speakers="speakersList"
             :selected="sid"

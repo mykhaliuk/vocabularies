@@ -59,12 +59,15 @@ const toggle = (id: string) => {
   emit('update:selected', props.selected === id ? null : id);
 };
 
+const nameInput = ref<HTMLInputElement | null>(null);
+
 const startCreating = () => {
   name.value = '';
   rel.value = '';
   birthday.value = '';
   createError.value = false;
   creating.value = true;
+  void nextTick(() => nameInput.value?.focus());
 };
 
 const cancelCreating = () => {
@@ -97,7 +100,9 @@ const add = async () => {
   }
 };
 
-defineExpose({ isCreating: creating });
+// The sheet resets its fields on every opening; the creation panel is a
+// field too ("fields never carry over between words").
+defineExpose({ resetPanel: cancelCreating });
 </script>
 
 <template>
@@ -132,6 +137,7 @@ defineExpose({ isCreating: creating });
         </label>
         <input
           id="speaker-name"
+          ref="nameInput"
           v-model="name"
           class="chips__input"
           :placeholder="t('app.compose.speaker.namePlaceholder')"
@@ -319,11 +325,6 @@ defineExpose({ isCreating: creating });
   font-size: 12.5px;
   line-height: 1.4;
   color: var(--ink-3);
-}
-
-.chips__hint b {
-  font-weight: var(--w-semibold);
-  color: var(--ink-2);
 }
 
 .chips__error {
