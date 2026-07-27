@@ -55,8 +55,8 @@ export const run = async ({ base, findLink }) => {
     const link = await findLink(email);
     const clicked = await clickAndReadCode(browser, link);
     check(
-      'Safari-jar click -> code page (not /me) showing a 4-digit code',
-      clicked.path !== '/me' && /^\d{4}$/.test(clicked.code),
+      'Safari-jar click -> code page (not /feed) showing a 4-digit code',
+      clicked.path !== '/feed' && /^\d{4}$/.test(clicked.code),
       `code=${clicked.code}`,
     );
 
@@ -64,13 +64,13 @@ export const run = async ({ base, findLink }) => {
     await codeInput.pressSequentially(clicked.code, { delay: 10 });
     await pwaPage.getByRole('button', { name: /^confirm$/i }).click();
     try {
-      await pwaPage.waitForURL('**/me', { timeout: 20000 });
+      await pwaPage.waitForURL('**/feed', { timeout: 20000 });
     } catch {
       // assertion below reports the actual URL
     }
     check(
-      'entering the code signs the PWA in and navigates to /me',
-      new URL(pwaPage.url()).pathname === '/me',
+      'entering the code signs the PWA in and navigates to /feed',
+      new URL(pwaPage.url()).pathname === '/feed',
       pwaPage.url(),
     );
 
@@ -90,6 +90,10 @@ export const run = async ({ base, findLink }) => {
         Boolean(safariSession?.value) &&
         pwaSession.value !== safariSession.value,
     );
+    // The signed-in landing is /feed now, and the feed names no account.
+    // /me is where the identity is shown, and it is one tab away.
+    await pwaPage.goto(`${base}/me`);
+    await pwaPage.waitForLoadState('networkidle');
     check(
       'PWA /me shows the signed-in account',
       (await pwaPage.getByRole('heading', { level: 1 }).innerText()).includes(
@@ -125,8 +129,8 @@ export const run = async ({ base, findLink }) => {
     await p2.getByRole('button', { name: /^confirm$/i }).click();
     await p2.getByRole('alert').waitFor({ timeout: 10000 });
     check(
-      'wrong code -> stays on the code screen with an error, no /me',
-      new URL(p2.url()).pathname !== '/me' &&
+      'wrong code -> stays on the code screen with an error, no /feed',
+      new URL(p2.url()).pathname !== '/feed' &&
         (await p2.getByLabel(/confirmation code/i).count()) === 1,
     );
     // Then the correct code still works.
@@ -134,13 +138,13 @@ export const run = async ({ base, findLink }) => {
     await codeInput2.pressSequentially(clicked2.code, { delay: 10 });
     await p2.getByRole('button', { name: /^confirm$/i }).click();
     try {
-      await p2.waitForURL('**/me', { timeout: 20000 });
+      await p2.waitForURL('**/feed', { timeout: 20000 });
     } catch {
       // reported below
     }
     check(
       'correct code after a wrong attempt signs in',
-      new URL(p2.url()).pathname === '/me',
+      new URL(p2.url()).pathname === '/feed',
       p2.url(),
     );
     await clicked2.safari.close();
@@ -168,13 +172,13 @@ export const run = async ({ base, findLink }) => {
     await codeInput3.pressSequentially(clicked3.code, { delay: 10 });
     await r2.getByRole('button', { name: /^confirm$/i }).click();
     try {
-      await r2.waitForURL('**/me', { timeout: 20000 });
+      await r2.waitForURL('**/feed', { timeout: 20000 });
     } catch {
       // reported below
     }
     check(
       'cold-start resume re-attaches, then the code signs the PWA in',
-      new URL(r2.url()).pathname === '/me',
+      new URL(r2.url()).pathname === '/feed',
       r2.url(),
     );
     await clicked3.safari.close();

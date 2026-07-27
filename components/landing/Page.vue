@@ -106,7 +106,7 @@ const resolveStandaloneEntry = async () => {
   try {
     const probed = await probeSession();
     if (probed === 'session') {
-      await navigateTo('/me', { replace: true });
+      await navigateTo('/feed', { replace: true });
       return;
     }
     // Only a definite 401 may suppress the /login guard's own probe. On

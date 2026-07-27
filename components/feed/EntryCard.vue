@@ -74,8 +74,10 @@ const headwordSize = computed(() => {
 
     <p v-if="entry.gloss" class="entry__gloss">{{ entry.gloss }}</p>
 
-    <p v-if="entry.story" class="entry__story">{{ entry.story }}</p>
-
+    <!-- The story is deliberately NOT here. The feed card is speaker · word ·
+         gloss · media (prototype feed.jsx); the story belongs to the detail
+         screen, behind its "meaning & story" toggle. It stays on the entry
+         payload for that screen. -->
     <FeedMediaBlock
       class="entry__media"
       :media="entry.media"
@@ -138,21 +140,6 @@ const headwordSize = computed(() => {
   font-size: 16px;
   font-style: italic;
   color: var(--ink-2);
-}
-
-.entry__story {
-  margin: 0;
-  max-width: 330px;
-  font-family: var(--font-sans);
-  font-size: 14.5px;
-  line-height: 1.5;
-  color: var(--ink-2);
-  text-align: center;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
 }
 
 .entry__media {

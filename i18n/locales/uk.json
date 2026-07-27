@@ -108,6 +108,7 @@
   },
   "me": {
     "pageTitle": "Мій профіль · Vocabu",
+    "backToFeed": "Назад до стрічки",
     "greeting": "Привіт, {name}",
     "emailLabel": "пошта: {email}",
     "avatar": {

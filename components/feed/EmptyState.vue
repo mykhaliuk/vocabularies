@@ -6,11 +6,13 @@ const { t } = useI18n();
 
 <template>
   <div class="empty">
-    <div class="empty__badge">
-      <Feather :size="32" />
+    <div class="empty__content">
+      <div class="empty__badge">
+        <Feather :size="32" />
+      </div>
+      <h2 class="empty__title">{{ t('app.feed.empty.title') }}</h2>
+      <p class="empty__subtitle">{{ t('app.feed.empty.subtitle') }}</p>
     </div>
-    <h2 class="empty__title">{{ t('app.feed.empty.title') }}</h2>
-    <p class="empty__subtitle">{{ t('app.feed.empty.subtitle') }}</p>
 
     <!-- Handwritten hint + arrow guiding the eye down to the compose FAB. -->
     <div class="empty__hint" aria-hidden="true">
@@ -34,15 +36,26 @@ const { t } = useI18n();
 </template>
 
 <style scoped>
+/* `flex: 1`, not `min-height: 100%`: the parent is a flex column whose height
+   comes from flexing, so a percentage min-height resolves against nothing and
+   the block collapses to its content — which left the arrow stranded near the
+   top of the screen, hundreds of pixels from the button it points at. */
 .empty {
-  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 40px 40px 0;
+  text-align: center;
+}
+
+/* The block centres in whatever height the hint leaves it, so the two read as
+   one composition instead of a centred column with something floating below. */
+.empty__content {
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 100%;
-  padding: 40px 40px 0;
-  text-align: center;
 }
 
 .empty__badge {
@@ -77,15 +90,17 @@ const { t } = useI18n();
   color: var(--ink-2);
 }
 
+/* Sits on the shell's bottom padding, which ends 96px + safe-area above the
+   viewport floor; the compose FAB's top edge is at 88px + safe-area. The
+   negative margin cancels the tail of empty space under the arrow glyph, so
+   the tip stops a few pixels short of the button instead of pointing at it
+   from across the screen. */
 .empty__hint {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 100px;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 4px;
+  margin-bottom: -8px;
   pointer-events: none;
 }
 

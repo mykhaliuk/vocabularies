@@ -37,13 +37,13 @@ async function onConfirm() {
 // plus bookmarks, the back button, a shared link), not just the PWA case. The
 // probe is advisory only: `hasSession()` resolves false on 401 / offline /
 // timeout, so a failed probe simply leaves the form in place rather than
-// blocking. No loop — /me sends only *unauthenticated* visitors back here.
+// blocking. No loop — /feed sends only *unauthenticated* visitors back here.
 onMounted(async () => {
   try {
     // The standalone landing hands off after establishing there is no session;
     // consume that instead of paying for the same probe twice in one launch.
     if (takeSignedOutHandoff()) return;
-    if (await hasSession()) await navigateTo('/me', { replace: true });
+    if (await hasSession()) await navigateTo('/feed', { replace: true });
   } catch (error) {
     // hasSession() cannot reject (the probe swallows everything), but
     // navigateTo() can — a stale service-worker precache / failed chunk load

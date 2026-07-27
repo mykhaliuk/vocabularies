@@ -202,6 +202,11 @@ async function logout() {
 
 <template>
   <main v-if="me">
+    <!-- /me sits outside the app shell. In standalone there is no address bar,
+         so without this the only way back is the OS back gesture. -->
+    <p>
+      <NuxtLink to="/feed">{{ $t('me.backToFeed') }}</NuxtLink>
+    </p>
     <h1>{{ $t('me.greeting', { name: me.displayName ?? me.email }) }}</h1>
     <p>{{ $t('me.emailLabel', { email: me.email }) }}</p>
 

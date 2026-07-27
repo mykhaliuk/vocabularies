@@ -350,9 +350,9 @@ export const run = async ({ base, findLink }) => {
     );
     const deskCb = await fetch(deskLink, { redirect: 'manual' });
     check(
-      'desktop callback still 302 -> /me with session (no code page)',
+      'desktop callback still 302 -> /feed with session (no code page)',
       deskCb.status === 302 &&
-        deskCb.headers.get('location') === '/me' &&
+        deskCb.headers.get('location') === '/feed' &&
         Boolean(sessionCookieFrom(deskCb)),
     );
   } finally {

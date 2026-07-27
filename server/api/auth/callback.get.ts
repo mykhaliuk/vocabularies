@@ -177,5 +177,5 @@ export default defineEventHandler(async (event) => {
     });
   }
 
-  return noStoreRedirect(event, '/me');
+  return noStoreRedirect(event, '/feed');
 });

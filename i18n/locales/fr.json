@@ -108,6 +108,7 @@
   },
   "me": {
     "pageTitle": "Mon profil · Vocabu",
+    "backToFeed": "Retour au fil",
     "greeting": "Bonjour, {name}",
     "emailLabel": "e-mail : {email}",
     "avatar": {
