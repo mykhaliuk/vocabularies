@@ -20,7 +20,7 @@ const consoleEmailer: Emailer = {
   isNull: true,
   sendMagicLink: async (to, link, options) => {
     console.log(
-      `[email:console] magic-link to=${to} locale=${options.locale} link=${link}`,
+      `[email:console] magic-link to=${to} locale=${options.locale} link=  ${link}`,
     );
   },
 };
