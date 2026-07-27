@@ -1,4 +1,3 @@
-// graph-pending: VKB-66 — the feed screen consumes this page cursor.
 import { z } from 'zod';
 import { getFeedPage } from '~/server/domain/entries';
 import { requireUser } from '~/server/utils/auth';

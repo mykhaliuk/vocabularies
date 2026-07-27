@@ -25,7 +25,8 @@ cheapest method still reliable for that edge: routes from Nitro filenames,
 route→operation and module→entity from non-type named imports, columns from
 a runtime import of the Drizzle schema (exact — `getTableColumns`, no
 parsing), and client→route from `/api/…` literals inside `$fetch`/`useFetch`
-calls. Reading the graph when scoping a ticket is a step in
+calls and locals bound to `useRequestFetch()` (the SSR-safe idiom binds the
+fetcher to an arbitrary name, so the binding is read rather than guessed). Reading the graph when scoping a ticket is a step in
 `docs/PR-CHECKLIST.md`, not a new ritual.
 
 ## Consequences

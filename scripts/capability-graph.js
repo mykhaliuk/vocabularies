@@ -11,7 +11,8 @@
      route → operation  named imports of server/domain/*
      module→ entity     named imports of db/schema/* (domain AND infra)
      entity→ columns    runtime import + drizzle getTableColumns (exact)
-     client→ route      '/api/...' literals inside $fetch/useFetch calls
+     client→ route      '/api/...' literals inside $fetch/useFetch and
+                        locals bound to useRequestFetch()
 
    The last edge is the weak one: a computed endpoint is invisible to a
    lexical scan. Rather than drop such a call silently — the worst failure
@@ -64,6 +65,14 @@ const HTTP_METHODS = ['get', 'post', 'put', 'patch', 'delete', 'head'];
 // is an /api/ path and it never raises UNRESOLVED.
 const API_CALLERS = ['$fetch', 'useFetch', 'useLazyFetch'];
 const LOOSE_CALLERS = ['fetch'];
+
+/* useRequestFetch() returns a $fetch bound to the incoming request (it
+   forwards cookies during SSR), and callers bind it to a local name. The
+   name is arbitrary, so the binding has to be read rather than guessed —
+   without this, a screen that fetches only through it looks like it calls
+   nothing, and its route reads as an orphan. */
+const FETCH_BINDING_RE =
+  /(?:const|let|var)\s+(\w+)\s*=\s*useRequestFetch\s*\(/g;
 
 const COMMENT_LINE_RE = /^\s*\/\/\s?(.*)$/;
 const ENDPOINT_HINT_RE = /graph-endpoint:\s*(\S+)/g;
@@ -256,8 +265,10 @@ const findCalls = (relFile) => {
   );
   const calls = [];
   const unresolved = [];
+  const bound = [...text.matchAll(FETCH_BINDING_RE)].map((match) => match[1]);
+  const strict = [...API_CALLERS, ...bound];
   const callee = new RegExp(
-    `(?<![\\w$.])(${[...API_CALLERS, ...LOOSE_CALLERS]
+    `(?<![\\w$.])(${[...strict, ...LOOSE_CALLERS]
       .map((name) => name.replace('$', '\\$'))
       .join('|')})\\s*`,
     'g',
@@ -269,18 +280,25 @@ const findCalls = (relFile) => {
     i = skipSpace(text, i);
     if (text[i] !== '(') continue;
     const argStart = skipSpace(text, i + 1);
-    const path = readPathArgument(text, argStart);
-    if (path === null) {
-      if (API_CALLERS.includes(name)) {
+    const literal = readPathArgument(text, argStart);
+    if (literal === null) {
+      if (strict.includes(name)) {
         unresolved.push({ line: lineAt(text, match.index), callee: name });
       }
       continue;
     }
-    if (!path.startsWith('/api/')) continue;
+    if (!literal.startsWith('/api/')) continue;
+    // `'/api/entries/' + id` — the literal is a prefix, so the trailing
+    // segment is dynamic. Without this the empty tail segment happens to
+    // match a `:param` route anyway, which is the right answer for the
+    // wrong reason and would mislead on any other shape.
+    const literalEnd = skipString(text, argStart);
+    const concatenated = text[skipSpace(text, literalEnd)] === '+';
+    const path = literal.split('?')[0];
     const args = text.slice(i, findCallEnd(text, i));
     const method = args.match(/\bmethod:\s*['"]([A-Za-z]+)['"]/);
     calls.push({
-      path: path.split('?')[0],
+      path: concatenated && path.endsWith('/') ? `${path}:*` : path,
       method: (method ? method[1] : 'GET').toUpperCase(),
       line: lineAt(text, match.index),
     });

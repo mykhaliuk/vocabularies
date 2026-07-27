@@ -1,5 +1,3 @@
-// graph-pending: VKB-66 — single-entry read for the feed card and any
-// detail view built on it.
 import { z } from 'zod';
 import { getOwnEntry } from '~/server/domain/entries';
 import { requireUser } from '~/server/utils/auth';

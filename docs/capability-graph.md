@@ -19,10 +19,10 @@ None — every route has a caller and every call resolves.
 | `POST /api/auth/magic-link` | `composables/useMagicLink.ts` | _direct db (ADR-0010 legacy):_ `magicLinkTokens`, `signinClaims` |
 | `POST /api/auth/poll` | `composables/useSigninPoll.ts` | _direct db (ADR-0010 legacy):_ `signinClaims` |
 | `GET /api/dev/error` | `pages/me.vue` | _inline_ |
-| `GET /api/entries` | _none yet — VKB-66_ | `entries.getFeedPage` |
+| `GET /api/entries` | `pages/feed.vue` | `entries.getFeedPage` |
 | `POST /api/entries` | _none yet — VKB-67_ | `entries.createEntry` |
 | `DELETE /api/entries/:id` | _none yet — VKB-95_ | `entries.deleteOwnEntry` |
-| `GET /api/entries/:id` | _none yet — VKB-66_ | `entries.getOwnEntry` |
+| `GET /api/entries/:id` | `composables/useEntryPlayback.ts` | `entries.getOwnEntry` |
 | `GET /api/health` | `pages/offline.vue` | _inline_ |
 | `GET /api/me` | `composables/useSession.ts`<br>`middleware/auth.ts`<br>`pages/me.vue` | _inline_ |
 | `PATCH /api/me` | _none yet — VKB-94_ | _direct db (ADR-0010 legacy):_ `users` |
@@ -47,10 +47,8 @@ finding, so the note cannot outlive the gap.
 
 | Route | Tracked by | Note |
 | --- | --- | --- |
-| `GET /api/entries` | VKB-66 | the feed screen consumes this page cursor. |
 | `POST /api/entries` | VKB-67 | the compose sheet creates entries through this. |
 | `DELETE /api/entries/:id` | VKB-95 | no delete affordance exists yet; neither the feed nor compose ticket covers it. |
-| `GET /api/entries/:id` | VKB-66 | single-entry read for the feed card and any detail view built on it. |
 | `PATCH /api/me` | VKB-94 | /me reads displayName but offers no way to edit it. |
 
 ## Client surfaces without API calls
@@ -63,6 +61,11 @@ placeholder awaiting its ticket.
 - `components/app/BottomNav.vue`
 - `components/app/TabPlaceholder.vue`
 - `components/app/TopBar.vue`
+- `components/feed/AudioPlayer.vue`
+- `components/feed/EmptyState.vue`
+- `components/feed/EntryCard.vue`
+- `components/feed/MediaBlock.vue`
+- `components/feed/VideoPlayer.vue`
 - `components/landing/Page.vue`
 - `components/landing/PhoneMock.vue`
 - `components/landing/copy.en.ts`
@@ -74,7 +77,6 @@ placeholder awaiting its ticket.
 - `layouts/app.vue`
 - `layouts/default.vue`
 - `pages/discover.vue`
-- `pages/feed.vue`
 - `pages/fr.vue`
 - `pages/index.vue`
 - `pages/login.vue`
@@ -127,11 +129,13 @@ Rounded transport nodes have no client caller.
 ```mermaid
 flowchart LR
   subgraph client
+    c_composables_useEntryPlayback_ts["composables/useEntryPlayback.ts"]
     c_composables_useMagicLink_ts["composables/useMagicLink.ts"]
     c_composables_useSession_ts["composables/useSession.ts"]
     c_composables_useSigninPoll_ts["composables/useSigninPoll.ts"]
     c_middleware_auth_ts["middleware/auth.ts"]
     c_pages_dev_media_spike_vue["pages/dev/media-spike.vue"]
+    c_pages_feed_vue["pages/feed.vue"]
     c_pages_me_vue["pages/me.vue"]
     c_pages_offline_vue["pages/offline.vue"]
   end
@@ -142,10 +146,10 @@ flowchart LR
     r_POST__api_auth_magic_link["POST /api/auth/magic-link"]
     r_POST__api_auth_poll["POST /api/auth/poll"]
     r_GET__api_dev_error["GET /api/dev/error"]
-    r_GET__api_entries("GET /api/entries")
+    r_GET__api_entries["GET /api/entries"]
     r_POST__api_entries("POST /api/entries")
     r_DELETE__api_entries__id("DELETE /api/entries/:id")
-    r_GET__api_entries__id("GET /api/entries/:id")
+    r_GET__api_entries__id["GET /api/entries/:id"]
     r_GET__api_health["GET /api/health"]
     r_GET__api_me["GET /api/me"]
     r_PATCH__api_me("PATCH /api/me")
@@ -195,9 +199,11 @@ flowchart LR
   c_composables_useSigninPoll_ts --> r_POST__api_auth_poll
   r_POST__api_auth_poll -.-> e_signinClaims
   c_pages_me_vue --> r_GET__api_dev_error
+  c_pages_feed_vue --> r_GET__api_entries
   r_GET__api_entries --> o_entries_getFeedPage
   r_POST__api_entries --> o_entries_createEntry
   r_DELETE__api_entries__id --> o_entries_deleteOwnEntry
+  c_composables_useEntryPlayback_ts --> r_GET__api_entries__id
   r_GET__api_entries__id --> o_entries_getOwnEntry
   c_pages_offline_vue --> r_GET__api_health
   c_composables_useSession_ts --> r_GET__api_me
