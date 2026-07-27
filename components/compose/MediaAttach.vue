@@ -12,6 +12,7 @@ import {
 } from 'lucide-vue-next';
 import type { ComposePhase } from '~/composables/useMediaUpload';
 import type { Entitlements } from '~/server/utils/entitlements';
+import { ALLOWED_MEDIA_CONTENT_TYPES } from '~/shared/media-types';
 
 // The media affordance (docs/design/prototype/project/Vocabu/media-spec.html).
 // Tier decides the shape: premium gets one combined control that infers the
@@ -40,25 +41,10 @@ const emit = defineEmits<{
 
 const { t } = useI18n();
 
-// Mirrors ALLOWED_MEDIA_CONTENT_TYPES on the server (media-key.ts). Anything
-// outside this set is rejected by POST /api/entries with a bare validation
-// error, so catch it here and say something a person can act on.
-const ALLOWED_TYPES = new Set([
-  'audio/mp4',
-  'audio/x-m4a',
-  'audio/aac',
-  'audio/mpeg',
-  'audio/ogg',
-  'audio/wav',
-  'audio/webm',
-  'audio/amr',
-  'audio/3gpp',
-  'video/mp4',
-  'video/quicktime',
-  'video/webm',
-  'video/3gpp',
-  'video/x-matroska',
-]);
+// The same roster POST /api/entries validates against (shared/media-types).
+// Anything outside it would be rejected with a bare validation error, so
+// catch it here and say something a person can act on.
+const ALLOWED_TYPES: ReadonlySet<string> = new Set(ALLOWED_MEDIA_CONTENT_TYPES);
 
 // Kind inference: the MIME type decides, and the extension is only a fallback
 // for the containers that carry both (a .mov arriving as application/octet-

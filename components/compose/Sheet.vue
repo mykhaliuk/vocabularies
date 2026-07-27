@@ -60,7 +60,12 @@ let focusTimer: ReturnType<typeof setTimeout> | null = null;
 
 watch(isOpen, (open) => {
   if (focusTimer !== null) clearTimeout(focusTimer);
-  if (!open) return;
+  if (!open) {
+    // The premium sheet teleports to <body>, so the closed sheet's `inert`
+    // never reaches it — left open it would float over a closed compose.
+    premiumOpen.value = false;
+    return;
+  }
   resetForm();
   focusTimer = setTimeout(() => wordInput.value?.focus(), 280);
 });

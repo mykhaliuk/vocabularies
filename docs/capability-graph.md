@@ -88,6 +88,7 @@ placeholder awaiting its ticket.
 - `pages/uk.vue`
 - `shared/landing-locales.ts`
 - `shared/magic-link.ts`
+- `shared/media-types.ts`
 - `shared/pwa-caches.ts`
 
 ## Domain and infra modules
