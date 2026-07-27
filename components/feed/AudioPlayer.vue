@@ -182,7 +182,11 @@ onBeforeUnmount(() => {
       :aria-label="playing ? t('app.feed.audioPause') : t('app.feed.audioPlay')"
       @click="toggle"
     >
-      <span class="audio__btn" :class="{ 'audio__btn--playing': playing }">
+      <span
+        class="audio__btn"
+        :class="{ 'audio__btn--playing': playing }"
+        aria-hidden="true"
+      >
         <Pause v-if="playing" :size="16" :fill="'currentColor'" />
         <Play v-else :size="16" :fill="'currentColor'" />
       </span>
@@ -214,7 +218,7 @@ onBeforeUnmount(() => {
     </button>
 
     <p v-if="failed" class="audio__failed" role="status">
-      {{ t('app.feed.audioUnavailable') }}
+      {{ t('app.feed.playbackUnavailable') }}
     </p>
   </div>
 </template>

@@ -7,7 +7,7 @@ const { t } = useI18n();
 <template>
   <div class="empty">
     <div class="empty__content">
-      <div class="empty__badge">
+      <div class="empty__badge" aria-hidden="true">
         <Feather :size="32" />
       </div>
       <h2 class="empty__title">{{ t('app.feed.empty.title') }}</h2>

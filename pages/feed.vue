@@ -97,8 +97,17 @@ const loadMore = async () => {
   }
 };
 
-const hasProcessing = computed(() =>
-  entries.value.some((entry) => entry.media?.status === 'processing'),
+// Keyed by WHICH entries are processing, not merely whether any are. The
+// attempt budget below is per batch, and a plain boolean is edge-triggered:
+// once a stuck row spent the budget, a later upload joining that same `true`
+// state would never restart the timer, and would sit on 'processing' until a
+// manual refresh. A changed set is evidence of new work, so it earns a fresh
+// budget; a set that never changes still exhausts one and stops.
+const processingKey = computed(() =>
+  entries.value
+    .filter((entry) => entry.media?.status === 'processing')
+    .map((entry) => entry.id)
+    .join(','),
 );
 
 // Merge the freshest first page into local state: update media/status on
@@ -156,10 +165,10 @@ const startPolling = () => {
 };
 
 watch(
-  hasProcessing,
-  (processing) => {
-    if (processing) startPolling();
-    else stopPolling();
+  processingKey,
+  (key) => {
+    stopPolling();
+    if (key !== '') startPolling();
   },
   { immediate: true },
 );

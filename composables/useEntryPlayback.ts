@@ -17,7 +17,25 @@ interface EntryDetailResponse {
 
 // Module-level cache shared across every component instance: a given entry's
 // presigned URLs are resolved once and reused until an explicit force refetch.
+//
+// Bounded, because module state outlives every component that reads it: a long
+// scrolling session would otherwise accumulate entries for the lifetime of the
+// tab. Oldest-first eviction suits the access pattern — the feed is reverse
+// chronological, so the entries pushed out are the ones scrolled past, and a
+// re-resolve costs one request. It also caps how long an evicted (and by then
+// likely expired) URL can linger.
+const CACHE_LIMIT = 100;
 const cache = new Map<string, PlaybackUrls>();
+
+const remember = (entryId: string, playback: PlaybackUrls) => {
+  // Re-insert so refreshed entries move to the newest position.
+  cache.delete(entryId);
+  cache.set(entryId, playback);
+  if (cache.size > CACHE_LIMIT) {
+    const oldest = cache.keys().next();
+    if (!oldest.done) cache.delete(oldest.value);
+  }
+};
 
 export const useEntryPlayback = () => {
   const resolvePlayback = async (
@@ -29,13 +47,16 @@ export const useEntryPlayback = () => {
       if (cached) return cached;
     }
     try {
-      const res = await $fetch<EntryDetailResponse>('/api/entries/' + entryId, {
-        credentials: 'include',
-      });
+      const res = await $fetch<EntryDetailResponse>(
+        // Ids are uuids today, so nothing here needs escaping — encoded anyway
+        // so the call cannot become the reason a future id shape breaks.
+        '/api/entries/' + encodeURIComponent(entryId),
+        { credentials: 'include' },
+      );
       const { playback } = res;
       // `playback` stays null while media is still processing or has failed —
       // don't cache that, so a later call retries once the media is ready.
-      if (playback) cache.set(entryId, playback);
+      if (playback) remember(entryId, playback);
       return playback;
     } catch (error) {
       console.error('[entry-playback] resolve failed', error);

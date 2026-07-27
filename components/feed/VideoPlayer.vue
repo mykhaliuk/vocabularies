@@ -186,7 +186,7 @@ onUnmounted(() => {
         <Video :size="15" aria-hidden="true" />
       </span>
       <span class="video__dur">{{
-        failed ? t('app.feed.audioUnavailable') : durationLabel
+        failed ? t('app.feed.playbackUnavailable') : durationLabel
       }}</span>
     </button>
 
