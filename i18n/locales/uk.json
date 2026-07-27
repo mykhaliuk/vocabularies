@@ -74,7 +74,23 @@
     },
     "feed": {
       "pageTitle": "Стрічка · Vocabu",
-      "placeholder": "Тут скоро житимуть ваші слова."
+      "empty": {
+        "title": "ще немає слів.",
+        "subtitle": "збережіть перше, що хтось скаже, і від чого ви всміхнетесь.",
+        "hint": "торкніться, щоб зберегти перше"
+      },
+      "end": "поки що це всі слова.",
+      "loadMore": "показати ще",
+      "loadMoreRetry": "не завантажилося — спробувати ще",
+      "playbackUnavailable": "це зараз не відтворюється.",
+      "failed": "не вдалося обробити це",
+      "loadError": "не вдалося завантажити ваші слова зараз.",
+      "normalizing": "обробляємо…",
+      "videoFailed": "це відео не вдалося обробити.",
+      "videoPlay": "відтворити відео",
+      "videoCollapse": "згорнути",
+      "audioPlay": "відтворити",
+      "audioPause": "пауза"
     },
     "discover": {
       "pageTitle": "Цікаве · Vocabu",
@@ -92,6 +108,7 @@
   },
   "me": {
     "pageTitle": "Мій профіль · Vocabu",
+    "backToFeed": "Назад до стрічки",
     "greeting": "Привіт, {name}",
     "emailLabel": "пошта: {email}",
     "avatar": {

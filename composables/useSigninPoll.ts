@@ -295,7 +295,7 @@ export const useSigninPoll = () => {
       });
       if (res.status === 'ready') {
         clear();
-        await navigateTo('/me');
+        await navigateTo('/feed');
         return 'ready';
       }
       return res.status === 'invalid' ? 'invalid' : 'expired';

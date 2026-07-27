@@ -52,7 +52,7 @@ const findLink = async (email) => {
     const line = [...lines]
       .reverse()
       .find((l) => l.includes(`to=${email}`) && l.includes('link='));
-    if (line) return /link=(\S+)/.exec(line)[1];
+    if (line) return /link=  (\S+)/.exec(line)[1];
     await sleep(100);
   }
   throw new Error(`no console link for ${email}`);

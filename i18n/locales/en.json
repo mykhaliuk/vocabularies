@@ -74,7 +74,23 @@
     },
     "feed": {
       "pageTitle": "Feed · Vocabu",
-      "placeholder": "Your words will live here soon."
+      "empty": {
+        "title": "no words yet.",
+        "subtitle": "keep the first thing someone says that makes you smile.",
+        "hint": "tap to keep your first one"
+      },
+      "end": "that's every word for now.",
+      "loadMore": "show more",
+      "loadMoreRetry": "that didn't load — try again",
+      "playbackUnavailable": "this one won't play right now.",
+      "failed": "couldn't process this one",
+      "loadError": "we couldn't load your words just now.",
+      "normalizing": "normalizing…",
+      "videoFailed": "this video didn't make it through.",
+      "videoPlay": "play video",
+      "videoCollapse": "collapse",
+      "audioPlay": "play",
+      "audioPause": "pause"
     },
     "discover": {
       "pageTitle": "Discover · Vocabu",
@@ -92,6 +108,7 @@
   },
   "me": {
     "pageTitle": "My profile · Vocabu",
+    "backToFeed": "Back to the feed",
     "greeting": "Hello, {name}",
     "emailLabel": "email: {email}",
     "avatar": {

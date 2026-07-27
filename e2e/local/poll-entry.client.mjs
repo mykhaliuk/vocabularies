@@ -141,7 +141,7 @@ export const run = async ({ base, findLink }) => {
       (await p.getByRole('button', { name: /send me a link/i }).count()) ===
         0 && (await codeInput.count()) === 1,
     );
-    check('failed confirm does NOT navigate to /me', pathOf(p) !== '/me');
+    check('failed confirm does NOT navigate to /feed', pathOf(p) !== '/feed');
     check(
       'failed confirm keeps "ask for a new link" reachable',
       (await p.getByRole('button', { name: /^resend$/i }).count()) === 1,
@@ -159,7 +159,7 @@ export const run = async ({ base, findLink }) => {
     const clicked = await clickAndReadCode(browser, link);
     check(
       'the emailed link still arms a fresh code page',
-      clicked.path !== '/me' && /^\d{4}$/.test(clicked.code),
+      clicked.path !== '/feed' && /^\d{4}$/.test(clicked.code),
       `code=${clicked.code}`,
     );
     await codeInput.click();
@@ -167,23 +167,23 @@ export const run = async ({ base, findLink }) => {
     await codeInput.pressSequentially(clicked.code, { delay: 10 });
     await p.getByRole('button', { name: /^confirm$/i }).click();
     try {
-      await p.waitForURL('**/me', { timeout: 20000 });
+      await p.waitForURL('**/feed', { timeout: 20000 });
     } catch {
       // reported below
     }
     check(
       'the real code still signs the PWA in after a failed confirm',
-      pathOf(p) === '/me',
+      pathOf(p) === '/feed',
       p.url(),
     );
     await clicked.safari.close();
 
     // The standalone context now holds a session — the returning-user case.
     console.log('\n== FIX A: a signed-in launch resolves to the app ==');
-    const relaunch = await gotoExpecting(standalone, `${base}/`, '**/me');
+    const relaunch = await gotoExpecting(standalone, `${base}/`, '**/feed');
     check(
-      'signed-in standalone `/` resolves to /me, not the sign-in form',
-      pathOf(relaunch) === '/me',
+      'signed-in standalone `/` resolves to /feed, not the sign-in form',
+      pathOf(relaunch) === '/feed',
       relaunch.url(),
     );
     check(
@@ -193,10 +193,10 @@ export const run = async ({ base, findLink }) => {
         .count()) === 0,
     );
 
-    const guarded = await gotoExpecting(standalone, `${base}/login`, '**/me');
+    const guarded = await gotoExpecting(standalone, `${base}/login`, '**/feed');
     check(
-      'authenticated visitor reaching /login is sent to /me',
-      pathOf(guarded) === '/me',
+      'authenticated visitor reaching /login is sent to /feed',
+      pathOf(guarded) === '/feed',
       guarded.url(),
     );
 
@@ -220,13 +220,13 @@ export const run = async ({ base, findLink }) => {
     const slowSignedInPage = await slowSignedIn.newPage();
     await slowSignedInPage.goto(`${base}/`);
     try {
-      await slowSignedInPage.waitForURL('**/me', { timeout: 25000 });
+      await slowSignedInPage.waitForURL('**/feed', { timeout: 25000 });
     } catch {
       // assertion reports the actual URL
     }
     check(
       'signed-in + timed-out first probe still reaches the app',
-      pathOf(slowSignedInPage) === '/me',
+      pathOf(slowSignedInPage) === '/feed',
       slowSignedInPage.url(),
     );
     await slowSignedIn.close();
@@ -332,13 +332,13 @@ export const run = async ({ base, findLink }) => {
     await lateInput.pressSequentially(lateClicked.code, { delay: 10 });
     await lp.getByRole('button', { name: /^confirm$/i }).click();
     try {
-      await lp.waitForURL('**/me', { timeout: 20000 });
+      await lp.waitForURL('**/feed', { timeout: 20000 });
     } catch {
       // assertion reports the actual URL
     }
     check(
       'a code entered past the old client deadline still signs in',
-      pathOf(lp) === '/me',
+      pathOf(lp) === '/feed',
       lp.url(),
     );
     await lateClicked.safari.close();
