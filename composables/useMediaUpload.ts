@@ -20,7 +20,9 @@ export type ComposePhase =
 export interface ComposeInput {
   word: string;
   gloss: string;
-  speaker: string;
+  // Speaker id from the chip row (VKB-97); null attributes the word to the
+  // user themselves.
+  sid: string | null;
   story: string;
   file: File | null;
 }
@@ -133,7 +135,7 @@ export const useMediaUpload = () => {
           body: {
             word: input.word.trim(),
             gloss: input.gloss.trim() || undefined,
-            speaker: input.speaker.trim() || undefined,
+            sid: input.sid ?? undefined,
             story: input.story.trim() || undefined,
             media: input.file
               ? { contentType: input.file.type, sizeBytes: input.file.size }

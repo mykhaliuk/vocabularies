@@ -90,7 +90,13 @@
       "videoPlay": "lire la vidéo",
       "videoCollapse": "replier",
       "audioPlay": "lire",
-      "audioPause": "pause"
+      "audioPause": "pause",
+      "you": "Vous",
+      "age": {
+        "newborn": "nouveau-né",
+        "months": "{n} mois",
+        "years": "{n} ans"
+      }
     },
     "compose": {
       "title": "Nouveau mot",
@@ -100,11 +106,31 @@
       "wordLabel": "Le mot ou la phrase",
       "wordPlaceholder": "ex. Appo — ou toute une expression",
       "speakerLabel": "Qui l'a dit",
-      "speakerPlaceholder": "Mira, Papa, Théo…",
       "glossLabel": "Sens (facultatif)",
       "glossPlaceholder": "pastèque",
       "storyLabel": "L'histoire (facultatif)",
       "storyPlaceholder": "Quand le dit-on ? Pourquoi ça compte ?",
+      "speaker": {
+        "someoneNew": "quelqu'un de nouveau",
+        "nameLabel": "Nom",
+        "namePlaceholder": "Mira",
+        "relLabel": "Lien",
+        "relPlaceholder": "ma fille",
+        "optional": "— facultatif",
+        "birthdayLabel": "Anniversaire",
+        "hintEmpty": "ajoutez-le et chaque mot se souviendra de leur âge.",
+        "hintFilled": "iels ont {age} aujourd'hui. chaque mot retient l'âge qu'iels avaient à ce moment-là.",
+        "add": "Ajouter",
+        "adding": "Ajout…",
+        "createError": "impossible de l'ajouter. réessayez.",
+        "rel": {
+          "daughter": "ma fille",
+          "son": "mon fils",
+          "dad": "mon père",
+          "mum": "ma mère",
+          "bestFriend": "meilleur ami"
+        }
+      },
       "media": {
         "ctaCombined": "envoyer un clip vocal ou une vidéo",
         "ctaAudio": "envoyer un clip vocal",

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Loader2 } from 'lucide-vue-next';
+import type { SpeakerView } from '~/server/utils/speaker-view';
 
 // Compose bottom sheet (prototype compose.jsx / compose-dark screenshot),
 // adapted to upload-first (VKB-67). Rises over the blurred app behind it.
@@ -20,11 +21,34 @@ const videoLimitLabel = computed(() => {
 });
 
 const word = ref('');
-const speaker = ref('');
+const sid = ref<string | null>(null);
 const gloss = ref('');
 const story = ref('');
 const file = ref<File | null>(null);
 const wordInput = ref<HTMLInputElement | null>(null);
+
+// The chip row's people. Fetched on every sheet OPENING, never while it is
+// open: the MRU order settles between sessions, so chips do not move under
+// the thumb (speaker-spec §Creation flow). A failed fetch degrades to just
+// "＋ someone new" — attribution is optional, the word is not blocked.
+const speakersList = ref<SpeakerView[]>([]);
+
+const loadSpeakers = async () => {
+  try {
+    const res = await $fetch<{ speakers: SpeakerView[] }>('/api/speakers', {
+      credentials: 'include',
+    });
+    speakersList.value = res.speakers;
+  } catch (error) {
+    console.error('[ComposeSheet] speakers load failed', error);
+  }
+};
+
+// A person created inline joins the end of the row already selected; the
+// MRU order catches up on the next opening.
+const onSpeakerCreated = (speaker: SpeakerView) => {
+  speakersList.value = [...speakersList.value, speaker];
+};
 
 const isBusy = computed(
   () =>
@@ -46,7 +70,7 @@ const liveStatus = computed(() => {
 
 const resetForm = () => {
   word.value = '';
-  speaker.value = '';
+  sid.value = null;
   gloss.value = '';
   story.value = '';
   file.value = null;
@@ -67,6 +91,7 @@ watch(isOpen, (open) => {
     return;
   }
   resetForm();
+  void loadSpeakers();
   focusTimer = setTimeout(() => wordInput.value?.focus(), 280);
 });
 
@@ -93,7 +118,7 @@ const onKeep = async () => {
   const result = await submit({
     word: word.value,
     gloss: gloss.value,
-    speaker: speaker.value,
+    sid: sid.value,
     story: story.value,
     file: file.value,
   });
@@ -147,31 +172,30 @@ const onKeep = async () => {
           autocomplete="off"
         />
 
-        <div class="compose__pair">
-          <div class="compose__field">
-            <label class="compose__field-label" for="compose-speaker">
-              {{ t('app.compose.speakerLabel') }}
-            </label>
-            <input
-              id="compose-speaker"
-              v-model="speaker"
-              class="compose__input"
-              :placeholder="t('app.compose.speakerPlaceholder')"
-              autocomplete="off"
-            />
-          </div>
-          <div class="compose__field">
-            <label class="compose__field-label" for="compose-gloss">
-              {{ t('app.compose.glossLabel') }}
-            </label>
-            <input
-              id="compose-gloss"
-              v-model="gloss"
-              class="compose__input"
-              :placeholder="t('app.compose.glossPlaceholder')"
-              autocomplete="off"
-            />
-          </div>
+        <div class="compose__field">
+          <span class="compose__field-label">
+            {{ t('app.compose.speakerLabel') }}
+          </span>
+          <ComposeSpeakerChips
+            class="compose__chips"
+            :speakers="speakersList"
+            :selected="sid"
+            @update:selected="sid = $event"
+            @created="onSpeakerCreated"
+          />
+        </div>
+
+        <div class="compose__field">
+          <label class="compose__field-label" for="compose-gloss">
+            {{ t('app.compose.glossLabel') }}
+          </label>
+          <input
+            id="compose-gloss"
+            v-model="gloss"
+            class="compose__input"
+            :placeholder="t('app.compose.glossPlaceholder')"
+            autocomplete="off"
+          />
         </div>
 
         <div class="compose__field">
@@ -388,19 +412,12 @@ const onKeep = async () => {
   border-bottom-color: var(--primary);
 }
 
-.compose__pair {
-  display: flex;
-  gap: 12px;
-  margin-top: 18px;
-}
-.compose__pair .compose__field {
-  flex: 1;
-  min-width: 0;
-  margin-top: 0;
-}
-
 .compose__field {
   margin-top: 18px;
+}
+
+.compose__chips {
+  margin-top: 7px;
 }
 
 .compose__input {

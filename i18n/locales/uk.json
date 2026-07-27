@@ -90,7 +90,13 @@
       "videoPlay": "відтворити відео",
       "videoCollapse": "згорнути",
       "audioPlay": "відтворити",
-      "audioPause": "пауза"
+      "audioPause": "пауза",
+      "you": "Ви",
+      "age": {
+        "newborn": "немовля",
+        "months": "{n} міс",
+        "years": "{n} р"
+      }
     },
     "compose": {
       "title": "Нове слово",
@@ -100,11 +106,31 @@
       "wordLabel": "Слово або фраза",
       "wordPlaceholder": "напр. Appo — чи цілий вислів",
       "speakerLabel": "Хто це сказав",
-      "speakerPlaceholder": "Міра, Тато, Тео…",
       "glossLabel": "Значення (необов'язково)",
       "glossPlaceholder": "кавун",
       "storyLabel": "Історія (необов'язково)",
       "storyPlaceholder": "Коли це кажуть? Чому це важливо?",
+      "speaker": {
+        "someoneNew": "хтось новий",
+        "nameLabel": "Ім'я",
+        "namePlaceholder": "Міра",
+        "relLabel": "Зв'язок",
+        "relPlaceholder": "моя донька",
+        "optional": "— необов'язково",
+        "birthdayLabel": "День народження",
+        "hintEmpty": "додайте — і кожне слово пам'ятатиме, скільки їм було.",
+        "hintFilled": "їм зараз {age}. кожне слово пам'ятає вік, у якому його сказали.",
+        "add": "Додати",
+        "adding": "Додаємо…",
+        "createError": "не вдалося додати. спробуйте ще.",
+        "rel": {
+          "daughter": "моя донька",
+          "son": "мій син",
+          "dad": "мій тато",
+          "mum": "моя мама",
+          "bestFriend": "найкращий друг"
+        }
+      },
       "media": {
         "ctaCombined": "завантажте голосовий кліп або відео",
         "ctaAudio": "завантажте голосовий кліп",

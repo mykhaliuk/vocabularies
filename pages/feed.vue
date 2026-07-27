@@ -15,11 +15,19 @@ type FeedMedia = {
   error: string | null;
 };
 
+type FeedSpeaker = {
+  name: string;
+  tone: 'rose' | 'blue' | 'ink' | null;
+  rel: string | null;
+  birthday: string | null;
+};
+
 type FeedEntry = {
   id: string;
   word: string;
   gloss: string | null;
-  speaker: string | null;
+  speaker: FeedSpeaker | null;
+  saidAt: string;
   story: string | null;
   collection: string | null;
   createdAt: string;
