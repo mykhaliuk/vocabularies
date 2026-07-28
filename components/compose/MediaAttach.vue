@@ -82,10 +82,29 @@ const videoLimitLabel = computed(() =>
   limits.value ? durationLabel(limits.value.maxVideoDurationSec) : '',
 );
 
+// MP4-family containers state their duration in moov/mvhd regardless of the
+// codec, so they get a byte-level read FIRST: the media-element probe below
+// goes blind exactly when the codec is undecodable (ALAC in .m4a fires
+// `error`), which used to fail open and ship a too-long file to the server.
+const MP4_FAMILY_TYPES = new Set([
+  'audio/mp4',
+  'audio/x-m4a',
+  'audio/3gpp',
+  'video/mp4',
+  'video/quicktime',
+  'video/3gpp',
+]);
+const MP4_FAMILY_EXTENSIONS = ['.m4a', '.mp4', '.mov', '.3gp'];
+
+const isMp4Family = (file: File): boolean =>
+  MP4_FAMILY_TYPES.has(file.type) ||
+  (file.type === '' &&
+    MP4_FAMILY_EXTENSIONS.some((ext) => file.name.toLowerCase().endsWith(ext)));
+
 // Best-effort client-side duration guard, mirroring the server's caps so a
 // client rejection reads exactly like a server rejection. Resolves true when
 // the container is unreadable — the server still checks.
-const withinDuration = (file: File, limitSec: number) =>
+const probeElementDuration = (file: File, limitSec: number) =>
   new Promise<boolean>((resolve) => {
     const element = document.createElement(
       isVideoFile(file) ? 'video' : 'audio',
@@ -110,6 +129,17 @@ const withinDuration = (file: File, limitSec: number) =>
     });
     element.src = url;
   });
+
+const withinDuration = async (
+  file: File,
+  limitSec: number,
+): Promise<boolean> => {
+  if (isMp4Family(file)) {
+    const containerSec = await readMp4DurationSec(file);
+    if (containerSec !== null) return containerSec <= limitSec + 1;
+  }
+  return probeElementDuration(file, limitSec);
+};
 
 const accept = async (file: File | undefined) => {
   if (!file) return;
