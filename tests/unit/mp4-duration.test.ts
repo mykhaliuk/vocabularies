@@ -1,4 +1,3 @@
-import { existsSync } from 'node:fs';
 import { readFileSync } from 'node:fs';
 import { describe, expect, test } from 'bun:test';
 import {
@@ -108,16 +107,12 @@ describe('readMp4DurationSec', () => {
   });
 
   // The real thing: the ALAC voice file the browser cannot decode but the
-  // container fully describes. Skipped when the local fixture is absent —
-  // it is a 25MB binary that lives outside the repo.
+  // container fully describes (the report that motivated this parser).
   const FIXTURE = 'tests/assets/too-big-audio-file.m4a';
-  test.skipIf(!existsSync(FIXTURE))(
-    'reads the ALAC fixture the media element cannot',
-    async () => {
-      const file = new File([readFileSync(FIXTURE)], 'too-big.m4a');
-      const duration = await readMp4DurationSec(file);
-      expect(duration).not.toBeNull();
-      expect(duration as number).toBeCloseTo(514.56, 1);
-    },
-  );
+  test('reads the ALAC fixture the media element cannot', async () => {
+    const file = new File([readFileSync(FIXTURE)], 'too-big.m4a');
+    const duration = await readMp4DurationSec(file);
+    expect(duration).not.toBeNull();
+    expect(duration as number).toBeCloseTo(514.56, 1);
+  });
 });
