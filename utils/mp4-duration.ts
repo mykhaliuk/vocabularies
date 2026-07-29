@@ -67,7 +67,12 @@ export const parseMvhdDurationSec = (moov: DataView): number | null => {
       if (version === 1) {
         if (fields + 28 > moov.byteLength) return null;
         const timescale = moov.getUint32(fields + 16);
-        const duration = readUint64(moov, fields + 20);
+        const raw = moov.getBigUint64(fields + 20);
+        // All-ones is the 64-bit "unknown" sentinel (v0's 0xffffffff); and a
+        // duration past Number's safe range is a corrupt file, not a long one.
+        if (raw === 0xffffffffffffffffn) return null;
+        const duration = Number(raw);
+        if (!Number.isSafeInteger(duration)) return null;
         return timescale > 0 ? duration / timescale : null;
       }
       if (fields + 16 > moov.byteLength) return null;

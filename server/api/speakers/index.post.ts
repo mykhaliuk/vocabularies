@@ -1,19 +1,17 @@
 import { z } from 'zod';
+import { isValidIsoDate } from '~/shared/speaker-age';
 import { createSpeaker } from '~/server/domain/speakers';
 import { requireUser } from '~/server/utils/auth';
 import { toHttpError } from '~/server/utils/http-errors';
 import { toSpeakerView } from '~/server/utils/speaker-view';
 
-const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
-
 const Body = z.object({
   name: z.string().trim().min(1).max(200),
   rel: z.string().trim().max(200).optional(),
-  birthday: z
-    .string()
-    .regex(DATE_ONLY)
-    .refine((value) => !Number.isNaN(new Date(value + 'T00:00:00Z').getTime()))
-    .optional(),
+  // Round-trip validation: V8 normalises a day overflow ('2026-02-30' parses
+  // as March 2nd), and Postgres would then 500 on the literal — refuse it as
+  // the 400 it really is.
+  birthday: z.string().refine(isValidIsoDate).optional(),
 });
 
 // Inline creation from the compose sheet ("＋ someone new") — and later the

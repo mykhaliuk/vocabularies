@@ -12,6 +12,18 @@ export type SpeakerAge =
   | { kind: 'months'; n: number }
   | { kind: 'years'; n: number };
 
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+// A real calendar day, not merely a parseable string: V8 normalises a day
+// overflow in ISO strings ('2026-02-30' parses as March 2nd) instead of
+// rejecting it, so the parse must round-trip back to the same YYYY-MM-DD.
+export const isValidIsoDate = (value: string): boolean => {
+  if (!ISO_DATE.test(value)) return false;
+  const parsed = new Date(value + 'T00:00:00Z');
+  if (Number.isNaN(parsed.getTime())) return false;
+  return parsed.toISOString().slice(0, 10) === value;
+};
+
 // Both arguments are plain YYYY-MM-DD strings (Postgres `date` columns come
 // through the API as exactly that). Calendar months, rounded down; a
 // birthday after the anchor derives nothing, silently — data can be messy.
@@ -20,11 +32,9 @@ export const speakerAgeAt = (
   saidAt: string,
 ): SpeakerAge | null => {
   if (!birthday) return null;
+  if (!isValidIsoDate(birthday) || !isValidIsoDate(saidAt)) return null;
   const born = new Date(birthday + 'T00:00:00Z');
   const anchor = new Date(saidAt + 'T00:00:00Z');
-  if (Number.isNaN(born.getTime()) || Number.isNaN(anchor.getTime())) {
-    return null;
-  }
   if (born > anchor) return null;
 
   let months =

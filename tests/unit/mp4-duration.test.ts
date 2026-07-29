@@ -77,6 +77,20 @@ describe('parseMvhdDurationSec', () => {
     expect(parseMvhdDurationSec(view(moov))).toBeNull();
   });
 
+  test('the 64-bit unknown sentinel proves nothing either', () => {
+    const body = [
+      1,
+      0,
+      0,
+      0,
+      ...u64(0),
+      ...u64(0),
+      ...u32(600),
+      ...Array.from({ length: 8 }, () => 0xff),
+    ];
+    expect(parseMvhdDurationSec(view(box('mvhd', body)))).toBeNull();
+  });
+
   test('a zero timescale proves nothing', () => {
     const moov = mvhdV0(0, 1000);
     expect(parseMvhdDurationSec(view(moov))).toBeNull();

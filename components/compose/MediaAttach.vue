@@ -46,17 +46,9 @@ const { t } = useI18n();
 // catch it here and say something a person can act on.
 const ALLOWED_TYPES: ReadonlySet<string> = new Set(ALLOWED_MEDIA_CONTENT_TYPES);
 
-// Kind inference: the MIME type decides, and the extension is only a fallback
-// for the containers that carry both (a .mov arriving as application/octet-
-// stream from some Android pickers). Never the filename alone.
-const VIDEO_EXTENSIONS = ['.mov', '.mp4', '.webm', '.mkv', '.3gp'];
-
-const isVideoFile = (file: File): boolean => {
-  if (file.type.startsWith('video/')) return true;
-  if (file.type.startsWith('audio/')) return false;
-  const name = file.name.toLowerCase();
-  return VIDEO_EXTENSIONS.some((extension) => name.endsWith(extension));
-};
+// Kind inference for files that already passed the roster gate, so the MIME
+// type is always present and decides alone.
+const isVideoFile = (file: File): boolean => file.type.startsWith('video/');
 
 const canUploadVideo = computed(() => props.entitlements?.videoUpload === true);
 const limits = computed(() => props.entitlements);
@@ -94,12 +86,8 @@ const MP4_FAMILY_TYPES = new Set([
   'video/quicktime',
   'video/3gpp',
 ]);
-const MP4_FAMILY_EXTENSIONS = ['.m4a', '.mp4', '.mov', '.3gp'];
 
-const isMp4Family = (file: File): boolean =>
-  MP4_FAMILY_TYPES.has(file.type) ||
-  (file.type === '' &&
-    MP4_FAMILY_EXTENSIONS.some((ext) => file.name.toLowerCase().endsWith(ext)));
+const isMp4Family = (file: File): boolean => MP4_FAMILY_TYPES.has(file.type);
 
 // Best-effort client-side duration guard, mirroring the server's caps so a
 // client rejection reads exactly like a server rejection. Resolves true when
@@ -145,7 +133,10 @@ const accept = async (file: File | undefined) => {
   if (!file) return;
   localError.value = null;
 
-  if (!ALLOWED_TYPES.has(file.type) && !isVideoFile(file)) {
+  // Strict roster gate: the server requires a contentType from the same
+  // roster, so anything outside it (including an empty type from an odd
+  // picker) would only die later as a bare 400 — say it here instead.
+  if (!ALLOWED_TYPES.has(file.type)) {
     localError.value = t('app.compose.media.invalidType');
     return;
   }
@@ -219,10 +210,13 @@ const isMediaFailure = computed(
 );
 
 // Only free users can be offered the picker without video; premium's combined
-// control accepts both, so the input filter follows the tier.
-const acceptAttribute = computed(() =>
-  canUploadVideo.value ? 'audio/*,video/*' : 'audio/*',
-);
+// control accepts both. While entitlements are unresolved the filter stays
+// wide open — narrowing it would GUESS a tier and block a premium user's
+// video pick; the guards are skipped, and the server stays the gate.
+const acceptAttribute = computed(() => {
+  if (limits.value === null) return 'audio/*,video/*';
+  return canUploadVideo.value ? 'audio/*,video/*' : 'audio/*';
+});
 
 // A static bar field that reads as a waveform while bytes move. Heights are
 // deterministic (no Math.random, so SSR and client agree) and the lit count

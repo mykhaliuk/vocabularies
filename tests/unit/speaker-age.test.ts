@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { speakerAgeAt } from '../../shared/speaker-age';
+import { isValidIsoDate, speakerAgeAt } from '../../shared/speaker-age';
 
 // The age rule (VKB-97, speaker-spec.html §The age rule): measure the
 // birthday against saidAt, never against today. The worked example is the
@@ -68,5 +68,22 @@ describe('speakerAgeAt', () => {
   test('garbage dates derive nothing rather than NaN copy', () => {
     expect(speakerAgeAt('not-a-date', '2026-07-20')).toBeNull();
     expect(speakerAgeAt('2024-09-14', 'not-a-date')).toBeNull();
+  });
+
+  // V8 normalises an ISO day overflow instead of rejecting it — a birthday
+  // of Feb 30th must derive nothing, not the age of March 2nd.
+  test('normalised-but-impossible calendar days derive nothing', () => {
+    expect(speakerAgeAt('2026-02-30', '2026-07-20')).toBeNull();
+    expect(speakerAgeAt('2024-09-14', '2026-02-30')).toBeNull();
+  });
+});
+
+describe('isValidIsoDate', () => {
+  test('accepts a real day, rejects overflow and shape violations', () => {
+    expect(isValidIsoDate('2026-02-28')).toBe(true);
+    expect(isValidIsoDate('2026-02-30')).toBe(false);
+    expect(isValidIsoDate('2026-13-01')).toBe(false);
+    expect(isValidIsoDate('2026-2-8')).toBe(false);
+    expect(isValidIsoDate('not-a-date')).toBe(false);
   });
 });

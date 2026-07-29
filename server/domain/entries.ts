@@ -106,7 +106,16 @@ export const getFeedPage = async (
   const rows = await db
     .select({ entry: entries, speaker: speakers, media })
     .from(entries)
-    .leftJoin(speakers, eq(speakers.id, entries.sid))
+    .leftJoin(
+      speakers,
+      and(
+        eq(speakers.id, entries.sid),
+        // Belt and braces: sid is only ever written through getOwnSpeaker,
+        // but a private person's rel/birthday must not leak even if a row
+        // goes bad — the join refuses a cross-owner speaker outright.
+        eq(speakers.ownerId, entries.ownerId),
+      ),
+    )
     .leftJoin(media, eq(media.entryId, entries.id))
     .where(and(...conditions))
     .orderBy(desc(entries.createdAt), desc(entries.id))
@@ -127,7 +136,10 @@ export const getOwnEntry = async (
   const [row] = await db
     .select({ entry: entries, speaker: speakers, media })
     .from(entries)
-    .leftJoin(speakers, eq(speakers.id, entries.sid))
+    .leftJoin(
+      speakers,
+      and(eq(speakers.id, entries.sid), eq(speakers.ownerId, entries.ownerId)),
+    )
     .leftJoin(media, eq(media.entryId, entries.id))
     .where(and(eq(entries.id, entryId), eq(entries.ownerId, ownerId)))
     .limit(1);
