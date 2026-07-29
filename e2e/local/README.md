@@ -1,6 +1,7 @@
-# Local-only integration tests (poll/claim sign-in, VKB-70)
+# Local-only integration tests (poll/claim sign-in VKB-70, compose VKB-67)
 
-These tests exercise the installed-PWA poll/claim sign-in flow end to end. They
+These tests exercise the installed-PWA poll/claim sign-in flow and the compose
+write path end to end. They
 need a **live Postgres** and the **console email driver**, so they are **not**
 part of the CI e2e suite (`bun run test:e2e`), which deliberately covers only
 DB-free routes so CI needs no infra. They are excluded from the Playwright
@@ -37,7 +38,16 @@ That runs `infra:up` (OrbStack Postgres + MinIO) and then, under the local env,
    and the poll key, after which the real code still signs the PWA in (re-adding
    a `clear()` on a failed confirm fails these); a non-standalone `/login` and
    the landing show the plain message with no code field and no redirect,
-5. tears the dev server down.
+5. runs `compose.client.mjs` — the VKB-67 compose write path: a signed-in
+   desktop jar composes a text-only word and one with a generated 1s WAV
+   fixture; both appear in the feed without a reload, and the voice entry is
+   polled to `ready` in place (counting the feed's own `/api/entries` GETs, so
+   the postedVersion → merge → poll-restart chain leaves evidence). The
+   free-tier video gate is exercised against the real server verdict
+   (403 `VIDEO_UPLOAD_FORBIDDEN` → the premium branch and sheet), never a
+   client guess. Needs MinIO and the inline (no-QStash) transcode path — both
+   part of the same `infra:up` local stack,
+6. tears the dev server down.
 
 `helpers.mjs` holds the shared standalone-signal init script and the
 click-and-read-code helper used by both client suites.

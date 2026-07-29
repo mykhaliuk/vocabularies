@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Speaker creation — spec</title>
+<link rel="stylesheet" href="../_ds/vocabu-design-system-fc456a27-02a5-4423-9181-3fc0311e1354/colors_and_type.css" />
+<script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+<style>
+*{box-sizing:border-box}html,body{margin:0}
+body{background:var(--paper);color:var(--ink);font-family:var(--font-sans);-webkit-font-smoothing:antialiased}
+.wrap{max-width:1040px;margin:0 auto;padding:56px 28px 96px}
+.eyebrow{display:flex;align-items:center;gap:9px;font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3)}
+.eyebrow i{width:7px;height:7px;border-radius:50%;background:var(--primary);display:inline-block}
+h1{font-size:38px;font-weight:800;letter-spacing:-.03em;line-height:1.1;margin:14px 0 0}
+.lede{font-size:17px;line-height:1.55;color:var(--ink-2);max-width:660px;margin:14px 0 0;text-wrap:pretty}
+.meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
+.tag{font-size:12.5px;font-weight:600;padding:6px 11px;border-radius:var(--r-pill);background:var(--surface-sunk);color:var(--ink-2)}
+.tag.rose{background:var(--primary-soft);color:var(--on-primary-soft)}
+h2{font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:0 0 20px}
+section{margin-top:64px;border-top:1px solid var(--hairline);padding-top:26px}
+h3{font-size:21px;font-weight:700;letter-spacing:-.02em;margin:0 0 8px}
+p{font-size:15.5px;line-height:1.6;color:var(--ink-2);margin:0 0 14px;max-width:680px;text-wrap:pretty}
+p b,li b,td b{color:var(--ink);font-weight:600}
+ul{margin:0 0 14px;padding-left:20px;max-width:680px}
+li{font-size:15.5px;line-height:1.6;color:var(--ink-2);margin-bottom:7px}
+ol{margin:0 0 14px;padding-left:20px;max-width:680px}
+ol li{margin-bottom:10px}
+.answers{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-top:8px}
+.ans{background:var(--surface);border:1px solid var(--hairline);border-radius:var(--r-lg);box-shadow:var(--shadow-sm);padding:20px}
+.ans .q{font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-3);margin-bottom:8px}
+.ans .a{font-size:16.5px;font-weight:700;letter-spacing:-.01em;color:var(--ink);line-height:1.35;margin-bottom:8px}
+.ans p{font-size:14.5px;margin:0}
+.cap{font-size:13px;font-weight:600;color:var(--ink-2);margin:34px 0 9px}
+.cap span{color:var(--ink-3);font-weight:400}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
+.frame{background:var(--paper);border:1px solid var(--hairline);border-radius:var(--r-lg);padding:20px 18px}
+.frame[data-theme="dark"]{border-color:var(--hairline)}
+.mob{max-width:360px;margin:0 auto}
+table{border-collapse:collapse;width:100%;margin-top:6px}
+th{text-align:left;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);padding:0 12px 10px 0;border-bottom:1px solid var(--hairline)}
+td{font-size:14px;line-height:1.5;color:var(--ink-2);padding:12px 12px 12px 0;border-bottom:1px solid var(--hairline);vertical-align:top}
+td:first-child{color:var(--ink);font-weight:600;white-space:nowrap}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;background:var(--surface-sunk);color:var(--ink);padding:2px 5px;border-radius:var(--r-xs)}
+a{color:var(--link)}a:hover{color:var(--secondary-hover)}
+.callout{background:var(--primary-soft);border:1px solid var(--primary-soft-border);border-radius:var(--r-md);padding:18px 20px;max-width:680px;margin:0 0 20px}
+.callout p{margin:0;color:var(--on-primary-soft)}
+.callout p b{color:var(--on-primary-soft)}
+/* ── component mocks (values lifted from speakers.jsx) ── */
+.lbl{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-3);margin-bottom:7px}
+.lbl em{text-transform:none;letter-spacing:0;font-weight:400;font-style:normal}
+.chips{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:13.5px;font-weight:600;padding:8px 13px;border-radius:var(--r-sm);background:var(--surface);border:1.5px solid var(--hairline-2);color:var(--ink-2);min-height:38px}
+.chip.on{background:var(--primary-soft);border-color:var(--primary-soft-border);color:var(--on-primary-soft)}
+.chip svg{width:15px;height:15px}
+.field{border:1.5px solid var(--hairline-2);background:var(--surface);border-radius:var(--r-sm);padding:12px 13px;font-size:16px;color:var(--ink);min-height:46px;display:flex;align-items:center}
+.field.ph{color:var(--ink-3)}
+.panel{border:1.5px solid var(--primary-soft-border);background:var(--primary-soft);border-radius:var(--r-md);padding:14px;display:flex;flex-direction:column;gap:14px;margin-top:10px}
+.grp{display:flex;flex-direction:column;gap:6px}
+.hint{font-size:12.5px;color:var(--ink-3);line-height:1.4}
+.hint b{color:var(--ink-2);font-weight:600}
+.acts{display:flex;gap:8px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:34px;padding:0 13px;border-radius:var(--r-btn);background:var(--primary-action);color:var(--text-on-accent);font-size:14px;font-weight:600}
+.btn.ghost{background:transparent;color:var(--primary-hover)}
+.btn.off{opacity:.55}
+.btn.lg{min-height:50px;font-size:16px;width:100%;box-shadow:var(--shadow-float)}
+.list{border:1px solid var(--hairline);border-radius:var(--r-lg);background:var(--surface);overflow:hidden}
+.prow{display:flex;align-items:center;gap:12px;padding:12px 14px;min-height:44px}
+.prow+.prow{border-top:1px solid var(--hairline);margin-left:0}
+.av{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex:0 0 auto}
+.av.rose{background:var(--rose-200);color:var(--rose-700)}
+.av.blue{background:var(--blue-200);color:var(--blue-700)}
+.av.ink{background:var(--surface-sunk);color:var(--ink-2)}
+.prow .nm{font-size:15px;font-weight:600;color:var(--ink)}
+.prow .sub{font-size:13px;color:var(--ink-3);margin-top:1px}
+.prow .ct{margin-left:auto;font-size:13px;color:var(--ink-3);white-space:nowrap}
+.prow svg{width:17px;height:17px;color:var(--ink-3)}
+.metaline{font-size:13.5px;line-height:1.3;white-space:nowrap}
+.metaline b{font-weight:600;color:var(--ink)}
+.metaline span{color:var(--ink-3);font-weight:400}
+.entry{border-bottom:1px solid var(--hairline);padding:14px 0}
+.entry .w{font-family:var(--font-hand);font-size:30px;font-weight:500;color:var(--ink);margin-top:8px;line-height:1.2}
+.entry .k{font-size:12px;color:var(--ink-3);margin-top:6px}
+@media(max-width:720px){.pair{grid-template-columns:1fr}h1{font-size:30px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow"><i></i>Design spec · handoff back to product</div>
+  <h1>Speaker creation</h1>
+  <p class="lede">A speaker stops being a string typed into a field and becomes a person you keep. Created where you need them — inside compose — and managed under your dictionary. Name is the only thing we ask for. Birthday is the quiet payoff: every word remembers how old they were when they said it.</p>
+  <div class="meta"><span class="tag rose">speaker entity</span><span class="tag rose">derived age</span><span class="tag">supersedes free-text “who said it”</span><span class="tag">27 Jul 2026</span></div>
+
+  <section>
+    <h2>The decisions</h2>
+    <div class="answers">
+      <div class="ans">
+        <div class="q">Q1 · where is a speaker born</div>
+        <div class="a">Inline in compose</div>
+        <p>The chip row of your people, plus <b>＋ someone new</b> — the same select/add mechanic collections already use. Creating a person never costs you the word you were in the middle of writing.</p>
+      </div>
+      <div class="ans">
+        <div class="q">Q2 · what do we require</div>
+        <div class="a">Name only</div>
+        <p>Relation and birthday are optional and stay optional forever. A speaker with just a name is a complete speaker — the meta line simply reads <code>Theo</code>.</p>
+      </div>
+      <div class="ans">
+        <div class="q">Q3 · does the age move</div>
+        <div class="a">No — it freezes with the word</div>
+        <p>The age shown on an entry is the age they were <b>on the day it was said</b>. That is the memory. Their age <i>today</i> appears only where we're talking about the person, not a word.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>The object</h2>
+    <h3>Speaker</h3>
+    <p>Owned by one user, private, never published. An entry points at a speaker by id; it does not carry the relation or the age.</p>
+    <table>
+      <tr><th>Field</th><th>Required</th><th>Notes</th></tr>
+      <tr><td>id</td><td>yes</td><td>Stable. Renaming a person must not orphan their words.</td></tr>
+      <tr><td>name</td><td><b>yes</b></td><td>Free text, as they're actually called — “Dad”, “Nonna”, “Mira”. Not a legal name.</td></tr>
+      <tr><td>rel</td><td>no</td><td>Free text with suggestion chips. Resolves live: fix it once and every word updates.</td></tr>
+      <tr><td>birthday</td><td>no</td><td>Date. Never displayed as a date — only as a derived age. Corrigible.</td></tr>
+      <tr><td>tone</td><td>auto</td><td>Assigned at creation, cycling rose → blue → ink. Drives the avatar everywhere.</td></tr>
+    </table>
+    <h3 style="margin-top:34px">Entry, changed</h3>
+    <table>
+      <tr><th>Field</th><th>Was</th><th>Now</th></tr>
+      <tr><td>sid</td><td>—</td><td>Points at the speaker.</td></tr>
+      <tr><td>speaker / tone</td><td>Authored per entry</td><td>Denormalised copy for cheap rendering; the speaker record wins.</td></tr>
+      <tr><td>rel</td><td><code>"my daughter · 22 mo"</code> — a frozen string</td><td><b>Gone.</b> Derived from speaker + <code>saidAt</code>.</td></tr>
+      <tr><td>saidAt</td><td>—</td><td><b>Required, never null.</b> The day the words were said. Set to <code>created_at</code> when the entry is written; correctable by the user afterwards.</td></tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>The age rule</h2>
+    <div class="callout"><p><b>Measure the birthday against <code>saidAt</code>, never against today.</b> A word said when she was 12 months old reads “12 mo” for the rest of her life. Today's date only enters the picture on the people screen, where we're describing the person rather than a moment.</p></div>
+
+    <h3>One field, always set</h3>
+    <p><code>saidAt</code> is required and non-nullable. It is initialised to <code>created_at</code> at insert and edited in place — there is no fallback chain and no “unset” state to reason about. <code>created_at</code> stays what it is: an audit field about the row, not about the memory.</p>
+    <p><b>Rejected: inferring the date from clip metadata.</b> It looked like the truest anchor — an old recording uploaded today <i>was</i> said back then — but capture dates are wrong often enough to matter: broken device clocks, timezone drift, messaging apps that stamp the re-encode. A confidently wrong date silently mis-ages a memory and reads as truth. <code>created_at</code> is at worst a little late, and the user can fix it.</p>
+
+    <h3 style="margin-top:34px">Format</h3>
+    <table>
+      <tr><th>Condition</th><th>Renders</th></tr>
+      <tr><td>no birthday</td><td>nothing — the meta line is just name · relation</td></tr>
+      <tr><td>under 1 month</td><td><code>newborn</code></td></tr>
+      <tr><td>1–23 months</td><td><code>7 mo</code> · <code>22 mo</code> — whole months, rounded down</td></tr>
+      <tr><td>24 months and over</td><td><code>3 y</code> · <code>41 y</code> — whole years, rounded down</td></tr>
+      <tr><td>birthday after <code>saidAt</code></td><td>nothing — silently, no error. Data can be messy.</td></tr>
+    </table>
+
+    <p class="cap">The freeze, worked through <span>— Mira, born 14 Sep 2024. Read today, 27 Jul 2026, and in five years.</span></p>
+    <table>
+      <tr><th>Word</th><th>Anchor</th><th>Shows</th><th>In 2031</th></tr>
+      <tr><td>pasketti</td><td>said 20 Sep 2025<br /><span style="font-weight:400;color:var(--ink-3)">filed 2 Nov 2025, corrected by hand</span></td><td><code>12 mo</code></td><td><code>12 mo</code></td></tr>
+      <tr><td>bapple</td><td>said 10 May 2026</td><td><code>19 mo</code></td><td><code>19 mo</code></td></tr>
+      <tr><td>nana-lella</td><td>said 20 Jul 2026</td><td><code>22 mo</code></td><td><code>22 mo</code></td></tr>
+      <tr><td>Mira herself</td><td>today</td><td><code>22 mo</code></td><td><code>6 y</code></td></tr>
+    </table>
+
+    <p class="cap">In the feed <span>— one child, three ages, because they were three different days.</span></p>
+    <div class="pair">
+      <div class="frame"><div class="mob">
+        <div class="entry"><div class="metaline"><b>Mira</b><span> · my daughter · 12 mo</span></div><div class="w">“pasketti”</div><div class="k">said 20 Sep 2025</div></div>
+        <div class="entry"><div class="metaline"><b>Mira</b><span> · my daughter · 19 mo</span></div><div class="w">“bapple”</div><div class="k">said 10 May 2026</div></div>
+        <div class="entry" style="border:0"><div class="metaline"><b>Mira</b><span> · my daughter · 22 mo</span></div><div class="w">“nana-lella”</div><div class="k">said 20 Jul 2026</div></div>
+      </div></div>
+      <div class="frame" data-theme="dark"><div class="mob">
+        <div class="entry"><div class="metaline"><b>Mira</b><span> · my daughter · 12 mo</span></div><div class="w">“pasketti”</div><div class="k">said 20 Sep 2025</div></div>
+        <div class="entry"><div class="metaline"><b>Mira</b><span> · my daughter · 19 mo</span></div><div class="w">“bapple”</div><div class="k">said 10 May 2026</div></div>
+        <div class="entry" style="border:0"><div class="metaline"><b>Mira</b><span> · my daughter · 22 mo</span></div><div class="w">“nana-lella”</div><div class="k">said 20 Jul 2026</div></div>
+      </div></div>
+    </div>
+    <p style="margin-top:14px"><b>Note:</b> <code>saidAt</code> is shown under each word for the spec only — the feed does not print it.</p>
+  </section>
+
+  <section>
+    <h2>Correcting the date</h2>
+    <p>A derived age is only honest if the anchor is visible and fixable. The birthday is editable and repairs every word at once; the per-word date needed the same escape hatch, or a memory could sit mis-aged forever with nothing to notice it by.</p>
+    <ul>
+      <li>Lives on the <b>word screen only</b>, below the collection tag. The feed never prints a date — it would clutter the rhythm and nobody needs it while scrolling.</li>
+      <li>Resting state is one quiet grey line: <code>said 20 Sep 2025 · 12 mo · edit</code>. It doubles as the explanation for why two words filed the same day can show different ages.</li>
+      <li>Editing shows a date field and the consequence in plain words — <b>they were 12 mo. this is what the word will always say.</b> No save button; the change lands as you pick.</li>
+      <li>Writes <code>saidAt</code> in place. Every entry already has one, so there is no create-versus-update branch.</li>
+      <li>A speaker with no birthday still gets the row — the date is worth keeping right on its own.</li>
+    </ul>
+    <p class="cap">Resting and editing</p>
+    <div class="pair">
+      <div class="frame"><div class="mob" style="text-align:center">
+        <div style="font-family:var(--font-hand);font-size:34px;color:var(--ink);line-height:1.2">“pasketti”</div>
+        <div style="font-size:16px;font-style:italic;color:var(--ink-2);margin-top:4px">spaghetti</div>
+        <div style="display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--ink-2);background:var(--surface-sunk);padding:7px 13px;border-radius:var(--r-sm);margin-top:18px"><svg data-lucide="bookmark" style="width:14px;height:14px"></svg>Mira's words</div>
+        <div style="display:inline-flex;align-items:center;gap:7px;font-size:13px;color:var(--ink-3);margin-top:16px;padding:8px 6px"><svg data-lucide="calendar" style="width:13px;height:13px"></svg>said 20 Sep 2025 · 12 mo <b style="color:var(--link);font-weight:600">edit</b></div>
+      </div></div>
+      <div class="frame"><div class="mob" style="text-align:center">
+        <div style="font-family:var(--font-hand);font-size:34px;color:var(--ink);line-height:1.2">“pasketti”</div>
+        <div style="font-size:16px;font-style:italic;color:var(--ink-2);margin-top:4px">spaghetti</div>
+        <div style="display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--ink-2);background:var(--surface-sunk);padding:7px 13px;border-radius:var(--r-sm);margin-top:18px"><svg data-lucide="bookmark" style="width:14px;height:14px"></svg>Mira's words</div>
+        <div style="margin-top:16px;display:flex;flex-direction:column;align-items:center;gap:8px">
+          <div style="border:1.5px solid var(--primary);background:var(--surface);border-radius:var(--r-sm);padding:10px 12px;font-size:15px;color:var(--ink);min-height:44px;display:flex;align-items:center">20 . 09 . 2025</div>
+          <div style="font-size:13px;color:var(--ink-3);max-width:260px;line-height:1.4">they were <b style="color:var(--ink-2);font-weight:600">12 mo</b>. this is what the word will always say.</div>
+          <div style="font-size:14px;font-weight:600;color:var(--link);padding:8px 12px">done</div>
+        </div>
+      </div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Creation flow — in compose</h2>
+    <p>“Who said it” is a chip row, not an input. Selection is single and toggleable: tapping the active chip clears it.</p>
+    <ol>
+      <li>Open compose, type the word. <b>Who said it</b> shows every speaker you have, most recently used first, plus <b>＋ someone new</b>. The order settles between sessions, never while the sheet is open — chips must not move under your thumb.</li>
+      <li>Tapping a chip selects that person and closes the question. One tap is the whole flow for the common case.</li>
+      <li>Tapping <b>＋ someone new</b> expands a soft rose panel below the row: name, relation, birthday.</li>
+      <li><b>Add</b> is disabled until the name has content. On add, the person is created, the panel collapses, and their chip appears selected.</li>
+      <li><b>Keep it</b> posts. If no speaker is selected the entry is attributed to <b>You</b> — we do not block the word on the person.</li>
+    </ol>
+
+    <p class="cap">Chip row, resting and creating</p>
+    <div class="pair">
+      <div class="frame"><div class="mob">
+        <div class="lbl">Who said it</div>
+        <div class="chips"><span class="chip on"><svg data-lucide="check"></svg>Mira</span><span class="chip">Dad</span><span class="chip">Theo</span><span class="chip">Grandma</span><span class="chip"><svg data-lucide="plus"></svg>someone new</span></div>
+      </div></div>
+      <div class="frame"><div class="mob">
+        <div class="lbl">Who said it</div>
+        <div class="chips"><span class="chip">Mira</span><span class="chip">Dad</span><span class="chip">Theo</span><span class="chip">Grandma</span></div>
+        <div class="panel">
+          <div class="grp"><div class="lbl">Name</div><div class="field">Nico</div></div>
+          <div class="grp"><div class="lbl">Relation <em>— optional</em></div><div class="field ph">my daughter</div>
+            <div class="chips" style="margin-top:2px"><span class="chip">my daughter</span><span class="chip">my son</span><span class="chip">my dad</span></div></div>
+          <div class="grp"><div class="lbl">Birthday <em>— optional</em></div><div class="field">14 . 09 . 2024</div>
+            <div class="hint">they're <b>22 mo</b> today. every word remembers the age they were when you kept it.</div></div>
+          <div class="acts"><span class="btn">Add</span><span class="btn ghost">Cancel</span></div>
+        </div>
+      </div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Managing — “your people”</h2>
+    <p>Reached from <b>my dictionary → your people → manage</b>, or by tapping any avatar in the people row. This screen is for repair and upkeep, not for creation in the flow of writing — though <b>Add someone</b> is here too, using the identical form.</p>
+    <ul>
+      <li>Each row: avatar, name, <code>relation · age today</code>, word count. Tap opens an edit sheet prefilled with the current values.</li>
+      <li>A person with no relation reads <b>no relation yet</b> in place of the subtitle — never an empty row.</li>
+      <li>Word count is the archive count plus anything kept this session. Singular reads <b>1 word</b>.</li>
+      <li>Editing a relation or a birthday propagates immediately: the feed re-derives on next render. A corrected birthday corrects every past word's age <i>as it should have been</i> — the freeze is on the date, not on a cached string.</li>
+    </ul>
+    <p class="cap">The list <span>— age here is age today, deliberately</span></p>
+    <div class="pair">
+      <div class="frame"><div class="mob"><div class="list">
+        <div class="prow"><span class="av rose">M</span><div><div class="nm">Mira</div><div class="sub">my daughter · 22 mo</div></div><span class="ct">12 words</span><svg data-lucide="chevron-right"></svg></div>
+        <div class="prow"><span class="av blue">D</span><div><div class="nm">Dad</div><div class="sub">my dad</div></div><span class="ct">9 words</span><svg data-lucide="chevron-right"></svg></div>
+        <div class="prow"><span class="av ink">T</span><div><div class="nm">Theo</div><div class="sub">best friend</div></div><span class="ct">17 words</span><svg data-lucide="chevron-right"></svg></div>
+        <div class="prow"><span class="av rose">N</span><div><div class="nm">Nico</div><div class="sub">no relation yet</div></div><span class="ct">1 word</span><svg data-lucide="chevron-right"></svg></div>
+      </div></div></div>
+      <div class="frame" data-theme="dark"><div class="mob"><div class="list">
+        <div class="prow"><span class="av rose">M</span><div><div class="nm">Mira</div><div class="sub">my daughter · 22 mo</div></div><span class="ct">12 words</span><svg data-lucide="chevron-right"></svg></div>
+        <div class="prow"><span class="av blue">D</span><div><div class="nm">Dad</div><div class="sub">my dad</div></div><span class="ct">9 words</span><svg data-lucide="chevron-right"></svg></div>
+        <div class="prow"><span class="av ink">T</span><div><div class="nm">Theo</div><div class="sub">best friend</div></div><span class="ct">17 words</span><svg data-lucide="chevron-right"></svg></div>
+        <div class="prow"><span class="av rose">N</span><div><div class="nm">Nico</div><div class="sub">no relation yet</div></div><span class="ct">1 word</span><svg data-lucide="chevron-right"></svg></div>
+      </div></div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Copy</h2>
+    <table>
+      <tr><th>Where</th><th>Copy</th></tr>
+      <tr><td>Field label</td><td>Who said it</td></tr>
+      <tr><td>Create chip</td><td>＋ someone new</td></tr>
+      <tr><td>Form labels</td><td>Name · Relation — optional · Birthday — optional</td></tr>
+      <tr><td>Name placeholder</td><td>Mira</td></tr>
+      <tr><td>Birthday hint, empty</td><td>add it and each word remembers how old they were.</td></tr>
+      <tr><td>Birthday hint, filled</td><td>they're <b>22 mo</b> today. every word remembers the age they were when you kept it.</td></tr>
+      <tr><td>Word screen date</td><td>said 20 Sep 2025 · 12 mo · edit</td></tr>
+      <tr><td>Date edit hint</td><td>they were <b>12 mo</b>. this is what the word will always say.</td></tr>
+      <tr><td>Date edit, no birthday</td><td>the day they said it, not the day you filed it.</td></tr>
+      <tr><td>People screen title</td><td>your people</td></tr>
+      <tr><td>People screen lede</td><td>everyone whose words you keep. add a birthday and every word remembers how old they were.</td></tr>
+      <tr><td>Empty relation</td><td>no relation yet</td></tr>
+      <tr><td>Remove</td><td>remove from your people → yes, remove</td></tr>
+    </table>
+    <p style="margin-top:18px">Sentence case throughout. No exclamation marks, no “successfully”. The form asks for one thing and forgives the rest.</p>
+  </section>
+
+  <section>
+    <h2>Edges</h2>
+    <table>
+      <tr><th>Case</th><th>Behaviour</th></tr>
+      <tr><td>No speakers yet</td><td>Row shows only <b>＋ someone new</b>. First-run compose therefore teaches the mechanic without an onboarding step.</td></tr>
+      <tr><td>Duplicate name</td><td>Allowed — two Grandmas is a real situation. The relation line disambiguates. No warning.</td></tr>
+      <tr><td>No speaker chosen</td><td>Entry is attributed to <b>You</b>. Never blocks the post.</td></tr>
+      <tr><td>Speaker removed</td><td>Two taps — <b>remove from your people</b>, then <b>yes, remove</b>. Their words stay; the meta line falls back to the denormalised name with no relation or age.</td></tr>
+      <tr><td>Many speakers</td><td>Chip row wraps. Beyond roughly a dozen, most-recently-used ordering carries the common case; a search affordance is a v1 problem, not v0.</td></tr>
+      <tr><td>Adult with a birthday</td><td>Renders <code>41 y</code>. Opt-in, and some people will want it — we don't second-guess them.</td></tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>Not in v0 · open for product</h2>
+    <ul>
+      <li><b>Merging duplicates.</b> Deliberately out. Needs a reassign-all-words operation and an undo.</li>
+      <li><b>Photo avatars.</b> Initials only for now. A real photo is the obvious next warmth upgrade.</li>
+      <li><b>Speaker page.</b> A read-only “everything Mira has said” view. We looked at reaching it by tapping the name in the feed and dropped it — not enough value for the affordance. If it ships, the browse entry belongs in <b>saved</b> (alongside collections, which already carry a voices field), not in discover — discover is other people's dictionaries, and mixing private speakers in there confuses two different meanings of “people”.</li>
+      <li><b>Backfilling old entries.</b> One migration: <code>saidAt = created_at</code> for every existing row. No inference, no nulls.</li>
+    </ul>
+  </section>
+</div>
+<script>window.lucide&&lucide.createIcons();</script>
+</body>
+</html>

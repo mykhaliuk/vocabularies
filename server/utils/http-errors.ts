@@ -4,6 +4,7 @@ const STATUS_BY_CODE: Record<string, number> = {
   [DOMAIN_ERROR_CODES.videoUploadForbidden]: 403,
   [DOMAIN_ERROR_CODES.uploadTooLarge]: 413,
   [DOMAIN_ERROR_CODES.entryNotFound]: 404,
+  [DOMAIN_ERROR_CODES.speakerNotFound]: 404,
   [DOMAIN_ERROR_CODES.mediaNotFound]: 404,
   [DOMAIN_ERROR_CODES.storageUnavailable]: 503,
 };

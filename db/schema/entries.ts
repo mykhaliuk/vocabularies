@@ -1,5 +1,13 @@
 import { sql } from 'drizzle-orm';
-import { index, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import {
+  date,
+  index,
+  pgTable,
+  text,
+  timestamp,
+  uuid,
+} from 'drizzle-orm/pg-core';
+import { speakers, speakerTone } from './speakers';
 import { users } from './users';
 
 export const entries = pgTable(
@@ -11,7 +19,21 @@ export const entries = pgTable(
       .references(() => users.id, { onDelete: 'cascade' }),
     word: text('word').notNull(),
     gloss: text('gloss'),
+    // Who said it (VKB-97). `sid` points at the speaker; `speaker`/`tone`
+    // are a denormalised copy taken at creation so a removed speaker still
+    // renders as a name (with no relation or age). The speaker record wins
+    // whenever `sid` still resolves. Both NULL → the word is the user's own
+    // ("You" is rendered client-side, never stored — it is locale copy).
+    sid: uuid('sid').references(() => speakers.id, { onDelete: 'set null' }),
     speaker: text('speaker'),
+    tone: speakerTone('tone'),
+    // The day the words were said — the anchor the frozen age is measured
+    // against. Required and initialised to the insert date (UTC); the user
+    // corrects it later on the word screen. created_at stays an audit field
+    // about the row, not about the memory.
+    saidAt: date('said_at')
+      .default(sql`CURRENT_DATE`)
+      .notNull(),
     story: text('story'),
     // Free-text placeholder until collections become an entity (VKB-64:
     // "nullable for now").

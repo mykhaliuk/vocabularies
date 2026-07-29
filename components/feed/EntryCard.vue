@@ -1,10 +1,14 @@
 <script setup lang="ts">
+import { speakerAgeAt } from '~/shared/speaker-age';
+import type { EntrySpeakerView } from '~/server/utils/entry-view';
+
 const props = defineProps<{
   entry: {
     id: string;
     word: string;
     gloss: string | null;
-    speaker: string | null;
+    speaker: EntrySpeakerView | null;
+    saidAt: string;
     story: string | null;
     collection: string | null;
     createdAt: string;
@@ -21,17 +25,32 @@ const props = defineProps<{
   };
 }>();
 
-const SPEAKER_SEPARATOR = ' · ';
+const { t } = useI18n();
 
-// Split "Mom · grandmother" into a bold lead and a faint remainder (the
-// separator travels with the remainder). No separator → the whole line is
-// bold. Returns null when there is no speaker so the line is omitted.
-const speakerParts = computed(() => {
-  const { speaker } = props.entry;
-  if (!speaker) return null;
-  const index = speaker.indexOf(SPEAKER_SEPARATOR);
-  if (index === -1) return { lead: speaker, rest: null };
-  return { lead: speaker.slice(0, index), rest: speaker.slice(index) };
+// The frozen age: birthday measured against the day the word was said,
+// never against today (speaker-spec §The age rule). Null renders nothing —
+// no birthday, or a birthday after saidAt (data can be messy).
+const ageLabel = computed(() => {
+  const sp = props.entry.speaker;
+  if (!sp) return null;
+  const age = speakerAgeAt(sp.birthday, props.entry.saidAt);
+  if (!age) return null;
+  if (age.kind === 'newborn') return t('app.feed.age.newborn');
+  if (age.kind === 'months') return t('app.feed.age.months', { n: age.n });
+  return t('app.feed.age.years', { n: age.n });
+});
+
+// Bold name, faint "· relation · age" tail. No speaker → the word is the
+// user's own and reads "You" — attribution never blocks a word, so it never
+// hides either.
+const speakerLead = computed(
+  () => props.entry.speaker?.name ?? t('app.feed.you'),
+);
+const speakerRest = computed(() => {
+  const sp = props.entry.speaker;
+  if (!sp) return null;
+  const parts = [sp.rel, ageLabel.value].filter(Boolean);
+  return parts.length > 0 ? ' · ' + parts.join(' · ') : null;
 });
 
 // The headword shrinks as the phrase grows so a single long word never
@@ -60,10 +79,10 @@ const headwordSize = computed(() => {
 
 <template>
   <article class="entry">
-    <p v-if="speakerParts" class="entry__speaker">
-      <span class="entry__speaker-lead">{{ speakerParts.lead }}</span
-      ><span v-if="speakerParts.rest" class="entry__speaker-rest">{{
-        speakerParts.rest
+    <p class="entry__speaker">
+      <span class="entry__speaker-lead">{{ speakerLead }}</span
+      ><span v-if="speakerRest" class="entry__speaker-rest">{{
+        speakerRest
       }}</span>
     </p>
 

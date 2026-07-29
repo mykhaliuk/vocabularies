@@ -1,4 +1,3 @@
-// graph-pending: VKB-67 — the compose sheet creates entries through this.
 import { z } from 'zod';
 import { createEntry } from '~/server/domain/entries';
 import { requireUser } from '~/server/utils/auth';
@@ -21,7 +20,9 @@ const MediaDecl = z.object({
 const Body = z.object({
   word: z.string().trim().min(1).max(200),
   gloss: z.string().trim().max(500).optional(),
-  speaker: z.string().trim().max(200).optional(),
+  // Attribution is by speaker id (VKB-97) — free text is gone. Absent means
+  // the word is the user's own.
+  sid: z.string().uuid().optional(),
   story: z.string().trim().max(5000).optional(),
   collection: z.string().trim().max(200).optional(),
   media: MediaDecl.optional(),
@@ -41,7 +42,7 @@ export default defineEventHandler(async (event) => {
   const input = {
     word: body.word,
     gloss: body.gloss || null,
-    speaker: body.speaker || null,
+    sid: body.sid || null,
     story: body.story || null,
     collection: body.collection || null,
   };
@@ -56,7 +57,7 @@ export default defineEventHandler(async (event) => {
   setResponseStatus(event, 201);
   setResponseHeader(event, 'Cache-Control', 'no-store');
   return {
-    entry: toEntryView(created.entry),
+    entry: toEntryView(created.entry, created.speaker),
     media: created.media ? toMediaView(created.media) : null,
     upload: created.upload,
   };

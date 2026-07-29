@@ -1,4 +1,8 @@
+// Relative (not `~/`) so bun's unit-test runner, which loads this module
+// outside the Nuxt resolver, can find it too.
 import { nanoid } from 'nanoid';
+import { EXTENSION_BY_TYPE } from '../../shared/media-types';
+import type { MediaContentType } from '../../shared/media-types';
 
 // Spike-scope limits (VKB-63): 250MB covers 20s of 4K60 H.264 with
 // headroom. Duration limits differ by kind — video is capped tight (weight
@@ -11,33 +15,10 @@ export const MAX_AUDIO_DURATION_SEC = 180;
 // Probe tolerance: containers often report 20.0x for a "20s" clip.
 export const DURATION_TOLERANCE_SEC = 0.75;
 
-// Anything a dictaphone or phone camera realistically produces. The
-// original is stored as-is; ffmpeg decides later whether it can decode it.
-// Several MIME types intentionally share one extension (audio/mp4 and
-// audio/x-m4a are both .m4a) — extension identifies the container, the
-// exact MIME the client declared lives on the stored object.
-const EXTENSION_BY_TYPE = Object.freeze({
-  'audio/mp4': 'm4a',
-  'audio/x-m4a': 'm4a',
-  'audio/aac': 'aac',
-  'audio/mpeg': 'mp3',
-  'audio/ogg': 'ogg',
-  'audio/wav': 'wav',
-  'audio/webm': 'weba',
-  'audio/amr': 'amr',
-  'audio/3gpp': '3gp',
-  'video/mp4': 'mp4',
-  'video/quicktime': 'mov',
-  'video/webm': 'webm',
-  'video/3gpp': '3gp',
-  'video/x-matroska': 'mkv',
-});
-
-type MediaContentType = keyof typeof EXTENSION_BY_TYPE;
-
-export const ALLOWED_MEDIA_CONTENT_TYPES = Object.freeze(
-  Object.keys(EXTENSION_BY_TYPE),
-);
+// The type roster lives in shared/media-types.ts (the compose picker
+// mirrors the same list); re-exported so the transport layer keeps one
+// import site for upload validation.
+export { ALLOWED_MEDIA_CONTENT_TYPES } from '../../shared/media-types';
 
 const ALLOWED_EXTENSIONS: ReadonlySet<string> = new Set(
   Object.values(EXTENSION_BY_TYPE),

@@ -13,6 +13,16 @@ export const STANDALONE_INIT = `
       : realMatchMedia(q);
 `;
 
+// Request a magic link from /login. pressSequentially (not fill) so the
+// v-model ref actually updates before hydration settles the submit button.
+export const sendFrom = async (page, base, email) => {
+  await page.goto(`${base}/login`);
+  await page.waitForLoadState('networkidle');
+  await page.getByLabel(/your email/i).click();
+  await page.getByLabel(/your email/i).pressSequentially(email, { delay: 10 });
+  await page.getByRole('button', { name: /send me a link/i }).click();
+};
+
 // Open the emailed link in a separate jar (Safari) and read the code it reveals.
 export const clickAndReadCode = async (browser, link) => {
   const safari = await browser.newContext();

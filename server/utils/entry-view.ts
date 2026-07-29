@@ -3,20 +3,36 @@ import { presignGet } from './storage';
 import type { InferSelectModel } from 'drizzle-orm';
 import type { entries } from '~/db/schema/entries';
 import type { media } from '~/db/schema/media';
+import type { speakers, SpeakerTone } from '~/db/schema/speakers';
 
 type EntryRow = InferSelectModel<typeof entries>;
 type MediaRow = InferSelectModel<typeof media>;
+type SpeakerRow = InferSelectModel<typeof speakers>;
 
 // Plain projection functions — the exposed API shapes (serialization, not a
 // DTO layer; see feedback_no_dto_in_js.md).
 
 const VIEW_TTL_SEC = 3600;
 
+// Who said it, as the feed renders it. Built from the live speaker row when
+// the entry's sid still resolves — relation and birthday come only from
+// there ("fix it once and every word updates") — and from the entry's
+// denormalised name/tone when it does not (removed speaker, legacy import).
+// Null means the word is the user's own; the client renders "You".
+export interface EntrySpeakerView {
+  name: string;
+  tone: SpeakerTone | null;
+  rel: string | null;
+  birthday: string | null;
+}
+
 export interface EntryView {
   id: string;
   word: string;
   gloss: string | null;
-  speaker: string | null;
+  speaker: EntrySpeakerView | null;
+  // The day the words were said — the frozen-age anchor (YYYY-MM-DD).
+  saidAt: string;
   story: string | null;
   collection: string | null;
   createdAt: string;
@@ -39,11 +55,33 @@ export interface MediaPlaybackUrls {
   audioUrl: string | null;
 }
 
-export const toEntryView = (entry: EntryRow): EntryView => ({
+const toSpeakerOnEntry = (
+  entry: EntryRow,
+  speaker: SpeakerRow | null,
+): EntrySpeakerView | null => {
+  if (speaker) {
+    return {
+      name: speaker.name,
+      tone: speaker.tone,
+      rel: speaker.rel,
+      birthday: speaker.birthday,
+    };
+  }
+  if (entry.speaker) {
+    return { name: entry.speaker, tone: entry.tone, rel: null, birthday: null };
+  }
+  return null;
+};
+
+export const toEntryView = (
+  entry: EntryRow,
+  speaker: SpeakerRow | null,
+): EntryView => ({
   id: entry.id,
   word: entry.word,
   gloss: entry.gloss,
-  speaker: entry.speaker,
+  speaker: toSpeakerOnEntry(entry, speaker),
+  saidAt: entry.saidAt,
   story: entry.story,
   collection: entry.collection,
   createdAt: entry.createdAt.toISOString(),

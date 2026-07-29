@@ -18,7 +18,38 @@ function Reply({ r }) {
   );
 }
 
-function DetailScreen({ m, onBack, media }) {
+/* when it was said. Defaults to the day it was kept; correctable here, because a wrong
+   date silently mis-ages the memory and this is the only place to notice it. */
+function SaidAt({ m, onChange }) {
+  const [editing, setEditing] = useD(false);
+  const at = window.vocabuSpokenAt(m);
+  const sp = window.vocabuSpeaker(m);
+  const age = sp && window.vocabuAge(sp.birthday, at);
+  if (!at) return null;
+  const row = { display: "inline-flex", alignItems: "center", gap: 7, fontFamily: "var(--font-sans)", fontSize: 13, color: "var(--ink-3)" };
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, marginTop: 16 }}>
+      {!editing ? (
+        <button onClick={() => onChange && setEditing(true)} style={{ ...row, border: 0, background: "transparent", cursor: onChange ? "pointer" : "default", padding: "8px 6px", minHeight: 40 }}>
+          <Icon name="calendar" size={13} />
+          said {window.vocabuDate(at)}{age ? " · " + age : ""}
+          {onChange && <span style={{ color: "var(--link)", fontWeight: 600 }}>edit</span>}
+        </button>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+          <input type="date" defaultValue={at} onChange={(e) => e.target.value && onChange(m, e.target.value)}
+            style={{ border: "1.5px solid var(--primary)", outline: 0, background: "var(--surface)", borderRadius: "var(--r-sm)", padding: "10px 12px", fontFamily: "var(--font-sans)", fontSize: 15, color: "var(--ink)", colorScheme: "light dark", minHeight: 44 }} />
+          <div style={{ ...row, maxWidth: 260, textAlign: "center", lineHeight: 1.4, display: "block" }}>
+            {age ? <>they were <b style={{ color: "var(--ink-2)", fontWeight: 600 }}>{age}</b>. this is what the word will always say.</> : "the day they said it, not the day you filed it."}
+          </div>
+          <button onClick={() => setEditing(false)} style={{ border: 0, background: "transparent", cursor: "pointer", fontFamily: "var(--font-sans)", fontSize: 14, fontWeight: 600, color: "var(--link)", padding: "8px 12px", minHeight: 40 }}>done</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DetailScreen({ m, onBack, media, onSaidAt }) {
   const [liked, setLiked] = useD(m.liked);
   const [likes, setLikes] = useD(m.likes);
   const [saved, setSaved] = useD(m.saved);
@@ -41,7 +72,7 @@ function DetailScreen({ m, onBack, media }) {
           <Avatar name={m.speaker} tone={m.tone} size={52} />
           <div style={{ fontFamily: "var(--font-sans)", fontSize: 14, lineHeight: 1.3, marginTop: -4, whiteSpace: "nowrap" }}>
             <span style={{ fontWeight: 600, color: "var(--ink)" }}>{m.speaker}</span>
-            {m.rel && <span style={{ color: "var(--ink-3)", fontWeight: 400 }}> · {m.rel}</span>}
+            {window.vocabuRel(m) && <span style={{ color: "var(--ink-3)", fontWeight: 400 }}> · {window.vocabuRel(m)}</span>}
           </div>
           <WordText word={m.word} />
           {m.gloss && <div style={{ fontFamily: "var(--font-sans)", fontSize: 17, fontStyle: "italic", color: "var(--ink-2)", marginTop: -6 }}>{m.gloss}</div>}
@@ -77,6 +108,8 @@ function DetailScreen({ m, onBack, media }) {
             </span>
           </div>
         )}
+
+        <SaidAt m={m} onChange={onSaidAt} />
 
         {/* social row */}
         <div style={{ marginTop: 20, paddingTop: 18, borderTop: "1px solid var(--hairline)" }}>

@@ -1,5 +1,5 @@
 import { chromium } from '@playwright/test';
-import { STANDALONE_INIT, clickAndReadCode } from './helpers.mjs';
+import { STANDALONE_INIT, clickAndReadCode, sendFrom } from './helpers.mjs';
 
 // Local-only UI tests for the VKB-70 QA fixes: an installed standalone PWA
 // resolves its entry (the app when signed in, /login otherwise) instead of
@@ -31,14 +31,6 @@ const gotoExpecting = async (context, url, pattern) => {
     // assertion reports the actual URL
   }
   return page;
-};
-
-const sendFrom = async (page, base, email) => {
-  await page.goto(`${base}/login`);
-  await page.waitForLoadState('networkidle');
-  await page.getByLabel(/your email/i).click();
-  await page.getByLabel(/your email/i).pressSequentially(email, { delay: 10 });
-  await page.getByRole('button', { name: /send me a link/i }).click();
 };
 
 export const run = async ({ base, findLink }) => {

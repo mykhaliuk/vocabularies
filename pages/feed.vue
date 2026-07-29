@@ -15,11 +15,19 @@ type FeedMedia = {
   error: string | null;
 };
 
+type FeedSpeaker = {
+  name: string;
+  tone: 'rose' | 'blue' | 'ink' | null;
+  rel: string | null;
+  birthday: string | null;
+};
+
 type FeedEntry = {
   id: string;
   word: string;
   gloss: string | null;
-  speaker: string | null;
+  speaker: FeedSpeaker | null;
+  saidAt: string;
   story: string | null;
   collection: string | null;
   createdAt: string;
@@ -172,6 +180,14 @@ watch(
   },
   { immediate: true },
 );
+
+// A word composed via the sheet lands as a processing entry; pull it into
+// view right away. The merge changes the processing set, so the watcher
+// above restarts the poll with a fresh attempt budget.
+const { postedVersion } = useCompose();
+watch(postedVersion, () => {
+  void mergeFirstPage();
+});
 
 onUnmounted(stopPolling);
 </script>

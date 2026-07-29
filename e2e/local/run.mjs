@@ -3,6 +3,7 @@ import { setTimeout as sleep } from 'node:timers/promises';
 import { run as runHttp } from './poll-claim.http.mjs';
 import { run as runClient } from './poll-claim.client.mjs';
 import { run as runEntry } from './poll-entry.client.mjs';
+import { run as runCompose } from './compose.client.mjs';
 
 // Local-only poll/claim integration runner (VKB-70). Spawns a dev server,
 // captures its console-email stdout to resolve magic links, runs the HTTP and
@@ -91,8 +92,10 @@ const main = async () => {
     const client = await runClient({ base: BASE, findLink });
     console.log('\n### entry routing + code-field UX (Playwright) ###');
     const entry = await runEntry({ base: BASE, findLink });
-    failed = http.failed + client.failed + entry.failed;
-    const total = http.passed + client.passed + entry.passed;
+    console.log('\n### compose write path (Playwright, VKB-67) ###');
+    const compose = await runCompose({ base: BASE, findLink });
+    failed = http.failed + client.failed + entry.failed + compose.failed;
+    const total = http.passed + client.passed + entry.passed + compose.passed;
     console.log(`\n==== TOTAL: ${total} passed, ${failed} failed ====`);
   } finally {
     killTree(server);
