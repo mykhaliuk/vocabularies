@@ -14,7 +14,10 @@ import { loadEntitlements } from './entitlements';
 import { DOMAIN_ERROR_CODES, DomainError } from './errors';
 import type { InferSelectModel } from 'drizzle-orm';
 import type { AuthUser } from '~/server/utils/auth';
-import type { MediaManifest } from '~/server/utils/media-process';
+import type {
+  MediaManifest,
+  ProcessMediaOptions,
+} from '~/server/utils/media-process';
 
 export type MediaRow = InferSelectModel<typeof media>;
 
@@ -206,13 +209,20 @@ const recordMediaFailure = async (
 // local stages, directly as the inline fallback injected into the queue.
 // Transient errors leave the row 'processing' and propagate so the caller
 // retries; rejections are terminal and become 'failed'.
+//
+// `options.force` (VKB-81) passes straight through to processMedia's
+// ready-manifest guard, unused today — the QStash worker route never reads
+// it off the request body, since a redelivered/retried message must NOT be
+// able to force a re-run — but it is the entry point a future deliberate
+// reprocess (admin action, CLI) would call with `{ force: true }`.
 export const processUploadedMedia = async (
   rawKey: string,
   userId: string,
+  options: ProcessMediaOptions = {},
 ): Promise<MediaManifest> => {
   const { mediaId, key } = parseOriginalKey(rawKey, userId);
   try {
-    const manifest = await processMedia(key, userId);
+    const manifest = await processMedia(key, userId, options);
     // The slot-mint gate keys off the DECLARED content type; the probe
     // keys off the bytes. A video smuggled under an audio/* declaration
     // (mp4/m4a containers carry both) lands here as kind 'video' — re-check

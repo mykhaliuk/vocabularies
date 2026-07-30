@@ -65,6 +65,15 @@ export interface MediaFailure {
 // layout — stays in server logs; the client gets a generic message.
 export class MediaRejection extends Error {}
 
+export interface ProcessMediaOptions {
+  // Deliberate reprocess opt-out (VKB-81): bypasses the ready-manifest
+  // guard below. Nothing in this codebase sets it yet — no reprocess
+  // action exists — but the guard needs an escape hatch from day one, so
+  // a future admin/CLI trigger can call processMedia again on purpose
+  // without the guard silently eating it.
+  force?: boolean;
+}
+
 interface ProbeResult {
   durationSec: number | null;
   hasVideo: boolean;
@@ -397,6 +406,25 @@ const runPipeline = async (
   return manifest;
 };
 
+// Reads and parses the manifest key if one exists, for callers that need
+// to know the prior outcome before acting. Returns null on NotFound (the
+// normal first-run case); any OTHER read error is rethrown so each caller
+// can apply its own risk tolerance — writeFailureManifest and
+// processMedia's ready-guard need different fallbacks for "could not
+// tell".
+const readManifestIfExists = async (
+  manifestKey: string,
+): Promise<MediaManifest | MediaFailure | null> => {
+  try {
+    const existing = await getObject(manifestKey, 'media');
+    const raw = await existing.Body?.transformToString();
+    return raw ? (JSON.parse(raw) as MediaManifest | MediaFailure) : null;
+  } catch (error) {
+    if (isNotFoundError(error)) return null;
+    throw error;
+  }
+};
+
 // QStash delivers at-least-once: a retry of an already-completed job can
 // fail on a transient and must NOT clobber the ready manifest a previous
 // run wrote — failed→ready self-heals on retry, ready→failed would be
@@ -411,29 +439,26 @@ const writeFailureManifest = async (
   error: unknown,
 ): Promise<boolean> => {
   const { manifest } = derivedKeys(userId, mediaId);
+  let existing: MediaManifest | MediaFailure | null;
   try {
-    const existing = await getObject(manifest, 'media');
-    const raw = await existing.Body?.transformToString();
-    if (raw && JSON.parse(raw).status === 'ready') {
-      console.warn(
-        '[media-process] retry failed but ready manifest exists — keeping it',
-        { key },
-      );
-      return true;
-    }
+    existing = await readManifestIfExists(manifest);
   } catch (readError) {
-    // NotFound is the normal first-run case — proceed to record the
-    // failure. Any OTHER read error is a transient exactly when a
-    // retry-after-transient is running, so writing now risks clobbering
-    // a ready manifest we could not see; skip instead and report the
-    // outcome as unrecorded so the caller keeps the retry path alive.
-    if (!isNotFoundError(readError)) {
-      console.error(
-        '[media-process] manifest read failed — skipping failure write',
-        { key, readError },
-      );
-      return false;
-    }
+    // A read error here is a transient exactly when a retry-after-transient
+    // is running, so writing now risks clobbering a ready manifest we
+    // could not see; skip instead and report the outcome as unrecorded so
+    // the caller keeps the retry path alive.
+    console.error(
+      '[media-process] manifest read failed — skipping failure write',
+      { key, readError },
+    );
+    return false;
+  }
+  if (existing?.status === 'ready') {
+    console.warn(
+      '[media-process] retry failed but ready manifest exists — keeping it',
+      { key },
+    );
+    return true;
   }
 
   // Only MediaRejection messages are client-safe; anything else (ffmpeg
@@ -462,11 +487,53 @@ const writeFailureManifest = async (
   }
 };
 
+// Pure decision extracted for unit coverage (VKB-81): whether an existing
+// manifest makes a fresh processMedia run redundant. QStash is at-least-once
+// (retries, plus the VKB-80 inline-fallback race where enqueueJSON throws
+// after QStash already accepted the job) so the SAME completed job can be
+// delivered twice; a 'ready' manifest is durable proof the ffmpeg run and
+// derivative uploads already happened. A 'failed' manifest is NOT such
+// proof — the job must still run so it can self-heal — and force is the
+// caller's explicit override for a deliberate reprocess.
+export const shouldSkipProcessing = (
+  existing: MediaManifest | MediaFailure | null,
+  force: boolean,
+): existing is MediaManifest =>
+  !force && existing !== null && existing.status === 'ready';
+
 export const processMedia = async (
   rawKey: string,
   userId: string,
+  options: ProcessMediaOptions = {},
 ): Promise<MediaManifest> => {
+  const { force = false } = options;
   const { key, mediaId } = parseOriginalKey(rawKey, userId);
+  const { manifest: manifestKey } = derivedKeys(userId, mediaId);
+
+  // Skip the R2 round trip entirely on a deliberate reprocess — force
+  // already decides the outcome regardless of what the manifest says.
+  const existing = force
+    ? null
+    : await readManifestIfExists(manifestKey).catch((error: unknown) => {
+        // An unreadable manifest must not block processing: the worse
+        // failure mode is skipping a job that was never actually done,
+        // not the wasted re-run this guard exists to avoid. Only a
+        // confirmed 'ready' body may skip.
+        console.warn(
+          '[media-process] existing manifest read failed — proceeding to reprocess',
+          { key, error },
+        );
+        return null;
+      });
+
+  if (shouldSkipProcessing(existing, force)) {
+    console.log('[media-process] ready manifest exists — skipping reprocess', {
+      key,
+      mediaId,
+    });
+    return existing;
+  }
+
   const startedAt = Date.now();
   const workDir = await mkdtemp(join(tmpdir(), 'vocabu-media-'));
 
