@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Entry edit &amp; delete — spec</title>
+<link rel="stylesheet" href="../_ds/vocabu-design-system-fc456a27-02a5-4423-9181-3fc0311e1354/colors_and_type.css" />
+<script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+<style>
+*{box-sizing:border-box}html,body{margin:0}
+body{background:var(--paper);color:var(--ink);font-family:var(--font-sans);-webkit-font-smoothing:antialiased}
+.wrap{max-width:1040px;margin:0 auto;padding:56px 28px 96px}
+.eyebrow{display:flex;align-items:center;gap:9px;font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3)}
+.eyebrow i{width:7px;height:7px;border-radius:50%;background:var(--primary);display:inline-block}
+h1{font-size:38px;font-weight:800;letter-spacing:-.03em;line-height:1.1;margin:14px 0 0}
+.lede{font-size:17px;line-height:1.55;color:var(--ink-2);max-width:660px;margin:14px 0 0;text-wrap:pretty}
+.meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
+.tag{font-size:12.5px;font-weight:600;padding:6px 11px;border-radius:var(--r-pill);background:var(--surface-sunk);color:var(--ink-2)}
+.tag.rose{background:var(--primary-soft);color:var(--on-primary-soft)}
+h2{font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:0 0 20px}
+section{margin-top:64px;border-top:1px solid var(--hairline);padding-top:26px}
+h3{font-size:21px;font-weight:700;letter-spacing:-.02em;margin:0 0 8px}
+p{font-size:15.5px;line-height:1.6;color:var(--ink-2);margin:0 0 14px;max-width:680px;text-wrap:pretty}
+p b,li b,td b{color:var(--ink);font-weight:600}
+ul{margin:0 0 14px;padding-left:20px;max-width:680px}
+li{font-size:15.5px;line-height:1.6;color:var(--ink-2);margin-bottom:7px}
+ol{margin:0 0 14px;padding-left:20px;max-width:680px}
+ol li{margin-bottom:10px}
+.answers{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-top:8px}
+.ans{background:var(--surface);border:1px solid var(--hairline);border-radius:var(--r-lg);box-shadow:var(--shadow-sm);padding:20px}
+.ans .q{font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-3);margin-bottom:8px}
+.ans .a{font-size:16.5px;font-weight:700;letter-spacing:-.01em;color:var(--ink);line-height:1.35;margin-bottom:8px}
+.ans p{font-size:14.5px;margin:0}
+.cap{font-size:13px;font-weight:600;color:var(--ink-2);margin:34px 0 9px}
+.cap span{color:var(--ink-3);font-weight:400}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
+.frame{background:var(--paper);border:1px solid var(--hairline);border-radius:var(--r-lg);padding:20px 18px}
+.mob{max-width:360px;margin:0 auto}
+table{border-collapse:collapse;width:100%;margin-top:6px}
+th{text-align:left;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);padding:0 12px 10px 0;border-bottom:1px solid var(--hairline)}
+td{font-size:14px;line-height:1.5;color:var(--ink-2);padding:12px 12px 12px 0;border-bottom:1px solid var(--hairline);vertical-align:top}
+td:first-child{color:var(--ink);font-weight:600;white-space:nowrap}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;background:var(--surface-sunk);color:var(--ink);padding:2px 5px;border-radius:var(--r-xs)}
+a{color:var(--link)}a:hover{color:var(--secondary-hover)}
+.callout{background:var(--primary-soft);border:1px solid var(--primary-soft-border);border-radius:var(--r-md);padding:18px 20px;max-width:680px;margin:0 0 20px}
+.callout p{margin:0;color:var(--on-primary-soft)}
+.callout p b{color:var(--on-primary-soft)}
+/* ── component mocks (values lifted from detail.jsx) ── */
+.bar{display:flex;align-items:center;height:54px;border-bottom:1px solid var(--hairline);padding:0 8px}
+.bar .side{width:44px;height:44px;display:flex;align-items:center;justify-content:center;color:var(--ink-2)}
+.bar .t{flex:1;text-align:center;font-size:17px;font-weight:700;letter-spacing:-.01em}
+.bar svg{width:21px;height:21px}
+.menu{min-width:176px;background:var(--surface);border:1px solid var(--hairline);border-radius:var(--r-md);box-shadow:var(--shadow-md);overflow:hidden;margin:8px 0 4px auto;width:fit-content}
+.mi{display:flex;align-items:center;gap:11px;padding:13px 18px 13px 16px;font-size:15px;font-weight:600;color:var(--ink);min-height:46px}
+.mi.danger{color:var(--danger)}
+.mi+.mi{border-top:1px solid var(--hairline)}
+.mi svg{width:17px;height:17px}
+.sheet{background:var(--surface);border:1px solid var(--hairline);border-radius:var(--r-xl) var(--r-xl) 0 0;box-shadow:var(--shadow-lg);padding:14px 20px 22px;display:flex;flex-direction:column;align-items:center;text-align:center;margin-top:14px}
+.sheet .grab{width:40px;height:4px;border-radius:2px;background:var(--hairline-2);margin-bottom:18px}
+.sheet .w{font-family:var(--font-hand);font-size:34px;font-weight:500;line-height:1.2;color:var(--ink);padding-bottom:.14em}
+.sheet p{font-size:15px;line-height:1.5;color:var(--ink-2);margin:10px 0 0;max-width:280}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:50px;padding:0 18px;border-radius:var(--r-btn);font-size:16px;font-weight:600;width:100%}
+.btn.danger{background:var(--danger);color:var(--text-on-accent)}
+.btn.sec{background:var(--surface);color:var(--ink);border:1.5px solid var(--hairline-2)}
+.stack{display:flex;flex-direction:column;gap:10px;width:100%;margin-top:22px}
+.entry{border-bottom:1px solid var(--hairline);padding:14px 0}
+.entry .w{font-family:var(--font-hand);font-size:30px;font-weight:500;color:var(--ink);margin-top:8px;line-height:1.2}
+.entry .k{font-size:12px;color:var(--ink-3);margin-top:6px}
+.metaline{font-size:13.5px;line-height:1.3;white-space:nowrap}
+.metaline b{font-weight:600;color:var(--ink)}
+.metaline span{color:var(--ink-3);font-weight:400}
+@media(max-width:720px){.pair{grid-template-columns:1fr}h1{font-size:30px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow"><i></i>Design spec · handoff back to product</div>
+  <h1>Entry edit &amp; delete</h1>
+  <p class="lede">Keeping is the loop; changing what you kept is the exception. Both actions live behind one quiet <b>⋯</b> on the word detail — the only screen where you're looking at a single entry with intent. Edit reuses the compose sheet you already know. Delete asks once, plainly, and means it.</p>
+  <div class="meta"><span class="tag rose">rare by design</span><span class="tag rose">compose reuse</span><span class="tag">one confirm, no undo theater</span><span class="tag">30 Jul 2026</span></div>
+
+  <section>
+    <h2>The decisions</h2>
+    <div class="answers">
+      <div class="ans">
+        <div class="q">Q1 · where do the actions live</div>
+        <div class="a">⋯ menu on word detail</div>
+        <p>Rare actions earn a quiet home. The feed stays a reading surface — no per-card affordances, no accidental taps. Detail is where you've already committed attention to one entry.</p>
+      </div>
+      <div class="ans">
+        <div class="q">Q2 · what is the edit surface</div>
+        <div class="a">The compose sheet, prefilled</div>
+        <p>Same fields, same order, same muscle memory. Title flips to <b>Edit word</b>, the button to <b>Save changes</b>. Nothing new to learn; nothing to keep in sync with compose as it evolves.</p>
+      </div>
+      <div class="ans">
+        <div class="q">Q3 · how careful is delete</div>
+        <div class="a">One honest confirm</div>
+        <p>A small sheet names the word and what leaves with it — the story, the voice. One tap to confirm, one to back out. No typing the word to confirm, no fake-undo toast for v0.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Entry points, weighed</h2>
+    <table>
+      <tr><th>Proposal</th><th>Verdict</th><th>Why</th></tr>
+      <tr><td>⋯ menu on detail</td><td><b>Shipped — default</b></td><td>Zero visual cost at rest; both actions in one place; room for future items (share, move to collection) without redesign.</td></tr>
+      <tr><td>Pencil + trash in the bar</td><td><b>Shipped — behind a tweak</b></td><td>One tap faster, but a permanently visible trash on a keepsake reads harsh, and two icons crowd the 54px bar. Kept as the <code>icons</code> variant for side-by-side judgment.</td></tr>
+      <tr><td>Swipe left/right on touch</td><td><b>Rejected</b></td><td>Undiscoverable with no affordance; horizontal swipe collides with the browser/PWA back gesture on iOS; and destructive-on-swipe is the opposite of “quiet interactive elements”. If a swipe ever ships it belongs on feed rows, revealing buttons — never firing actions directly.</td></tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>The surfaces</h2>
+    <p class="cap">The menu <span>— opens from ⋯ top-right; tap anywhere else to dismiss.</span></p>
+    <div class="pair">
+      <div class="frame"><div class="mob">
+        <div class="bar"><div class="side"><i data-lucide="arrow-left"></i></div><div class="t">word</div><div class="side"><i data-lucide="more-horizontal"></i></div></div>
+        <div class="menu">
+          <div class="mi"><i data-lucide="pencil"></i>edit word</div>
+          <div class="mi danger"><i data-lucide="trash-2"></i>delete…</div>
+        </div>
+        <div class="entry" style="border:0;text-align:center;padding-top:4px"><div class="metaline"><b>Mira</b><span> · my daughter · 19 mo</span></div><div class="w">“bapple”</div><div class="k">said 10 May 2026</div></div>
+      </div></div>
+      <div class="frame"><div class="mob">
+        <div class="bar"><div class="side"><i data-lucide="arrow-left"></i></div><div class="t">word</div><div class="side" style="width:88px;gap:0"><span class="side" style="width:44px"><i data-lucide="pencil" style="width:19px;height:19px"></i></span><span class="side" style="width:44px;color:var(--danger)"><i data-lucide="trash-2" style="width:19px;height:19px"></i></span></div></div>
+        <p style="font-size:13px;color:var(--ink-3);text-align:center;margin:14px auto 0;max-width:240px">the <code>icons</code> tweak variant — same actions, always visible. kept for comparison, not the default.</p>
+      </div></div>
+    </div>
+
+    <p class="cap">Delete confirm <span>— a bottom sheet over the detail. The word itself does the emotional work.</span></p>
+    <div class="pair">
+      <div class="frame" style="padding-bottom:0"><div class="mob">
+        <div class="sheet">
+          <div class="grab"></div>
+          <div class="w">“bapple”</div>
+          <p>Let this one go? Its story and the voice go with it. There's no getting it back.</p>
+          <div class="stack">
+            <div class="btn danger">Delete word</div>
+            <div class="btn sec">Cancel</div>
+          </div>
+        </div>
+      </div></div>
+      <div class="frame">
+        <p style="font-size:14.5px"><b>The middle sentence is assembled from what the entry actually has</b> — never a generic warning:</p>
+        <table>
+          <tr><th>Entry has</th><th>Reads</th></tr>
+          <tr><td>story only</td><td>Its story goes with it.</td></tr>
+          <tr><td>story + voice</td><td>Its story and the voice go with it.</td></tr>
+          <tr><td>story + video</td><td>Its story and the video go with it.</td></tr>
+          <tr><td>bare word</td><td><i>(omitted)</i> — Let this one go? There's no getting it back.</td></tr>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Edit: what moves, what holds</h2>
+    <div class="callout"><p><b>Editing a word never rewrites its history.</b> The social record and the moment anchor survive every edit — only the content the user is looking at changes.</p></div>
+    <table>
+      <tr><th>Field</th><th>On save</th></tr>
+      <tr><td>word · meaning · story</td><td>Replaced with the sheet's values. Revealed fields open pre-filled; empty optional fields stay hidden behind their add-chips.</td></tr>
+      <tr><td>speaker</td><td>Re-pointable. The chip row opens with the current person selected; picking another re-derives relation and frozen age from the same <code>saidAt</code>.</td></tr>
+      <tr><td>voice / video</td><td>Shown in its kept state, removable, replaceable. Removing it and saving deletes the media.</td></tr>
+      <tr><td>collection</td><td>Re-fileable like any compose.</td></tr>
+      <tr><td>saidAt</td><td><b>Untouched.</b> Edited only in place on the detail screen (see speaker spec) — compose never shows a date.</td></tr>
+      <tr><td>id · likes · replies · saved</td><td><b>Untouched.</b> An edit is not a repost; the entry keeps its place in the feed.</td></tr>
+    </table>
+    <h3 style="margin-top:34px">Flow</h3>
+    <ol>
+      <li>Detail → ⋯ → <b>edit word</b>. The compose sheet rises over the detail, every present field filled.</li>
+      <li>Change anything → <b>Save changes</b>. The sheet drops; the detail underneath is already updated — no navigation, no scroll loss.</li>
+      <li>Cancel abandons cleanly; the entry is untouched.</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>Copy</h2>
+    <table>
+      <tr><th>Where</th><th>Copy</th></tr>
+      <tr><td>Menu items</td><td>edit word · delete…</td></tr>
+      <tr><td>Edit sheet title</td><td>Edit word</td></tr>
+      <tr><td>Edit primary button</td><td>Save changes</td></tr>
+      <tr><td>Confirm question</td><td>Let this one go?</td></tr>
+      <tr><td>Confirm consequence</td><td>Its story and the voice go with it. There's no getting it back.</td></tr>
+      <tr><td>Confirm buttons</td><td>Delete word · Cancel</td></tr>
+    </table>
+    <p style="margin-top:18px">The ellipsis on <b>delete…</b> is the standard promise that a confirm follows — nothing destructive happens on the first tap. Terracotta (<code>--danger</code>) appears exactly twice: the menu item and the confirm button. No “are you sure?”, no “successfully deleted”.</p>
+  </section>
+
+  <section>
+    <h2>Edges</h2>
+    <table>
+      <tr><th>Case</th><th>Behaviour</th></tr>
+      <tr><td>Delete confirmed</td><td>Entry leaves the feed and its collection count; detail closes back to wherever you were. No toast — the absence is the feedback.</td></tr>
+      <tr><td>Entry with replies</td><td>Deletes anyway, replies and all. It's the keeper's dictionary; a confirm line about replies is v1 polish if social grows.</td></tr>
+      <tr><td>Word cleared during edit</td><td><b>Save changes</b> disables — same rule as compose. A word is the one required thing.</td></tr>
+      <tr><td>Speaker deselected during edit</td><td>Entry falls back to <b>You</b>, keeping the denormalised name rules from the speaker spec.</td></tr>
+      <tr><td>Whose entries</td><td>Only your own. Entries from followed dictionaries never show ⋯ — the prop simply isn't passed.</td></tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>Not in v0 · open for product</h2>
+    <ul>
+      <li><b>Undo window.</b> A 5-second “deleted — undo” toast instead of a confirm is the friendlier long-term shape; it needs soft-delete server-side, so the confirm sheet holds the line for now.</li>
+      <li><b>Edit history.</b> Deliberately none. A keepsake shows its current truth, not a changelog.</li>
+      <li><b>Share / move actions.</b> The ⋯ menu is where they'd land — the container is built for growth.</li>
+      <li><b>Feed swipe.</b> If ever, swipe reveals buttons on feed rows (edit/delete) rather than acting directly — and only after the PWA owns its back gesture.</li>
+    </ul>
+  </section>
+</div>
+<script>window.lucide&&lucide.createIcons();</script>
+</body>
+</html>

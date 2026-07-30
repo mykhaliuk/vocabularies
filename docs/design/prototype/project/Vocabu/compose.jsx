@@ -22,7 +22,7 @@ const composeInput = {
   fontSize: 16, color: "var(--ink)", width: "100%", boxSizing: "border-box",
 };
 
-function Compose({ open, onClose, onPost, plan = "free", picker = "by plan", speakers = [], onAddSpeaker }) {
+function Compose({ open, onClose, onPost, plan = "free", picker = "by plan", speakers = [], onAddSpeaker, editing = null }) {
   // free → two affordances (voice + locked video); premium → one combined control.
   const mode = picker === "by plan" ? (plan === "premium" ? "combined" : "separate") : picker;
   const [word, setWord] = useC("");
@@ -42,9 +42,17 @@ function Compose({ open, onClose, onPost, plan = "free", picker = "by plan", spe
 
   useCE(() => {
     if (open) {
-      setWord(""); setSpeakerId(null); setGloss(""); setStory(""); setCollection(null);
-      setShow({ meaning: false, story: false, collection: false });
-      setAttach(null); setMedia(null); setUpsell(false);
+      if (editing) {
+        const st = editing.desc && editing.desc !== "you kept this just now." ? editing.desc : "";
+        const med = editing.audio ? { kind: "audio", audio: editing.audio } : editing.video ? { kind: "video", video: editing.video } : null;
+        setWord(editing.word); setSpeakerId(editing.sid || null); setGloss(editing.gloss || ""); setStory(st); setCollection(editing.collection || null);
+        setShow({ meaning: !!editing.gloss, story: !!st, collection: !!editing.collection });
+        setMedia(med); setAttach(med ? (mode === "combined" ? "media" : med.kind) : null); setUpsell(false);
+      } else {
+        setWord(""); setSpeakerId(null); setGloss(""); setStory(""); setCollection(null);
+        setShow({ meaning: false, story: false, collection: false });
+        setAttach(null); setMedia(null); setUpsell(false);
+      }
       setCustomColls([]); setCreatingColl(false); setNewCollName("");
       setTimeout(() => ref.current && ref.current.focus(), 280);
     }
@@ -78,7 +86,7 @@ function Compose({ open, onClose, onPost, plan = "free", picker = "by plan", spe
           <div style={{ width: 40, height: 4, borderRadius: 2, background: "var(--hairline-2)", margin: "0 auto 14px" }} />
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <button onClick={onClose} style={{ border: 0, background: "transparent", color: "var(--ink-2)", fontFamily: "var(--font-sans)", fontSize: 15, fontWeight: 500, cursor: "pointer", padding: "8px 4px" }}>cancel</button>
-            <span style={{ fontFamily: "var(--font-sans)", fontWeight: 700, fontSize: 16, color: "var(--ink)", whiteSpace: "nowrap" }}>New word</span>
+            <span style={{ fontFamily: "var(--font-sans)", fontWeight: 700, fontSize: 16, color: "var(--ink)", whiteSpace: "nowrap" }}>{editing ? "Edit word" : "New word"}</span>
             <span style={{ width: 52 }} />
           </div>
         </div>
@@ -175,7 +183,7 @@ function Compose({ open, onClose, onPost, plan = "free", picker = "by plan", spe
                 video: media && media.kind === "video" ? media.video : null,
               });
             }}>
-            Keep it
+            {editing ? "Save changes" : "Keep it"}
           </Button>
         </div>
       </div>

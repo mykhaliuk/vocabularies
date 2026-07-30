@@ -10,6 +10,7 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
   "density": "airy",
   "previewOffline": false,
   "emptyFeed": false,
+  "entryActions": "menu",
   "plan": "free",
   "picker": "by plan",
   "videoState": "ready",
@@ -27,6 +28,7 @@ function App() {
   const [tab, setTab] = React.useState("feed");
   const [detail, setDetail] = React.useState(null);
   const [composeOpen, setComposeOpen] = React.useState(false);
+  const [editing, setEditing] = React.useState(null);
   const [settingsOpen, setSettingsOpen] = React.useState(false);
   const [peopleOpen, setPeopleOpen] = React.useState(false);
   const [speakers, setSpeakersState] = React.useState(window.VOCABU_SPEAKERS);
@@ -65,8 +67,20 @@ function App() {
   const open = (m) => m && setDetail(m);
 
   const post = ({ word, speakerId, gloss, story, collection, audio, video }) => {
-    setTweak("emptyFeed", false);
     const sp = speakers.find((s) => s.id === speakerId);
+    if (editing) {
+      const upd = {
+        ...editing, sid: sp ? sp.id : null,
+        speaker: sp ? sp.name : editing.speaker, tone: sp ? sp.tone : editing.tone, rel: sp ? null : editing.rel,
+        word, gloss, desc: story || editing.desc, collection,
+        audio: audio || null, video: video || null,
+      };
+      setEntries((arr) => arr.map((e) => (e.id === editing.id ? upd : e)));
+      setDetail((d) => (d && d.id === editing.id ? upd : d));
+      setEditing(null); setComposeOpen(false);
+      return;
+    }
+    setTweak("emptyFeed", false);
     // most recently used floats to the front of the chip row — but only after the sheet closes.
     if (sp) setSpeakers([sp, ...speakers.filter((s) => s.id !== sp.id)]);
     const m = {
@@ -82,6 +96,9 @@ function App() {
     setTab("feed");
     if (scrollRef.current) scrollRef.current.scrollTop = 0;
   };
+
+  const openEdit = (m) => { setEditing(m); setComposeOpen(true); };
+  const deleteEntry = (m) => { setEntries((arr) => arr.filter((e) => e.id !== m.id)); setDetail(null); };
 
   const setSaidAt = (m, date) => {
     setEntries((arr) => arr.map((e) => (e.id === m.id ? { ...e, saidAt: date } : e)));
@@ -136,10 +153,10 @@ function App() {
 
       <BottomNav active={tab} onNav={setTab} onCompose={() => setComposeOpen(true)} />
 
-      {detail && <DetailScreen m={detail} onBack={() => setDetail(null)} media={mediaTweaks} onSaidAt={setSaidAt} />}
+      {detail && <DetailScreen m={detail} onBack={() => setDetail(null)} media={mediaTweaks} onSaidAt={setSaidAt} onEdit={openEdit} onDelete={deleteEntry} actions={t.entryActions} />}
       {peopleOpen && <PeopleScreen speakers={speakers} entries={entries} onBack={() => setPeopleOpen(false)} onSave={saveSpeaker} onCreate={addSpeaker} onDelete={deleteSpeaker} />}
       {settingsOpen && <SettingsScreen theme={t.theme} onTheme={(v) => setTweak("theme", v)} onBack={() => setSettingsOpen(false)} onSignOut={signOut} />}
-      <Compose open={composeOpen} onClose={() => setComposeOpen(false)} onPost={post} plan={t.plan} picker={t.picker} speakers={speakers} onAddSpeaker={addSpeaker} />
+      <Compose open={composeOpen} onClose={() => { setComposeOpen(false); setEditing(null); }} onPost={post} plan={t.plan} picker={t.picker} speakers={speakers} onAddSpeaker={addSpeaker} editing={editing} />
 
       {!authed && <LoginScreen onSignedIn={signIn} />}
       {(offline || t.previewOffline) && <OfflineScreen onRetry={() => setOffline(typeof navigator !== "undefined" && navigator.onLine === false)} />}
@@ -158,6 +175,8 @@ function App() {
         <TweakRadio label="Compose picker" value={t.picker} options={["by plan", "separate", "combined"]} onChange={(v) => setTweak("picker", v)} />
         <TweakRadio label="Feed video" value={t.videoState} options={["ready", "processing", "failed"]} onChange={(v) => setTweak("videoState", v)} />
         <TweakRadio label="Orientation" value={t.videoOrientation} options={["portrait", "landscape"]} onChange={(v) => setTweak("videoOrientation", v)} />
+        <TweakSection label="Entry actions (edit/delete)" />
+        <TweakRadio label="On detail" value={t.entryActions} options={["menu", "icons"]} onChange={(v) => setTweak("entryActions", v)} />
         <TweakSection label="States" />
         <TweakToggle label="Empty feed" value={t.emptyFeed} onChange={(v) => setTweak("emptyFeed", v)} />
         <TweakToggle label="Preview offline" value={t.previewOffline} onChange={(v) => setTweak("previewOffline", v)} />
