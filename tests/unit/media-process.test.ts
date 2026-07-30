@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, mock, test } from 'bun:test';
+import { afterAll, beforeEach, describe, expect, mock, test } from 'bun:test';
+import { isNotFoundError as realIsNotFoundError } from '../../server/utils/storage';
 import type {
   MediaFailure,
   MediaManifest,
@@ -42,7 +43,11 @@ const FAILED: MediaFailure = {
 // --- storage mock, installed before media-process.ts (and therefore
 // storage.ts) is ever imported by this process, so media-process.ts binds
 // to the mock rather than the real R2 client. Each test reconfigures
-// `getObjectImpl`/`callLog` instead of re-mocking the module. ---
+// `getObjectImpl`/`callLog` instead of re-mocking the module. isNotFoundError
+// is NOT faked — the real classifier (captured above, before the mock
+// replaces the module) is re-exported as-is, so the fixtures below must be
+// shaped like genuine AWS SDK errors for it to classify correctly; this
+// exercises the classifier, not just the branch wiring around it. ---
 
 interface RecordedCall {
   key: string;
@@ -54,9 +59,21 @@ let getObjectImpl: (key: string, kind: string) => unknown = () => {
   throw new Error('getObjectImpl not configured for this test');
 };
 
+// Real R2/S3 shape for a missing key: NoSuchKey with a 404 in $metadata —
+// NOT `name: 'NotFound'`, which would trivially satisfy a naive fake
+// classifier without exercising the $metadata.httpStatusCode branch the
+// real isNotFoundError actually relies on for this case.
 const notFoundError = () => {
-  const error = new Error('not found');
-  error.name = 'NotFound';
+  const error = new Error('The specified key does not exist.');
+  error.name = 'NoSuchKey';
+  Object.assign(error, { $metadata: { httpStatusCode: 404 } });
+  return error;
+};
+
+const transientError = () => {
+  const error = new Error('We encountered an internal error.');
+  error.name = 'InternalError';
+  Object.assign(error, { $metadata: { httpStatusCode: 500 } });
   return error;
 };
 
@@ -69,15 +86,12 @@ mock.module('../../server/utils/storage', () => ({
     callLog.push({ key, kind });
     return getObjectImpl(key, kind);
   },
-  isNotFoundError: (error: unknown) =>
-    typeof error === 'object' &&
-    error !== null &&
-    (error as Error).name === 'NotFound',
+  isNotFoundError: realIsNotFoundError,
   putFile: async () => {},
   putObject: async () => {},
 }));
 
-const { processMedia, isReadyManifest } =
+const { processMedia, isReadyManifest, tagProcessResult } =
   await import('../../server/utils/media-process');
 
 const USER_ID = 'user-vkb81';
@@ -86,6 +100,14 @@ const PIPELINE_ENTERED = 'PIPELINE_ENTERED_PROBE';
 
 beforeEach(() => {
   callLog.length = 0;
+});
+
+// The storage mock above is process-global (bun's mock.module is not
+// scoped to this file), so it is undone once this file's tests are done —
+// leaving it in place would silently mock storage.ts for whatever test
+// file bun schedules next in the same run.
+afterAll(() => {
+  mock.restore();
 });
 
 describe('isReadyManifest', () => {
@@ -114,6 +136,29 @@ describe('isReadyManifest', () => {
   });
 });
 
+describe('tagProcessResult', () => {
+  // processMedia's own real-run return statement is out of reach without
+  // stubbing the whole ffmpeg pipeline (disproportionate for pinning down
+  // one literal) — every processMedia test below ends in a thrown
+  // PIPELINE_ENTERED sentinel, so it never observes a real run's `return
+  // tagProcessResult(manifest, false)`. This is the cheap seam instead:
+  // both of processMedia's return sites route through this one function,
+  // so a `skipped` typo at either call site has nowhere to hide from it.
+  test('tags a real run as not skipped', () => {
+    expect(tagProcessResult(READY, false)).toEqual({
+      ...READY,
+      skipped: false,
+    });
+  });
+
+  test('tags a guard short-circuit as skipped', () => {
+    expect(tagProcessResult(READY, true)).toEqual({
+      ...READY,
+      skipped: true,
+    });
+  });
+});
+
 describe('processMedia ready-manifest guard', () => {
   test('no manifest yet (NotFound) proceeds to the pipeline', async () => {
     getObjectImpl = (_key, kind) => {
@@ -128,11 +173,7 @@ describe('processMedia ready-manifest guard', () => {
 
   test('a transient manifest-read error proceeds to the pipeline', async () => {
     getObjectImpl = (_key, kind) => {
-      if (kind === 'media') {
-        const error = new Error('internal error');
-        error.name = 'InternalError';
-        throw error;
-      }
+      if (kind === 'media') throw transientError();
       throw new Error(PIPELINE_ENTERED);
     };
     await expect(processMedia(RAW_KEY, USER_ID)).rejects.toThrow(
