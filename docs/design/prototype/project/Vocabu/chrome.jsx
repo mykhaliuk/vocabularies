@@ -3,7 +3,7 @@
 
 const { useState: useChromeState } = React;
 
-function TopBar({ title, onBack, leftIcon, onLeft, rightIcon, onRight, brand }) {
+function TopBar({ title, onBack, leftIcon, onLeft, rightIcon, onRight, right, brand }) {
   const side = (icon, onClick, fallbackBack) => (
     <div style={{ width: 44, height: 44, display: "flex", alignItems: "center", justifyContent: "center" }}>
       {(icon || fallbackBack) && (
@@ -29,7 +29,7 @@ function TopBar({ title, onBack, leftIcon, onLeft, rightIcon, onRight, brand }) 
       ) : (
         <h1 style={{ flex: 1, textAlign: "center", margin: 0, fontFamily: "var(--font-sans)", fontSize: 17, fontWeight: 700, letterSpacing: "-0.01em", color: "var(--ink)" }}>{title}</h1>
       )}
-      {side(rightIcon, onRight, false)}
+      {right ? <div style={{ display: "flex", alignItems: "center" }}>{right}</div> : side(rightIcon, onRight, false)}
     </header>
   );
 }

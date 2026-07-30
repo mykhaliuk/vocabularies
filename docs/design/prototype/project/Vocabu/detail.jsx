@@ -1,4 +1,4 @@
-/* global React, Icon, Avatar, IconButton, TopBar, WordText, AudioSample, VideoSample, SocialRow, window */
+/* global React, Icon, Avatar, IconButton, Button, TopBar, WordText, AudioSample, VideoSample, SocialRow, window */
 // Vocabu — word detail: full entry, unfoldable meaning & story, tender replies.
 
 const { useState: useD } = React;
@@ -49,12 +49,56 @@ function SaidAt({ m, onChange }) {
   );
 }
 
-function DetailScreen({ m, onBack, media, onSaidAt }) {
+/* overflow menu — edit/delete live here because they're rare; the bar stays quiet. */
+function EntryMenu({ open, onClose, onEdit, onDelete }) {
+  if (!open) return null;
+  const item = (icon, label, color, fn) => (
+    <button onClick={fn} style={{ display: "flex", alignItems: "center", gap: 11, width: "100%", border: 0, background: "transparent", cursor: "pointer", padding: "13px 18px 13px 16px", fontFamily: "var(--font-sans)", fontSize: 15, fontWeight: 600, color, minHeight: 46, whiteSpace: "nowrap" }}>
+      <Icon name={icon} size={17} color={color} />{label}
+    </button>
+  );
+  return (
+    <>
+      <div onClick={onClose} style={{ position: "absolute", inset: 0, zIndex: 70 }} />
+      <div style={{ position: "absolute", top: 52, right: 10, zIndex: 71, minWidth: 176, background: "var(--surface)", border: "1px solid var(--hairline)", borderRadius: "var(--r-md)", boxShadow: "var(--shadow-md)", overflow: "hidden" }}>
+        {item("pencil", "edit word", "var(--ink)", onEdit)}
+        <div style={{ height: 1, background: "var(--hairline)" }} />
+        {item("trash-2", "delete\u2026", "var(--danger)", onDelete)}
+      </div>
+    </>
+  );
+}
+
+/* delete confirm — a small sheet, gentle but honest about what's lost. */
+function DeleteConfirm({ m, onCancel, onConfirm }) {
+  const lost = [m.desc && "its story", m.audio && "the voice", m.video && "the video"].filter(Boolean);
+  const lostLine = lost.length ? ` ${lost[0][0].toUpperCase()}${lost[0].slice(1)}${lost.length > 1 ? " and " + lost.slice(1).join(" and ") : ""} go${lost.length === 1 ? "es" : ""} with it.` : "";
+  return (
+    <div style={{ position: "absolute", inset: 0, zIndex: 80 }}>
+      <div onClick={onCancel} style={{ position: "absolute", inset: 0, background: "var(--scrim)" }} />
+      <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, background: "var(--surface)", borderTopLeftRadius: "var(--r-xl)", borderTopRightRadius: "var(--r-xl)", boxShadow: "var(--shadow-lg)", padding: "14px 20px calc(18px + var(--safe-bottom))", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center" }}>
+        <div style={{ width: 40, height: 4, borderRadius: 2, background: "var(--hairline-2)", marginBottom: 18 }} />
+        <div style={{ fontFamily: "var(--word-font)", fontSize: "calc(26px * var(--word-scale))", fontWeight: "var(--word-weight)", lineHeight: "var(--word-leading)", color: "var(--ink)", paddingBottom: "var(--word-pad-b)" }}>“{m.word}”</div>
+        <p style={{ fontFamily: "var(--font-sans)", fontSize: 15, lineHeight: 1.5, color: "var(--ink-2)", margin: "10px 0 0", maxWidth: 280 }}>
+          Let this one go?{lostLine} There's no getting it back.
+        </p>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, width: "100%", marginTop: 22 }}>
+          <Button full size="lg" style={{ background: "var(--danger)", boxShadow: "none" }} onClick={onConfirm}>Delete word</Button>
+          <Button full size="lg" variant="secondary" onClick={onCancel}>Cancel</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DetailScreen({ m, onBack, media, onSaidAt, onEdit, onDelete, actions = "menu" }) {
   const [liked, setLiked] = useD(m.liked);
   const [likes, setLikes] = useD(m.likes);
   const [saved, setSaved] = useD(m.saved);
   const [pop, setPop] = useD(false);
   const [open, setOpen] = useD(true);
+  const [menuOpen, setMenuOpen] = useD(false);
+  const [confirm, setConfirm] = useD(false);
   const replies = (window.VOCABU_REPLIES && window.VOCABU_REPLIES[m.id]) || [];
 
   const toggleLike = () => setLiked((v) => {
@@ -65,7 +109,19 @@ function DetailScreen({ m, onBack, media, onSaidAt }) {
 
   return (
     <div style={{ position: "absolute", inset: 0, zIndex: 50, background: "var(--paper)", display: "flex", flexDirection: "column" }}>
-      <TopBar title="word" onBack={onBack} />
+      <TopBar title="word" onBack={onBack}
+        right={onEdit && actions === "icons" ? (
+          <div style={{ display: "flex" }}>
+            <IconButton name="pencil" iconSize={19} title="edit" onClick={() => onEdit(m)} />
+            <IconButton name="trash-2" iconSize={19} title="delete" color="var(--danger)" onClick={() => setConfirm(true)} />
+          </div>
+        ) : undefined}
+        rightIcon={onEdit && actions === "menu" ? "more-horizontal" : undefined}
+        onRight={onEdit && actions === "menu" ? () => setMenuOpen(true) : undefined} />
+      <EntryMenu open={menuOpen} onClose={() => setMenuOpen(false)}
+        onEdit={() => { setMenuOpen(false); onEdit(m); }}
+        onDelete={() => { setMenuOpen(false); setConfirm(true); }} />
+      {confirm && <DeleteConfirm m={m} onCancel={() => setConfirm(false)} onConfirm={() => { setConfirm(false); onDelete(m); }} />}
       <div style={{ flex: 1, overflowY: "auto", padding: "8px 20px 120px" }}>
         {/* the entry */}
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16, padding: "20px 0 8px", textAlign: "center" }}>
