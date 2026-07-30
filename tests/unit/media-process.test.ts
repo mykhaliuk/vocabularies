@@ -1,5 +1,5 @@
 import { afterAll, beforeEach, describe, expect, mock, test } from 'bun:test';
-import { isNotFoundError as realIsNotFoundError } from '../../server/utils/storage';
+import { isNotFoundError as realIsNotFound } from '../../server/utils/storage';
 import type {
   MediaFailure,
   MediaManifest,
@@ -86,7 +86,7 @@ mock.module('../../server/utils/storage', () => ({
     callLog.push({ key, kind });
     return getObjectImpl(key, kind);
   },
-  isNotFoundError: realIsNotFoundError,
+  isNotFoundError: realIsNotFound,
   putFile: async () => {},
   putObject: async () => {},
 }));
@@ -141,9 +141,10 @@ describe('tagProcessResult', () => {
   // stubbing the whole ffmpeg pipeline (disproportionate for pinning down
   // one literal) — every processMedia test below ends in a thrown
   // PIPELINE_ENTERED sentinel, so it never observes a real run's `return
-  // tagProcessResult(manifest, false)`. This is the cheap seam instead:
-  // both of processMedia's return sites route through this one function,
-  // so a `skipped` typo at either call site has nowhere to hide from it.
+  // tagProcessResult(manifest, false)`. This pins the SHAPE the helper
+  // produces for both booleans (one object literal, `skipped` spelled the
+  // same way at both call sites); it does not prove either call site
+  // passes the *correct* boolean — that argument is still review-caught.
   test('tags a real run as not skipped', () => {
     expect(tagProcessResult(READY, false)).toEqual({
       ...READY,

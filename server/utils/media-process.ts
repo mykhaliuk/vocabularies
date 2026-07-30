@@ -518,8 +518,10 @@ export type ProcessMediaResult = MediaManifest & { skipped: boolean };
 // has a unit-testable seam: exercising processMedia's own real-run return
 // statement would mean stubbing the full ffmpeg pipeline, which is
 // disproportionate for pinning down one literal. Both processMedia return
-// sites go through this single function, so a `skipped` typo at either
-// call site has nowhere to hide from `tagProcessResult(_, true/false)`.
+// sites go through this single object literal, so the RESULT SHAPE (key
+// name, no other fields) cannot drift between the two call sites; which
+// boolean each site passes is still a review-caught concern, not something
+// this function itself can verify.
 export const tagProcessResult = (
   manifest: MediaManifest,
   skipped: boolean,
