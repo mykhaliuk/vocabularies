@@ -28,6 +28,10 @@
      containing `>` in an arrow type (`<(a) => b>`) would confuse the
      scanner. None exists today; it would surface as UNRESOLVED, not as a
      wrong edge.
+   - `segmentsMatch` treats an unresolved call segment (`:*`) as matching
+     ANY route segment, param or literal, so a literal route added beside a
+     dynamic one at the same depth can silently absorb a call and suppress
+     an ORPHAN/DANGLING finding.
 
    Modes:
      build  rewrite docs/capability-graph.md
