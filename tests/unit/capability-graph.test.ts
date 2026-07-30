@@ -161,8 +161,9 @@ describe('skipString', () => {
   });
 
   test('walks through a nested ${} template literal holding further strings', () => {
-    const text = '`outer ${`inner ${x}`} end`';
-    expect(skipString(text, 0)).toBe(text.length);
+    const literal = '`outer ${`inner ${x}`} end`';
+    const text = `${literal} rest`;
+    expect(skipString(text, 0)).toBe(literal.length);
   });
 
   test('an escaped quote does not end the string early', () => {
