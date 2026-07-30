@@ -69,8 +69,21 @@ export default defineEventHandler(async (event) => {
 
   try {
     const manifest = await processUploadedMedia(key, userId);
-    console.log('[media.process] done', { key, timings: manifest.timings });
-    return { ok: true, timings: manifest.timings, kind: manifest.kind };
+    // manifest.timings are the ORIGINAL run's numbers on a skipped delivery
+    // (VKB-81 replays the stored manifest, it does not re-time anything) —
+    // skipped distinguishes the two so a log line full of tiny durations
+    // does not read as "this redelivery was suspiciously fast".
+    console.log('[media.process] done', {
+      key,
+      timings: manifest.timings,
+      skipped: manifest.skipped,
+    });
+    return {
+      ok: true,
+      timings: manifest.timings,
+      kind: manifest.kind,
+      skipped: manifest.skipped,
+    };
   } catch (error) {
     // A rejection (over-limit, unreadable file) is a PERMANENT outcome:
     // the failure manifest is already written, the job is done. Return

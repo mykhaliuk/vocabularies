@@ -7,7 +7,7 @@
 
 - Status: Accepted
 - Date: 2026-07-17 (async transport finalized 2026-07-21, VKB-80)
-- Refs: VKB-63, VKB-80, ROADMAP "Media core", `server/utils/storage.ts`,
+- Refs: VKB-63, VKB-80, VKB-81, ROADMAP "Media core", `server/utils/storage.ts`,
   `server/utils/media-process.ts`, `server/utils/media-queue.ts`
 
 ## Context
@@ -82,6 +82,24 @@ problem the numbers say we do not have.
   kinds, codecs, dimensions), which halves the binary weight.
 - The pinned build is from 2018; if a future iPhone codec variant fails to
   decode, bumping the binary package is the first move.
+
+## Idempotency (VKB-81)
+
+QStash's at-least-once delivery, plus the VKB-80 inline-fallback race
+(`enqueueJSON` throws after QStash already accepted the job, so the same
+job runs inline AND is later redelivered), means the same job can reach
+`processMedia` twice. The `manifest.json` a completed run writes is the
+idempotency token: a `'ready'` manifest is durable proof the transcode and
+uploads already happened, so `processMedia` reads it first and returns
+early instead of re-running ffmpeg. Two concurrent deliveries can both read
+"not ready yet" and both run the full pipeline before either's manifest
+write lands — accepted, not fixed with a distributed lock, because the
+pipeline's output is deterministic: a duplicate run is wasted work, never a
+corrupted or conflicting result. `force` is the deliberate-reprocess
+opt-out (default `false`, bypasses the guard); it is a function parameter
+only, never read from the QStash worker's request body, so a
+retried/redelivered message can never use it to defeat the guard it exists
+to be an exception to.
 
 ## Open ends (tracked, not blocking)
 
