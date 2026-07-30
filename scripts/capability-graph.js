@@ -1,4 +1,7 @@
 #!/usr/bin/env node
+// @ts-nocheck — JS CLI script run by node; it only enters vue-tsc's checked
+// graph via the tests/unit/capability-graph.test.ts import, and runtime
+// behavior there is pinned by that spec, not by static types.
 /* capability-graph — derive the UI ↔ API ↔ domain ↔ entity graph from code.
 
    The graph answers a planning-time question: "the feature I am about to
