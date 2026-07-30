@@ -17,6 +17,7 @@ import type { AuthUser } from '~/server/utils/auth';
 import type {
   MediaManifest,
   ProcessMediaOptions,
+  ProcessMediaResult,
 } from '~/server/utils/media-process';
 
 export type MediaRow = InferSelectModel<typeof media>;
@@ -219,7 +220,7 @@ export const processUploadedMedia = async (
   rawKey: string,
   userId: string,
   options: ProcessMediaOptions = {},
-): Promise<MediaManifest> => {
+): Promise<ProcessMediaResult> => {
   const { mediaId, key } = parseOriginalKey(rawKey, userId);
   try {
     const manifest = await processMedia(key, userId, options);

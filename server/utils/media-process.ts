@@ -487,25 +487,38 @@ const writeFailureManifest = async (
   }
 };
 
-// Pure decision extracted for unit coverage (VKB-81): whether an existing
-// manifest makes a fresh processMedia run redundant. QStash is at-least-once
-// (retries, plus the VKB-80 inline-fallback race where enqueueJSON throws
-// after QStash already accepted the job) so the SAME completed job can be
-// delivered twice; a 'ready' manifest is durable proof the ffmpeg run and
-// derivative uploads already happened. A 'failed' manifest is NOT such
-// proof — the job must still run so it can self-heal — and force is the
-// caller's explicit override for a deliberate reprocess.
-export const shouldSkipProcessing = (
+// Pure predicate extracted for unit coverage (VKB-81): does `existing`
+// carry durable proof of completion? A 'ready' manifest means the ffmpeg
+// run and derivative uploads already happened; a 'failed' one does NOT —
+// the job must still run so it can self-heal. The belt-and-braces checks
+// beyond the status string (durationSec is a number, kind is one of the
+// two known values) guard against a manifest that parsed but is not
+// actually shaped like a completed run.
+//
+// force is deliberately NOT a parameter here: folding it in would make
+// isReadyManifest(existing, true) return false for a manifest that IS
+// ready, which lies to the `existing is MediaManifest` type predicate.
+// force is the caller's override and belongs at the processMedia call
+// site (`!force && isReadyManifest(existing)`), not inside the predicate.
+export const isReadyManifest = (
   existing: MediaManifest | MediaFailure | null,
-  force: boolean,
 ): existing is MediaManifest =>
-  !force && existing !== null && existing.status === 'ready';
+  existing !== null &&
+  existing.status === 'ready' &&
+  typeof existing.durationSec === 'number' &&
+  (existing.kind === 'audio' || existing.kind === 'video');
+
+// processMedia's outcome, tagged with whether the ready-manifest guard
+// short-circuited the run. Always present (never a conditionally-present
+// key) so a skipped delivery is distinguishable from a real run instead of
+// silently replaying the original run's timings as if they just happened.
+export type ProcessMediaResult = MediaManifest & { skipped: boolean };
 
 export const processMedia = async (
   rawKey: string,
   userId: string,
   options: ProcessMediaOptions = {},
-): Promise<MediaManifest> => {
+): Promise<ProcessMediaResult> => {
   const { force = false } = options;
   const { key, mediaId } = parseOriginalKey(rawKey, userId);
   const { manifest: manifestKey } = derivedKeys(userId, mediaId);
@@ -526,19 +539,26 @@ export const processMedia = async (
         return null;
       });
 
-  if (shouldSkipProcessing(existing, force)) {
+  if (!force && isReadyManifest(existing)) {
     console.log('[media-process] ready manifest exists — skipping reprocess', {
       key,
       mediaId,
     });
-    return existing;
+    return { ...existing, skipped: true };
   }
 
   const startedAt = Date.now();
   const workDir = await mkdtemp(join(tmpdir(), 'vocabu-media-'));
 
   try {
-    return await runPipeline(key, userId, mediaId, workDir, startedAt);
+    const manifest = await runPipeline(
+      key,
+      userId,
+      mediaId,
+      workDir,
+      startedAt,
+    );
+    return { ...manifest, skipped: false };
   } catch (error) {
     // Record the failure where status looks for the result, so clients see
     // a terminal 'failed' instead of polling 'processing' forever. A
