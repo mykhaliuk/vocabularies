@@ -1,4 +1,7 @@
 #!/usr/bin/env node
+// @ts-nocheck — JS CLI script run by node; it only enters vue-tsc's checked
+// graph via the tests/unit/capability-graph.test.ts import, and runtime
+// behavior there is pinned by that spec, not by static types.
 /* capability-graph — derive the UI ↔ API ↔ domain ↔ entity graph from code.
 
    The graph answers a planning-time question: "the feature I am about to
@@ -28,6 +31,10 @@
      containing `>` in an arrow type (`<(a) => b>`) would confuse the
      scanner. None exists today; it would surface as UNRESOLVED, not as a
      wrong edge.
+   - `segmentsMatch` treats an unresolved call segment (`:*`) as matching
+     ANY route segment, param or literal, so a literal route added beside a
+     dynamic one at the same depth can silently absorb a call and suppress
+     an ORPHAN/DANGLING finding.
 
    Modes:
      build  rewrite docs/capability-graph.md
@@ -36,7 +43,6 @@
 
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { registerHooks } from 'node:module';
 import { pathToFileURL } from 'node:url';
 
 const ROOT = resolve(import.meta.dirname, '..');
@@ -90,7 +96,7 @@ const ANNOTATION_RE = (key) =>
 /* The reason may wrap across following comment lines — the 80-column
    limit makes that the common case, and a reason truncated at the first
    newline reads as a broken sentence in the report. */
-const readAnnotation = (source, key) => {
+export const readAnnotation = (source, key) => {
   const pattern = ANNOTATION_RE(key);
   const lines = source.split('\n');
   for (let i = 0; i < lines.length; i++) {
@@ -126,7 +132,7 @@ const read = (relFile) => readFileSync(join(ROOT, relFile), 'utf8');
 
 /* Comments are blanked in place — same length, same newlines — so offsets
    and line numbers stay valid while commented-out calls stop counting. */
-const maskComments = (text) => {
+export const maskComments = (text) => {
   const out = text.split('');
   const blank = (from, to) => {
     for (let i = from; i < to && i < out.length; i++) {
@@ -167,7 +173,7 @@ const maskComments = (text) => {
 
 /* Returns the index just past the closing quote. Template literals may
    nest ${ } holding further strings, so the walk is recursive. */
-const skipString = (text, start) => {
+export const skipString = (text, start) => {
   const quote = text[start];
   let i = start + 1;
   while (i < text.length) {
@@ -205,7 +211,7 @@ const skipSpace = (text, index) => {
 
 /* Steps over a generic argument list: `<{ url: string }>` between the
    callee and its parenthesis. Returns index unchanged when absent. */
-const skipGeneric = (text, index) => {
+export const skipGeneric = (text, index) => {
   if (text[index] !== '<') return index;
   let depth = 0;
   let i = index;
@@ -225,7 +231,7 @@ const skipGeneric = (text, index) => {
   return index;
 };
 
-const findCallEnd = (text, openParen) => {
+export const findCallEnd = (text, openParen) => {
   let depth = 0;
   let i = openParen;
   while (i < text.length) {
@@ -312,7 +318,7 @@ const findCalls = (relFile) => {
 };
 
 /* server/api/entries/[id].get.ts → GET /api/entries/:id */
-const routeFromFile = (relFile) => {
+export const routeFromFile = (relFile) => {
   const withoutExtension = relFile.replace(CODE_EXTENSION_RE, '');
   const segments = withoutExtension.slice('server/'.length).split('/');
   let last = segments.pop();
@@ -333,12 +339,12 @@ const routeFromFile = (relFile) => {
   return { method, path: `/${path}` };
 };
 
-const segmentsMatch = (callSegment, routeSegment) => {
+export const segmentsMatch = (callSegment, routeSegment) => {
   if (routeSegment.startsWith(':') || callSegment === ':*') return true;
   return callSegment === routeSegment;
 };
 
-const matchesRoute = (call, route) => {
+export const matchesRoute = (call, route) => {
   if (route.method !== 'ALL' && route.method !== call.method) return false;
   const callParts = call.path.split('/');
   const routeParts = route.path.split('/');
@@ -350,7 +356,7 @@ const matchesRoute = (call, route) => {
 
 /* Named imports of `moduleHint`, minus type-only ones — a type import
    creates no runtime dependency and must not become an edge. */
-const importedNames = (text, moduleHint) => {
+export const importedNames = (text, moduleHint) => {
   const names = new Set();
   for (const match of text.matchAll(NAMED_IMPORT_RE)) {
     if (match[1]) continue;
@@ -410,6 +416,13 @@ const operationsIn = (relFile) => {
 };
 
 const loadEntities = async () => {
+  // Dynamic, not a static top-level import: bun's `node:module` shim has no
+  // `registerHooks` export, and a static import of a missing named export
+  // fails at link time — before any test code runs — which would make the
+  // pure helpers below unimportable from a `bun test` spec. Node resolves
+  // this dynamically the same way it would a static import, so the CLI path
+  // (`node scripts/capability-graph.js`) is unaffected.
+  const { registerHooks } = await import('node:module');
   registerHooks({
     resolve(specifier, context, next) {
       if (specifier.startsWith('.') && !/\.[cm]?[jt]sx?$/.test(specifier)) {
@@ -915,4 +928,11 @@ const main = async () => {
   );
 };
 
-await main();
+/* Importing the module for its pure helpers (unit tests) must not trigger
+   the CLI — only running it directly, `node scripts/capability-graph.js
+   [build|check]`, does. */
+const isEntryPoint =
+  process.argv[1] !== undefined &&
+  import.meta.url === pathToFileURL(process.argv[1]).href;
+
+if (isEntryPoint) await main();
