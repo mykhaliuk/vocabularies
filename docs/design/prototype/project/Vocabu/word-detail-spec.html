@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Word detail — read layout spec</title>
+<link rel="stylesheet" href="../_ds/vocabu-design-system-fc456a27-02a5-4423-9181-3fc0311e1354/colors_and_type.css" />
+<script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+<style>
+*{box-sizing:border-box}html,body{margin:0}
+body{background:var(--paper);color:var(--ink);font-family:var(--font-sans);-webkit-font-smoothing:antialiased}
+.wrap{max-width:1040px;margin:0 auto;padding:56px 28px 96px}
+.eyebrow{display:flex;align-items:center;gap:9px;font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3)}
+.eyebrow i{width:7px;height:7px;border-radius:50%;background:var(--primary);display:inline-block}
+h1{font-size:38px;font-weight:800;letter-spacing:-.03em;line-height:1.1;margin:14px 0 0}
+.lede{font-size:17px;line-height:1.55;color:var(--ink-2);max-width:660px;margin:14px 0 0;text-wrap:pretty}
+.meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
+.tag{font-size:12.5px;font-weight:600;padding:6px 11px;border-radius:var(--r-pill);background:var(--surface-sunk);color:var(--ink-2)}
+.tag.rose{background:var(--primary-soft);color:var(--on-primary-soft)}
+h2{font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:0 0 20px}
+section{margin-top:64px;border-top:1px solid var(--hairline);padding-top:26px}
+h3{font-size:21px;font-weight:700;letter-spacing:-.02em;margin:0 0 8px}
+p{font-size:15.5px;line-height:1.6;color:var(--ink-2);margin:0 0 14px;max-width:680px;text-wrap:pretty}
+p b,li b,td b{color:var(--ink);font-weight:600}
+ul{margin:0 0 14px;padding-left:20px;max-width:680px}
+li{font-size:15.5px;line-height:1.6;color:var(--ink-2);margin-bottom:7px}
+.answers{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-top:8px}
+.ans{background:var(--surface);border:1px solid var(--hairline);border-radius:var(--r-lg);box-shadow:var(--shadow-sm);padding:20px}
+.ans .q{font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-3);margin-bottom:8px}
+.ans .a{font-size:16.5px;font-weight:700;letter-spacing:-.01em;color:var(--ink);line-height:1.35;margin-bottom:8px}
+.ans p{font-size:14.5px;margin:0}
+.cap{font-size:13px;font-weight:600;color:var(--ink-2);margin:34px 0 9px}
+.cap span{color:var(--ink-3);font-weight:400}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
+.frame{background:var(--paper);border:1px solid var(--hairline);border-radius:var(--r-lg);padding:20px 18px}
+.mob{max-width:360px;margin:0 auto}
+table{border-collapse:collapse;width:100%;margin-top:6px}
+th{text-align:left;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);padding:0 12px 10px 0;border-bottom:1px solid var(--hairline)}
+td{font-size:14px;line-height:1.5;color:var(--ink-2);padding:12px 12px 12px 0;border-bottom:1px solid var(--hairline);vertical-align:top}
+td:first-child{color:var(--ink);font-weight:600;white-space:nowrap}
+td.wrap1{white-space:normal}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;background:var(--surface-sunk);color:var(--ink);padding:2px 5px;border-radius:var(--r-xs)}
+a{color:var(--link)}a:hover{color:var(--secondary-hover)}
+.callout{background:var(--primary-soft);border:1px solid var(--primary-soft-border);border-radius:var(--r-md);padding:18px 20px;max-width:680px;margin:0 0 20px}
+.callout p{margin:0;color:var(--on-primary-soft)}.callout p b{color:var(--on-primary-soft)}
+.cut{background:var(--surface-sunk);border-radius:var(--r-md);padding:18px 20px;max-width:680px;margin:0 0 20px}
+.cut p{margin:0}
+/* ── mocks, values lifted from detail.jsx ── */
+.bar{display:flex;align-items:center;height:54px;border-bottom:1px solid var(--hairline);padding:0 8px}
+.bar .side{width:44px;height:44px;display:flex;align-items:center;justify-content:center;color:var(--ink-2)}
+.bar .t{flex:1;text-align:center;font-size:17px;font-weight:700;letter-spacing:-.01em}
+.bar svg{width:21px;height:21px}
+.read{display:flex;flex-direction:column;align-items:center;text-align:center;padding:20px 20px 8px;gap:16px}
+.av{width:52px;height:52px;border-radius:50%;background:var(--rose-200);color:var(--rose-700);display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:700}
+.av.blue{background:var(--blue-200);color:var(--blue-700)}
+.metaline{font-size:14px;line-height:1.3;margin-top:-4px;white-space:nowrap}
+.metaline b{font-weight:600;color:var(--ink)}
+.metaline span{color:var(--ink-3);font-weight:400}
+.word{font-family:var(--font-hand);font-weight:500;line-height:1.16;color:var(--ink);padding-bottom:.14em;align-self:stretch}
+.word .q{color:var(--ink-3);font-weight:400}
+.gloss{font-size:17px;font-style:italic;color:var(--ink-2);margin-top:-6px}
+.player{width:100%;margin-top:6px;display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--hairline);border-radius:var(--r-md);padding:12px 14px}
+.player .pl{width:38px;height:38px;border-radius:50%;background:var(--primary-soft);color:var(--on-primary-soft);display:flex;align-items:center;justify-content:center;flex:none}
+.player .pl svg{width:16px;height:16px}
+.bars{flex:1;display:flex;align-items:center;gap:3px;height:26px}
+.bars i{flex:1;background:var(--hairline-2);border-radius:2px;display:block}
+.dur{font-size:12.5px;color:var(--ink-3);font-variant-numeric:tabular-nums}
+.unfold{display:flex;flex-direction:column;align-items:center;margin-top:14px}
+.link{display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:600;color:var(--link);min-height:44px;padding:8px 4px}
+.link svg{width:16px;height:16px}
+.story{font-size:16px;line-height:1.6;color:var(--ink);margin:6px 0 0;max-width:330px;text-align:center}
+.coll{display:flex;justify-content:center;margin-top:18px}
+.coll span{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--ink-2);background:var(--surface-sunk);padding:7px 13px;border-radius:var(--r-sm)}
+.coll svg{width:14px;height:14px}
+.said{display:flex;justify-content:center;margin-top:16px}
+.said span{display:inline-flex;align-items:center;gap:7px;font-size:13px;color:var(--ink-3);padding:8px 6px}
+.said svg{width:13px;height:13px}
+.said b{color:var(--link);font-weight:600}
+.ruler{position:relative;padding-left:16px;border-left:2px solid var(--primary-soft-border)}
+.ruler .step{position:relative;padding:0 0 18px 12px}
+.ruler .step::before{content:"";position:absolute;left:-21px;top:5px;width:8px;height:8px;border-radius:50%;background:var(--primary)}
+.ruler .n{font-size:15px;font-weight:700;color:var(--ink);letter-spacing:-.01em}
+.ruler .d{font-size:14px;line-height:1.5;color:var(--ink-2);margin-top:2px}
+.ruler .d code{font-size:12px}
+@media(max-width:720px){.pair{grid-template-columns:1fr}h1{font-size:30px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow"><i></i>Design handoff · issue #144 · blocks M17 (17.0)</div>
+  <h1>Word detail — read layout</h1>
+  <p class="lede">Everything the entry is, in one centred column you can read without touching anything. The word is the hero; the person, the meaning, the story and the date orbit it in decreasing weight. Social is not part of v0 — what's left is a page you open to remember, not to respond.</p>
+  <div class="meta"><span class="tag rose">read layout only</span><span class="tag rose">v0 = no social</span><span class="tag">⋯ / delete / saidAt pinned elsewhere</span><span class="tag">30 Jul 2026</span></div>
+
+  <section>
+    <h2>Scope of this spec</h2>
+    <table>
+      <tr><th>Pinned here</th><th>Pinned elsewhere — do not re-decide</th></tr>
+      <tr><td class="wrap1" style="white-space:normal">Read-layout order and composition: speaker, word, meaning, media, story unfold, collection, date. Which <code>detail.jsx</code> affordances survive v0, and the metrics for each block.</td>
+        <td class="wrap1" style="color:var(--ink-2);font-weight:400">⋯ menu, edit flow, delete confirm → <a href="entry-actions-spec.html">entry-actions-spec.html</a><br />Speaker model, frozen age, date correction → <a href="speaker-spec.html">speaker-spec.html</a> §Correcting the date<br />Voice / video capture and player states → <a href="media-spec.html">media-spec.html</a></td></tr>
+    </table>
+    <p style="margin-top:18px">Source of truth for existing behaviour: <code>detail.jsx</code>. This spec pins it, minus the cut listed below.</p>
+  </section>
+
+  <section>
+    <h2>The decisions</h2>
+    <div class="answers">
+      <div class="ans">
+        <div class="q">Q1 · what shape is the page</div>
+        <div class="a">One centred column</div>
+        <p>No cards, no left-aligned rows, no chrome around the entry. The detail is a page of paper with the word in the middle — the feed's card opened up and given air.</p>
+      </div>
+      <div class="ans">
+        <div class="q">Q2 · is the story open or folded</div>
+        <div class="a">Open by default</div>
+        <p>You came here for the story; making it a second tap is a toll. The toggle stays so a long story can be collapsed back down to the word — the fold is a reader's tool, not a gate.</p>
+      </div>
+      <div class="ans">
+        <div class="q">Q3 · what happens to the social row</div>
+        <div class="a">Cut from v0, whole</div>
+        <p>Like, save, reply and the reply composer all leave together. A half-social detail (a heart with nothing behind it) is worse than none. The layout below is complete without them.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Anatomy</h2>
+    <p class="cap">Full entry, everything present <span>— vertical order is fixed; each block disappears cleanly when its data is absent.</span></p>
+    <div class="pair">
+      <div class="frame"><div class="mob">
+        <div class="bar"><div class="side"><i data-lucide="arrow-left"></i></div><div class="t">word</div><div class="side"><i data-lucide="more-horizontal"></i></div></div>
+        <div class="read">
+          <div class="av">M</div>
+          <div class="metaline"><b>Mira</b><span> · my daughter</span></div>
+          <div class="word" style="font-size:40px"><span class="q">“</span>bapple<span class="q">”</span></div>
+          <div class="gloss">apple, but rounder</div>
+          <div class="player"><span class="pl"><i data-lucide="play"></i></span><span class="bars"><i style="height:9px"></i><i style="height:17px"></i><i style="height:24px"></i><i style="height:13px"></i><i style="height:21px"></i><i style="height:8px"></i><i style="height:15px"></i><i style="height:23px"></i><i style="height:11px"></i><i style="height:18px"></i><i style="height:7px"></i><i style="height:20px"></i><i style="height:12px"></i><i style="height:16px"></i></span><span class="dur">0:04</span></div>
+        </div>
+        <div class="unfold">
+          <span class="link"><i data-lucide="chevron-up"></i>hide meaning &amp; story</span>
+          <p class="story">She pointed at the fruit bowl every morning for a week. We still call them bapples.</p>
+        </div>
+        <div class="coll"><span><i data-lucide="bookmark"></i> Mira's words</span></div>
+        <div class="said"><span><i data-lucide="calendar"></i>said 10 May 2026 · 19 mo <b>edit</b></span></div>
+      </div></div>
+      <div class="frame">
+        <div class="ruler">
+          <div class="step"><div class="n">1 · Speaker</div><div class="d">Avatar 52px, tone from the speaker. Below it the metaline at 14px: name <b>600 / --ink</b>, then <code>· relation</code> in <code>--ink-3</code> 400. Single line, never wraps.</div></div>
+          <div class="step"><div class="n">2 · The word</div><div class="d">Handwriting face, quotes in <code>--ink-3</code>. Auto-shrinks by length: <b>40 / 33 / 27 / 22 / 19px</b> at ≤13, ≤20, ≤30, ≤44, longer. Full-width, wraps on overflow.</div></div>
+          <div class="step"><div class="n">3 · Meaning</div><div class="d">One line, 17px italic <code>--ink-2</code>, tucked close under the word. Optional.</div></div>
+          <div class="step"><div class="n">4 · Media</div><div class="d">Voice or video player, full column width, in its <code>big</code> variant. Sits inside the header block so it reads as part of the word, not an attachment below it.</div></div>
+          <div class="step"><div class="n">5 · Story unfold</div><div class="d">Blue text button + rotating chevron, 44px target. Open by default. Body 16px/1.6 <code>--ink</code>, centred, max 330px.</div></div>
+          <div class="step"><div class="n">6 · Collection</div><div class="d">One quiet chip on <code>--surface-sunk</code>, bookmark glyph, 13px. Optional.</div></div>
+          <div class="step" style="padding-bottom:0"><div class="n">7 · Said on</div><div class="d">13px <code>--ink-3</code>, calendar glyph, frozen age appended when the speaker has a birthday. The <b>edit</b> affordance is pinned by the speaker spec.</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Metrics</h2>
+    <table>
+      <tr><th>Block</th><th>Values</th></tr>
+      <tr><td>Scroll container</td><td>Gutter 20px, top 8px, bottom <b>40px + safe-area</b> (was 120px to clear the reply composer — recovered when it goes).</td></tr>
+      <tr><td>Header stack</td><td>Column, centre-aligned, <code>gap 16</code>, padding <code>20px 0 8px</code>. Metaline pulled up <code>-4</code>, gloss <code>-6</code>, media pushed down <code>+6</code> — the optical spacing, not the flow gap.</td></tr>
+      <tr><td>Story unfold</td><td><code>margin-top 14</code>; toggle 14px/600 <code>--link</code>, min-height 44; chevron 16px, rotates 180° over <code>--dur-base --ease-out</code>.</td></tr>
+      <tr><td>Collection chip</td><td><code>margin-top 18</code>; padding <code>7px 13px</code>, radius <code>--r-sm</code>, icon 14px.</td></tr>
+      <tr><td>Said-on row</td><td><code>margin-top 16</code>; tap target padding <code>8px 6px</code>, min-height 40.</td></tr>
+      <tr><td>Top bar</td><td>54px, back left, title <code>word</code> centred, ⋯ right. Frosted, hairline bottom — standard chrome.</td></tr>
+    </table>
+    <p style="margin-top:18px">Everything is centred, including the story paragraph. It's the one place in the app where centred body copy is right: the block is short, the page is a keepsake, and the column is built around the word's axis.</p>
+  </section>
+
+  <section>
+    <h2>Which blocks appear</h2>
+    <p>Only the word, the speaker and the date are guaranteed. Absent blocks collapse entirely — no empty labels, no “no story yet” placeholders.</p>
+    <table>
+      <tr><th>Block</th><th>Present when</th><th>Absent</th></tr>
+      <tr><td>Avatar + metaline</td><td>always</td><td>Speaker-less entries fall back to <b>You</b>; relation is dropped, name only.</td></tr>
+      <tr><td>Word</td><td>always</td><td>—</td></tr>
+      <tr><td>Meaning</td><td>gloss written</td><td>Word sits directly above media / unfold.</td></tr>
+      <tr><td>Voice / video</td><td>media kept</td><td>No slot, no “add audio” prompt — that lives in edit.</td></tr>
+      <tr><td>Story unfold</td><td>story written</td><td><b>Toggle hides with it.</b> A control that opens nothing is noise.</td></tr>
+      <tr><td>Collection</td><td>filed</td><td>Chip omitted.</td></tr>
+      <tr><td>Said on</td><td>always</td><td>Age suffix drops when the speaker has no birthday.</td></tr>
+    </table>
+    <p class="cap">Two thin entries <span>— a bare word, and a word with only a story. Both hold the page without padding.</span></p>
+    <div class="pair">
+      <div class="frame"><div class="mob">
+        <div class="read" style="padding-bottom:0">
+          <div class="av blue">D</div>
+          <div class="metaline"><b>Dad</b></div>
+          <div class="word" style="font-size:27px"><span class="q">“</span>don't trust a quiet dog<span class="q">”</span></div>
+        </div>
+        <div class="said" style="margin-top:22px"><span><i data-lucide="calendar"></i>said 2 Mar 2026 <b>edit</b></span></div>
+      </div></div>
+      <div class="frame"><div class="mob">
+        <div class="read" style="padding-bottom:0">
+          <div class="av">T</div>
+          <div class="metaline"><b>Theo</b><span> · my son · 3</span></div>
+          <div class="word" style="font-size:40px"><span class="q">“</span>hangry-nap<span class="q">”</span></div>
+        </div>
+        <div class="unfold">
+          <span class="link"><i data-lucide="chevron-up"></i>hide meaning &amp; story</span>
+          <p class="story">What he calls the nap you take before you get mean.</p>
+        </div>
+        <div class="said"><span><i data-lucide="calendar"></i>said 18 Jun 2026 · 3 <b>edit</b></span></div>
+      </div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Cut from v0</h2>
+    <div class="cut"><p><b>Removed as one piece.</b> The divider, the social row, the replies list and its overline, and the pinned reply composer at the bottom of the screen. With the composer gone the scroll container's bottom padding drops from 120px to 40px + safe-area, and the detail has no fixed bottom chrome at all.</p></div>
+    <table>
+      <tr><th>Affordance</th><th>v0</th><th>Note</th></tr>
+      <tr><td>Like / count</td><td>cut</td><td>Nothing on the detail replaces it. The feed card's own state is a separate ticket.</td></tr>
+      <tr><td>Save</td><td>cut</td><td>Collections already do the keeping; a second save verb confuses the model.</td></tr>
+      <tr><td>Replies + composer</td><td>cut</td><td>The whole social loop lands together or not at all.</td></tr>
+      <tr><td>Story unfold</td><td><b>survives</b></td><td>Reader's control, not social.</td></tr>
+      <tr><td>Media player</td><td><b>survives</b></td><td>Playback is the point of keeping the voice.</td></tr>
+      <tr><td>Collection chip</td><td><b>survives</b></td><td>Read-only here; re-filing happens in edit.</td></tr>
+      <tr><td>Said-on + edit</td><td><b>survives</b></td><td>Per speaker spec — the only inline edit on the page.</td></tr>
+      <tr><td>⋯ menu</td><td><b>survives</b></td><td>Own entry only. Per entry-actions spec.</td></tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>Behaviour</h2>
+    <table>
+      <tr><th>Case</th><th>Behaviour</th></tr>
+      <tr><td>Open / close</td><td>Cross-fade over the feed, <code>--dur-base</code>. Back returns to the same scroll position in the feed.</td></tr>
+      <tr><td>Unfold toggle</td><td>Open on mount. State is per-visit, not persisted — reopening the word shows the story again.</td></tr>
+      <tr><td>Long word</td><td>Shrinks through the five steps, then wraps. Never truncated, never ellipsised — the whole phrase is the entry.</td></tr>
+      <tr><td>Long story</td><td>Page scrolls. No max-height, no “read more”.</td></tr>
+      <tr><td>Media failure</td><td>Player renders its error state in place; the rest of the layout is unaffected. See media spec.</td></tr>
+      <tr><td>Someone else's entry</td><td>Identical layout, no ⋯, no <b>edit</b> on the date.</td></tr>
+      <tr><td>Reduced motion</td><td>Chevron rotation and the open cross-fade drop to instant.</td></tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>Open for product</h2>
+    <ul>
+      <li><b>Where social returns.</b> When it does, it re-enters below the said-on row behind the same hairline the prototype used — the read stack above it doesn't move.</li>
+      <li><b>On-this-day framing.</b> Arriving from a resurfaced memory may want a small overline above the avatar; not specced, not blocking.</li>
+      <li><b>Sibling navigation.</b> Swiping between words in a collection is the obvious next gesture and the reason the detail has no fixed bottom chrome.</li>
+    </ul>
+  </section>
+</div>
+<script>window.lucide&&lucide.createIcons();</script>
+</body>
+</html>
