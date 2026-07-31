@@ -31,6 +31,10 @@ export interface EntryView {
   word: string;
   gloss: string | null;
   speaker: EntrySpeakerView | null;
+  // The raw pointer behind `speaker` (VKB-100) — the edit sheet's speaker
+  // chip row needs the id to prefill the current selection; the denormalised
+  // name/tone above is display-only and cannot drive a chip selection.
+  sid: string | null;
   // The day the words were said — the frozen-age anchor (YYYY-MM-DD).
   saidAt: string;
   story: string | null;
@@ -81,6 +85,7 @@ export const toEntryView = (
   word: entry.word,
   gloss: entry.gloss,
   speaker: toSpeakerOnEntry(entry, speaker),
+  sid: entry.sid,
   saidAt: entry.saidAt,
   story: entry.story,
   collection: entry.collection,
