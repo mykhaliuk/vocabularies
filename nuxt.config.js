@@ -258,7 +258,7 @@ export default defineNuxtConfig({
         '../scripts',
         '../service-worker',
         '../e2e',
-        '../playwright.config.ts',
+        '../playwright*.config.ts',
       ],
     },
   },

@@ -2,16 +2,19 @@ import { defineConfig, devices } from '@playwright/test';
 
 // Smoke E2E against a production preview (build + preview) — clean, fast
 // hydration, no dev HMR races. The covered routes (landing, login, offline,
-// 404) render without DB/Redis/email, so CI needs no infra.
+// 404) render without DB/Redis/email, so CI needs no infra, and this suite
+// stays that way on purpose. Anything needing a session goes to the authed
+// suite instead: playwright.authed.config.ts (VKB-101).
 const PORT = 3000;
 const baseURL = `http://localhost:${PORT}`;
 
 export default defineConfig({
   testDir: './e2e',
-  // e2e/local/* are DB-backed poll/claim integration tests run by their own
-  // runner (`bun run test:poll-claim`), never by this CI suite — CI has no
-  // database. Ignore them so `playwright test` cannot collect them.
-  testIgnore: '**/local/**',
+  // Both subtrees are DB-backed and belong to their own runners: e2e/local/*
+  // to `bun run test:poll-claim`, e2e/authed/* to `bun run test:e2e:authed`.
+  // This suite must stay infra-free, so neither may be collected here — the
+  // whole directory is testDir, and an uningnored subtree lands in it.
+  testIgnore: ['**/local/**', '**/authed/**'],
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,

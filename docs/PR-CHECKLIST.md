@@ -98,6 +98,10 @@ requires it for agent-authored work.
 - [ ] `bun run test:e2e` when covered flows are touched; new behavior gets
       new coverage (including the negative case: query params, explicit
       refusals).
+- [ ] `bun run test:e2e:authed` when the change touches a screen behind
+      `middleware: 'auth'` — and the ticket adds its own spec there
+      (`e2e/authed/README.md`). A UI ticket on an authed screen without an
+      authed spec is not done.
 - [ ] UI change → rendered check: screenshots of affected pages, both
       themes, mobile + desktop, actually looked at.
 - [ ] Run the adversarial review (`/code-review`) BEFORE opening the PR and

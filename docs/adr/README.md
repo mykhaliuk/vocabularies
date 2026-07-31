@@ -54,3 +54,6 @@ Format: `NNNN-short-slug.md`, template in [0000-template.md](0000-template.md).
 - [ADR-0013](0013-capability-graph-derived-not-declared.md) — the UI ↔ API ↔
   domain ↔ entity map is derived from the source tree and committed, with
   `graph:check` failing CI when it drifts; never hand-maintained
+- [ADR-0014](0014-authed-e2e-via-real-magic-link.md) — authed e2e mints its
+  session through the real magic-link flow, read from a mirrored server log,
+  in a second Playwright config; never a forged cookie or a test-only endpoint

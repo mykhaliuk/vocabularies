@@ -69,3 +69,70 @@ jobs:
 
       - name: E2E smoke tests
         run: bun run test:e2e
+
+  # Everything behind `middleware: 'auth'` (VKB-101). Its own job so the smoke
+  # suite above keeps running with no infra, unconditionally.
+  e2e-authed:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: vocabu
+          POSTGRES_PASSWORD: vocabu
+          POSTGRES_DB: vocabu
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U vocabu -d vocabu"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
+    env:
+      # Stage `local` is what makes this runnable without cloud services: the
+      # console emailer prints magic links (the suite reads them), Redis and
+      # the rate limiters use their null drivers, and the session cookie is not
+      # Secure — required over plain http. Any other stage would send real mail.
+      APP_ENV: local
+      DB_DRIVER: pg
+      # Throwaway credentials for the service container above; they authorize
+      # nothing outside this runner.
+      DATABASE_URL: postgresql://vocabu:vocabu@localhost:5432/vocabu
+      DATABASE_URL_UNPOOLED: postgresql://vocabu:vocabu@localhost:5432/vocabu
+      JWT_SECRET: ci-only-throwaway-jwt-secret-never-used-in-a-deployed-env
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Install Playwright browser
+        run: bunx playwright install --with-deps chromium
+
+      # drizzle-kit directly, NOT scripts/migrate-deploy.js: that wrapper exits
+      # 0 when DATABASE_URL_UNPOOLED is unset, which would hand us a green build
+      # against an empty database. drizzle.config.js throws on a missing URL and
+      # drizzle-kit exits non-zero on a failed migration, so this step is loud.
+      # The suite's global setup then refuses to run if the tables are absent.
+      - name: Apply migrations
+        run: bunx drizzle-kit migrate
+
+      - name: E2E authed tests
+        run: bunx playwright test --config playwright.authed.config.ts
+
+      # Traces (trace: on-first-retry) are the only way to debug a failure
+      # that does not reproduce locally.
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-authed-traces
+          path: test-results/authed/
+          retention-days: 7
