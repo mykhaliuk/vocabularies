@@ -23,6 +23,7 @@ None — every route has a caller and every call resolves.
 | `POST /api/entries` | `composables/useMediaUpload.ts` | `entries.createEntry` |
 | `DELETE /api/entries/:id` | _none yet — VKB-95_ | `entries.deleteOwnEntry` |
 | `GET /api/entries/:id` | `composables/useEntryPlayback.ts` | `entries.getOwnEntry` |
+| `PATCH /api/entries/:id` | _none yet — VKB-110_ | `entries.updateOwnEntry` |
 | `GET /api/health` | `pages/offline.vue` | _inline_ |
 | `GET /api/me` | `composables/useEntitlements.ts`<br>`composables/useSession.ts`<br>`middleware/auth.ts`<br>`pages/me.vue` | _inline_ |
 | `PATCH /api/me` | _none yet — VKB-94_ | _direct db (ADR-0010 legacy):_ `users` |
@@ -50,6 +51,7 @@ finding, so the note cannot outlive the gap.
 | Route | Tracked by | Note |
 | --- | --- | --- |
 | `DELETE /api/entries/:id` | VKB-95 | no delete affordance exists yet; neither the feed nor compose ticket covers it. |
+| `PATCH /api/entries/:id` | VKB-110 | compose edit mode is the first caller |
 | `PATCH /api/me` | VKB-94 | /me reads displayName but offers no way to edit it. |
 
 ## Client surfaces without API calls
@@ -98,7 +100,7 @@ placeholder awaiting its ticket.
 | Module | Layer | Operations | Entities | Calls |
 | --- | --- | --- | --- | --- |
 | `server/domain/entitlements.ts` | domain | `loadEntitlements` | `users` | — |
-| `server/domain/entries.ts` | domain | `createEntry`<br>`deleteOwnEntry`<br>`getFeedPage`<br>`getOwnEntry` | `entries`, `media`, `speakers` | `media.mintUploadSlot`<br>`speakers.getOwnSpeaker` |
+| `server/domain/entries.ts` | domain | `createEntry`<br>`deleteOwnEntry`<br>`getFeedPage`<br>`getOwnEntry`<br>`updateOwnEntry` | `entries`, `media`, `speakers` | `media.mintUploadSlot`<br>`speakers.getOwnSpeaker` |
 | `server/domain/media.ts` | domain | `confirmMediaUpload`<br>`getOwnMedia`<br>`mintUploadSlot`<br>`processUploadedMedia` | `media` | `entitlements.loadEntitlements` |
 | `server/domain/speakers.ts` | domain | `createSpeaker`<br>`getOwnSpeaker`<br>`listSpeakers` | `entries`, `speakers` | — |
 | `server/utils/auth.ts` | infra | — | `sessions`, `users` | — |
@@ -165,6 +167,7 @@ flowchart LR
     r_POST__api_entries["POST /api/entries"]
     r_DELETE__api_entries__id("DELETE /api/entries/:id")
     r_GET__api_entries__id["GET /api/entries/:id"]
+    r_PATCH__api_entries__id("PATCH /api/entries/:id")
     r_GET__api_health["GET /api/health"]
     r_GET__api_me["GET /api/me"]
     r_PATCH__api_me("PATCH /api/me")
@@ -184,6 +187,7 @@ flowchart LR
     o_entries_deleteOwnEntry["entries.deleteOwnEntry"]
     o_entries_getFeedPage["entries.getFeedPage"]
     o_entries_getOwnEntry["entries.getOwnEntry"]
+    o_entries_updateOwnEntry["entries.updateOwnEntry"]
     o_media_confirmMediaUpload["media.confirmMediaUpload"]
     o_media_getOwnMedia["media.getOwnMedia"]
     o_media_mintUploadSlot["media.mintUploadSlot"]
@@ -227,6 +231,7 @@ flowchart LR
   r_DELETE__api_entries__id --> o_entries_deleteOwnEntry
   c_composables_useEntryPlayback_ts --> r_GET__api_entries__id
   r_GET__api_entries__id --> o_entries_getOwnEntry
+  r_PATCH__api_entries__id --> o_entries_updateOwnEntry
   c_pages_offline_vue --> r_GET__api_health
   c_composables_useEntitlements_ts --> r_GET__api_me
   c_composables_useSession_ts --> r_GET__api_me
@@ -254,14 +259,17 @@ flowchart LR
   o_entries_deleteOwnEntry --> e_entries
   o_entries_getFeedPage --> e_entries
   o_entries_getOwnEntry --> e_entries
+  o_entries_updateOwnEntry --> e_entries
   o_entries_createEntry --> e_media
   o_entries_deleteOwnEntry --> e_media
   o_entries_getFeedPage --> e_media
   o_entries_getOwnEntry --> e_media
+  o_entries_updateOwnEntry --> e_media
   o_entries_createEntry --> e_speakers
   o_entries_deleteOwnEntry --> e_speakers
   o_entries_getFeedPage --> e_speakers
   o_entries_getOwnEntry --> e_speakers
+  o_entries_updateOwnEntry --> e_speakers
   o_media_confirmMediaUpload --> e_media
   o_media_getOwnMedia --> e_media
   o_media_mintUploadSlot --> e_media

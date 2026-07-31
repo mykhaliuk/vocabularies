@@ -149,6 +149,63 @@ export const getOwnEntry = async (
   return { entry: row.entry, speaker: row.speaker, media: row.media };
 };
 
+// The domain's own shape for a partial update — deliberately NOT derived
+// from the transport zod schema (server/utils/entry-patch.ts), the same way
+// EntryInput above is a plain interface rather than z.infer<typeof Body>: a
+// field added to the HTTP contract must not silently widen what this
+// function accepts. The route maps its validated body onto this shape
+// explicitly. Every field absent means "leave untouched"; `sid: null` is the
+// one field where an explicit null is itself a real value (see
+// updateOwnEntry below).
+export interface EntryPatch {
+  word?: string;
+  gloss?: string | null;
+  story?: string | null;
+  saidAt?: string;
+  sid?: string | null;
+}
+
+// Partial update (VKB-100, entry-actions-spec §"Edit: what moves, what
+// holds"): absent keys stay untouched. Re-pointing `sid` re-snapshots the
+// denormalised speaker/tone columns the same way createEntry does at
+// insert — `sid: null` detaches the speaker (falls back to "You"), which is
+// a real instruction distinct from `sid` being absent (leave the current
+// speaker alone). `id`, `createdAt` and media are never touched here; the
+// final read reuses getOwnEntry so the returned view matches GET exactly —
+// same live speaker join, same media join.
+export const updateOwnEntry = async (
+  ownerId: string,
+  entryId: string,
+  patch: EntryPatch,
+): Promise<EntryWithMedia> => {
+  const db = useDb();
+  const values: Partial<typeof entries.$inferInsert> = {
+    updatedAt: new Date(),
+  };
+  if (patch.word !== undefined) values.word = patch.word;
+  if (patch.gloss !== undefined) values.gloss = patch.gloss;
+  if (patch.story !== undefined) values.story = patch.story;
+  if (patch.saidAt !== undefined) values.saidAt = patch.saidAt;
+
+  if ('sid' in patch) {
+    const speaker = patch.sid ? await getOwnSpeaker(ownerId, patch.sid) : null;
+    values.sid = speaker ? speaker.id : null;
+    values.speaker = speaker ? speaker.name : null;
+    values.tone = speaker ? speaker.tone : null;
+  }
+
+  const updated = await db
+    .update(entries)
+    .set(values)
+    .where(and(eq(entries.id, entryId), eq(entries.ownerId, ownerId)))
+    .returning({ id: entries.id });
+  if (updated.length === 0) {
+    throw new DomainError(DOMAIN_ERROR_CODES.entryNotFound, 'entry not found');
+  }
+
+  return getOwnEntry(ownerId, entryId);
+};
+
 // Deletes the row (media cascades). R2 objects stay: originals are the
 // source of truth (ADR-0009); orphan derivatives are a lifecycle concern,
 // not a request-path one.
