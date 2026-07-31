@@ -10,7 +10,12 @@ const REQUIRED_TABLES = ['users', 'sessions', 'magic_link_tokens', 'entries'];
 
 export default async () => {
   const connectionString = process.env.DATABASE_URL;
-  const client = new pg.Client({ connectionString });
+  // pg waits forever by default, and there is no globalTimeout to catch it: a
+  // paused Docker or a filtered port would hang the suite instead of failing.
+  const client = new pg.Client({
+    connectionString,
+    connectionTimeoutMillis: 10_000,
+  });
 
   try {
     await client.connect();

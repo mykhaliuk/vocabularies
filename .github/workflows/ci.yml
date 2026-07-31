@@ -125,8 +125,11 @@ jobs:
       - name: Apply migrations
         run: bunx drizzle-kit migrate
 
+      # The :ci variant is the same invocation without the infra:up/db:migrate
+      # links, which the job already does itself. One script owns the config
+      # path, so a future flag cannot land on only one of the two paths.
       - name: E2E authed tests
-        run: bunx playwright test --config playwright.authed.config.ts
+        run: bun run test:e2e:authed:ci
 
       # Traces (trace: on-first-retry) are the only way to debug a failure
       # that does not reproduce locally.

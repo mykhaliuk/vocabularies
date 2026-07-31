@@ -53,6 +53,11 @@ export default defineConfig({
   testDir: './e2e/authed',
   globalSetup: './e2e/authed/global-setup.ts',
   outputDir: './test-results/authed',
+  // Above Playwright's 30s default because fixture setup is billed to the test:
+  // signing in spends up to 20s resolving the link and 30s reaching /feed, and
+  // at the default those budgets could not run out — the test would die first,
+  // reporting a generic timeout instead of the fixture's diagnostic.
+  timeout: 60_000,
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,

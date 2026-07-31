@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { readFile } from 'node:fs/promises';
+import { open, stat } from 'node:fs/promises';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { expect, test as base } from '@playwright/test';
 import { SERVER_LOG_PATH } from './server-log';
@@ -23,23 +23,50 @@ const HYDRATION_TIMEOUT_MS = 15_000;
 export const uniqueEmail = (prefix = 'authed') =>
   `${prefix}-${randomUUID()}@example.com`;
 
-const readServerLog = async () => {
+// The server writes the log on start; before that there is nothing to match.
+// Any other failure is a real fault — let it out.
+const isMissing = (error: unknown) =>
+  (error as NodeJS.ErrnoException).code === 'ENOENT';
+
+const serverLogSize = async () => {
   try {
-    return await readFile(SERVER_LOG_PATH, 'utf8');
+    const { size } = await stat(SERVER_LOG_PATH);
+    return size;
   } catch (error) {
-    // The server writes the file on start; until then there is simply nothing
-    // to match yet. Any other read failure is a real fault — let it out.
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return '';
+    if (isMissing(error)) return 0;
     throw error;
   }
 };
 
+// Read only what was appended past `offset`, rather than the whole file each
+// poll. Bounding the scan is what makes signing the SAME address twice in one
+// run safe: the earlier line is behind the offset, so the backwards scan can
+// no longer match a link the callback already consumed.
+const readServerLogFrom = async (offset: number) => {
+  let handle;
+  try {
+    handle = await open(SERVER_LOG_PATH, 'r');
+  } catch (error) {
+    if (isMissing(error)) return '';
+    throw error;
+  }
+  try {
+    const { size } = await handle.stat();
+    if (size <= offset) return '';
+    const buffer = Buffer.alloc(size - offset);
+    await handle.read(buffer, 0, buffer.length, offset);
+    return buffer.toString('utf8');
+  } finally {
+    await handle.close();
+  }
+};
+
 // Matches the console emailer's line: `... magic-link to=<email> ... link=  <url>`
-const findMagicLink = async (email: string) => {
+const findMagicLink = async (email: string, offset: number) => {
   const marker = `to=${email}`;
   const deadline = Date.now() + LINK_TIMEOUT_MS;
   while (Date.now() < deadline) {
-    const lines = (await readServerLog()).split('\n');
+    const lines = (await readServerLogFrom(offset)).split('\n');
     // Skip the trailing element: it is whatever sits after the last newline,
     // i.e. a half-written line if the read caught the server mid-write. A torn
     // link would still match \S+ and send the test to a truncated URL.
@@ -62,6 +89,10 @@ const findMagicLink = async (email: string) => {
 // Sign the page's browser context in and leave it on /feed, where the magic
 // link lands. Returns the address so a spec can assert on it (e.g. /me).
 export const signIn = async (page: Page, email = uniqueEmail()) => {
+  // Captured BEFORE the request, so the scan below can only see lines this
+  // sign-in produced.
+  const offset = await serverLogSize();
+
   const sent = await page.request.post('/api/auth/magic-link', {
     data: { email },
   });
@@ -71,9 +102,27 @@ export const signIn = async (page: Page, email = uniqueEmail()) => {
     );
   }
 
-  const link = await findMagicLink(email);
-  await page.goto(link);
-  await page.waitForURL('**/feed', { timeout: SIGN_IN_TIMEOUT_MS });
+  const link = await findMagicLink(email, offset);
+  const landed = await page.goto(link);
+  if (!landed || !landed.ok()) {
+    throw new Error(
+      `[authed] the magic-link callback failed for ${email}: ` +
+        `${landed ? landed.status() : 'no response'}`,
+    );
+  }
+
+  try {
+    await page.waitForURL('**/feed', { timeout: SIGN_IN_TIMEOUT_MS });
+  } catch {
+    // The callback answers a bad token with a redirect, not an error status,
+    // so without this the only symptom is an opaque navigation timeout.
+    const landing = new URL(page.url());
+    const reason = landing.searchParams.get('error');
+    throw new Error(
+      `[authed] sign-in for ${email} never reached /feed — landed on ` +
+        `${landing.pathname}${reason ? ` (error=${reason})` : ''}.`,
+    );
+  }
   return email;
 };
 

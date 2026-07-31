@@ -38,6 +38,21 @@ const child = spawn(process.execPath, [entry], {
   stdio: ['ignore', 'pipe', 'pipe'],
 });
 
+// A stream 'error' with no listener is thrown, which would kill this wrapper
+// mid-suite and leave Playwright reporting "Process from config.webServer
+// exited early" — a message pointing nowhere near the cause. EPIPE is the
+// expected one: Playwright closes our stdout during teardown.
+const watch = (stream, label) => {
+  stream.on('error', (error) => {
+    if (error.code === 'EPIPE') return;
+    console.error(`[e2e-server] ${label} stream failed:`, error);
+  });
+};
+
+watch(log, 'log');
+watch(process.stdout, 'stdout');
+watch(process.stderr, 'stderr');
+
 const mirror = (source, target) => {
   source.on('data', (chunk) => {
     target.write(chunk);
@@ -62,6 +77,19 @@ const reraise = (signal) => {
 
 process.on('SIGINT', forward('SIGINT'));
 process.on('SIGTERM', forward('SIGTERM'));
+
+// This wrapper outlives the suite, so it owes the process-level handlers any
+// long-lived process does. State is corrupt after an uncaught exception —
+// take the server down with us rather than serving from it.
+process.on('uncaughtException', (error) => {
+  console.error('[e2e-server] uncaught exception:', error);
+  child.kill('SIGTERM');
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('[e2e-server] unhandled rejection:', reason);
+});
 
 child.on('error', (error) => {
   console.error('[e2e-server] failed to start the server:', error);
