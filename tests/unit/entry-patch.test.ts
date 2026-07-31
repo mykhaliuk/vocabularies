@@ -94,12 +94,19 @@ describe('EntryPatchBody', () => {
   });
 });
 
-// notInFuture takes an injectable reference date specifically so the
-// timezone-slack boundary can be pinned with literal dates on both sides.
-// Computing "tomorrow" the same way here as in the implementation would
-// only prove the two formulas agree, and would keep agreeing under a
-// regression to local-time math (setDate/getDate) on any runner where
-// local time equals UTC — exactly GitHub Actions.
+// notInFuture takes an injectable reference date so these tests can pin the
+// one-day slack and the `<=` boundary against a fixed instant, instead of
+// recomputing "tomorrow" with the implementation's own formula — that would
+// only prove the two agree, and could never fail whatever it computed.
+//
+// What these tests do NOT catch: a regression to local-time math
+// (setDate/getDate in place of setUTCDate/getUTCDate). "Add one day holding
+// local wall-clock time fixed" and "add one day holding UTC time fixed"
+// resolve to the same instant unless a DST transition falls inside that
+// 24-hour window — true here, on any runner, since the reference date above
+// is nowhere near one. Catching that class would need `process.env.TZ`
+// manipulation around a DST edge, which is deliberately not worth the
+// fragility.
 describe('notInFuture', () => {
   const REFERENCE_NOW = new Date('2026-07-31T23:00:00Z');
 

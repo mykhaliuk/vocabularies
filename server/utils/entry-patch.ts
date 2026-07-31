@@ -23,12 +23,20 @@ import type { EntryPatch } from '../domain/entries';
 // own today.
 //
 // `now` is an injected, defaulted parameter — not read from inside the
-// function body — so a test can pin the timezone-slack boundary with
-// literal dates on both sides. Computing "tomorrow" the same way in the
-// test as in the implementation would only prove the two agree, and would
-// keep agreeing under a regression to local-time math (`setDate`/`getDate`)
-// on any runner where local time equals UTC, which is exactly GitHub
-// Actions.
+// function body — so tests/unit/entry-patch.test.ts can pin the one-day
+// slack and the `<=` boundary against a fixed reference instant, instead of
+// recomputing "tomorrow" with this same formula and only proving the two
+// agree — a tautology that could never fail whatever this function
+// computed.
+//
+// What that test does NOT prove: a regression to local-time math
+// (`setDate`/`getDate` in place of `setUTCDate`/`getUTCDate`) would still
+// pass it. "Add one calendar day holding local wall-clock time fixed" and
+// "add one day holding UTC time fixed" resolve to the SAME instant unless a
+// DST transition falls inside that 24-hour window — true for a reference
+// date away from one on every runner, UTC or not. Catching that class
+// would need `process.env.TZ` manipulation around a DST edge, which is
+// deliberately not worth the fragility here.
 export const notInFuture = (value: string, now: Date = new Date()) => {
   const tomorrow = new Date(now);
   tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
