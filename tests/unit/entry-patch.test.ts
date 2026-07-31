@@ -1,5 +1,9 @@
 import { describe, expect, test } from 'bun:test';
-import { EntryPatchBody } from '../../server/utils/entry-patch';
+import {
+  EntryPatchBody,
+  notInFuture,
+  toEntryPatch,
+} from '../../server/utils/entry-patch';
 
 // PATCH /api/entries/:id body (VKB-100, entry-actions-spec §"Edit: what
 // moves, what holds"). Every case here is the zod boundary only — the
@@ -76,23 +80,6 @@ describe('EntryPatchBody', () => {
     expect(() => EntryPatchBody.parse({ saidAt: FAR_FUTURE_DATE })).toThrow();
   });
 
-  // A plain calendar date carries no timezone, and a caller east of UTC (up
-  // to UTC+14) can have a local "today" that already reads as tomorrow in
-  // UTC — one day of slack keeps that caller's own today from a false 400.
-  test('accepts tomorrow (UTC) as one day of timezone slack', () => {
-    const tomorrow = new Date();
-    tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
-    const saidAt = tomorrow.toISOString().slice(0, 10);
-    expect(EntryPatchBody.parse({ saidAt }).saidAt).toBe(saidAt);
-  });
-
-  test('rejects the day after tomorrow (UTC)', () => {
-    const dayAfterTomorrow = new Date();
-    dayAfterTomorrow.setUTCDate(dayAfterTomorrow.getUTCDate() + 2);
-    const saidAt = dayAfterTomorrow.toISOString().slice(0, 10);
-    expect(() => EntryPatchBody.parse({ saidAt })).toThrow();
-  });
-
   test('rejects a bad date shape', () => {
     expect(() => EntryPatchBody.parse({ saidAt: '2026/07/31' })).toThrow();
     expect(() => EntryPatchBody.parse({ saidAt: '20260731' })).toThrow();
@@ -104,5 +91,51 @@ describe('EntryPatchBody', () => {
   // same reason the speaker birthday field already refuses it.
   test('rejects a day overflow that round-trips to a different date', () => {
     expect(() => EntryPatchBody.parse({ saidAt: '2026-02-30' })).toThrow();
+  });
+});
+
+// notInFuture takes an injectable reference date specifically so the
+// timezone-slack boundary can be pinned with literal dates on both sides.
+// Computing "tomorrow" the same way here as in the implementation would
+// only prove the two formulas agree, and would keep agreeing under a
+// regression to local-time math (setDate/getDate) on any runner where
+// local time equals UTC — exactly GitHub Actions.
+describe('notInFuture', () => {
+  const REFERENCE_NOW = new Date('2026-07-31T23:00:00Z');
+
+  test('accepts UTC tomorrow (a caller east of UTC sees this as today)', () => {
+    expect(notInFuture('2026-08-01', REFERENCE_NOW)).toBe(true);
+  });
+
+  test('accepts UTC today itself', () => {
+    expect(notInFuture('2026-07-31', REFERENCE_NOW)).toBe(true);
+  });
+
+  test('rejects the day after UTC tomorrow', () => {
+    expect(notInFuture('2026-08-02', REFERENCE_NOW)).toBe(false);
+  });
+});
+
+// The body → domain EntryPatch mapping (VKB-100 review): this is where the
+// absent-vs-null contract actually lives, and it was previously untested —
+// every EntryPatchBody test above exercises only the zod schema, none of
+// them would catch a regression in this mapping (e.g. `if (body.sid)` in
+// place of `if ('sid' in body)`, which silently stops clearing the speaker).
+describe('toEntryPatch', () => {
+  test('sid absent from the body stays absent from the patch', () => {
+    const patch = toEntryPatch({ word: 'bapple' });
+    expect('sid' in patch).toBe(false);
+  });
+
+  test('sid: null becomes an explicit null — detach the speaker', () => {
+    expect(toEntryPatch({ sid: null })).toEqual({ sid: null });
+  });
+
+  test('gloss: "" clears to null', () => {
+    expect(toEntryPatch({ gloss: '' })).toEqual({ gloss: null });
+  });
+
+  test('gloss: null clears to null', () => {
+    expect(toEntryPatch({ gloss: null })).toEqual({ gloss: null });
   });
 });
