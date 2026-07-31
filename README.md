@@ -68,6 +68,7 @@ bun run start:preprod      # local nuxt → preprod cloud
 | `bun run lint`                              | OxLint                                        |
 | `bun run fmt` / `fmt:check`                 | Oxfmt                                         |
 | `bun run typecheck`                         | `nuxt typecheck` (`vue-tsc -b --noEmit`)      |
+| `bun run typecheck:e2e`                     | Typecheck Playwright specs + configs          |
 | `bun run ds:check`                          | Design system sync                            |
 | `bun run proto:check`                       | Prototype vs design system drift              |
 | `bun run i18n:check`                        | i18n key parity                               |

@@ -21,6 +21,7 @@
     "fmt": "oxfmt .",
     "fmt:check": "oxfmt --check .",
     "typecheck": "nuxt typecheck",
+    "typecheck:e2e": "tsc -p tsconfig.e2e.json --noEmit",
     "test:unit": "bun test tests/unit",
     "test:e2e": "playwright test",
     "test:e2e:authed": "bun run infra:up && bun run db:migrate && node scripts/with-env.js local bun run test:e2e:authed:ci",

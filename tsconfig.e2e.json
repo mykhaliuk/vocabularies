@@ -1,0 +1,31 @@
+{
+  // Playwright sources are excluded from the Nuxt app graph (see
+  // nuxt.config.js `typescript.tsConfig.exclude`) because they are neither
+  // client nor server code and pull in browser globals the app never sees.
+  // That exclusion left them with no type checker at all — this config is
+  // their own graph. Run via `bun run typecheck:e2e`.
+  "compilerOptions": {
+    "target": "ES2024",
+    "module": "ESNext",
+    // Playwright transpiles specs with its own bundler-style resolver, so
+    // extensionless relative imports (`from './server-log'`) are valid here.
+    // "NodeNext" would reject them for want of a `.js` suffix.
+    "moduleResolution": "Bundler",
+    "moduleDetection": "force",
+    // ES2024 for Promise.withResolvers, which four specs already use.
+    "lib": ["ES2024", "DOM", "DOM.Iterable"],
+    // Only ambient globals need listing: @playwright/test is imported.
+    "types": ["node"],
+    "strict": true,
+    // Mirrors the app graph's strictness (nuxt.config.js) so a spec is held
+    // to the same bar as the code it exercises.
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "skipLibCheck": true,
+    "noEmit": true
+  },
+  "include": ["e2e/**/*.ts", "playwright*.config.ts"],
+  "exclude": ["node_modules"]
+}

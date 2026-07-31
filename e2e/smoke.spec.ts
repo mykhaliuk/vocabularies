@@ -6,12 +6,21 @@ import { expect, test } from '@playwright/test';
 // component is omitted whenever it equals 1.
 const parseAlpha = (color: string): number => {
   const match = color.match(/^(rgba?|color)\(([^)]+)\)$/);
-  if (!match) return Number.NaN;
-  const [channels, alpha] = match[2].split('/').map((part) => part.trim());
+  // A match always carries both groups, but RegExpMatchArray cannot express
+  // that — narrow the reads rather than assert them away. An unparseable
+  // color is NaN, which fails the caller's assertion loudly.
+  const notation = match?.[1];
+  const body = match?.[2];
+  if (notation === undefined || body === undefined) return Number.NaN;
+
+  // split() always yields a first element, so the default never applies.
+  const [channels = '', alpha] = body.split('/').map((part) => part.trim());
   if (alpha !== undefined) return Number.parseFloat(alpha);
+
   const parts = channels.split(/[\s,]+/).filter(Boolean);
-  const isLegacyRgba = match[1] !== 'color' && parts.length === 4;
-  return isLegacyRgba ? Number.parseFloat(parts[3]) : 1;
+  const isLegacyRgba = notation !== 'color' && parts.length === 4;
+  const legacyAlpha = isLegacyRgba ? parts[3] : undefined;
+  return legacyAlpha === undefined ? 1 : Number.parseFloat(legacyAlpha);
 };
 
 test.describe('landing', () => {
