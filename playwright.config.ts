@@ -13,7 +13,7 @@ export default defineConfig({
   // Both subtrees are DB-backed and belong to their own runners: e2e/local/*
   // to `bun run test:poll-claim`, e2e/authed/* to `bun run test:e2e:authed`.
   // This suite must stay infra-free, so neither may be collected here — the
-  // whole directory is testDir, and an uningnored subtree lands in it.
+  // whole directory is testDir, and an unignored subtree lands in it.
   testIgnore: ['**/local/**', '**/authed/**'],
   fullyParallel: true,
   forbidOnly: !!process.env.CI,

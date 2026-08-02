@@ -52,12 +52,17 @@ const watch = (stream, label) => {
 watch(log, 'log');
 watch(process.stdout, 'stdout');
 watch(process.stderr, 'stderr');
+watch(child.stdout, 'child stdout');
+watch(child.stderr, 'child stderr');
 
+// pipe(), not a 'data' handler writing blindly: it honours backpressure, so a
+// chatty server cannot balloon this process's memory. `end: false` on every
+// leg is load-bearing — the default would let whichever of stdout/stderr ends
+// first close the shared log out from under the other (and process.stdout must
+// never be closed at all). The log is closed once, on child exit.
 const mirror = (source, target) => {
-  source.on('data', (chunk) => {
-    target.write(chunk);
-    log.write(chunk);
-  });
+  source.pipe(target, { end: false });
+  source.pipe(log, { end: false });
 };
 
 mirror(child.stdout, process.stdout);
@@ -87,8 +92,17 @@ process.on('uncaughtException', (error) => {
   process.exit(1);
 });
 
+// Symmetric with the handler above, and deliberately stricter than
+// .claude/rules/metaskills-error-handling.md ("log unhandledRejection"): that
+// rule is written for a service you want to keep serving. Since Node 15 an
+// unhandled rejection crashes by default, and merely REGISTERING a listener
+// cancels that — a log-only handler would leave this wrapper serving from a
+// state we already know is broken, and let the suite go green on a run that
+// had a real failure in it.
 process.on('unhandledRejection', (reason) => {
   console.error('[e2e-server] unhandled rejection:', reason);
+  child.kill('SIGTERM');
+  process.exit(1);
 });
 
 child.on('error', (error) => {
