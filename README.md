@@ -67,12 +67,14 @@ bun run start:preprod      # local nuxt → preprod cloud
 | `bun run preview`                           | Preview production build                      |
 | `bun run lint`                              | OxLint                                        |
 | `bun run fmt` / `fmt:check`                 | Oxfmt                                         |
-| `bun run typecheck`                         | `tsc --noEmit`                                |
+| `bun run typecheck`                         | `nuxt typecheck` (`vue-tsc -b --noEmit`)      |
 | `bun run db:generate`                       | Generate Drizzle migrations from schema       |
 | `bun run db:migrate` / `:dev` / `:preprod`  | Apply migrations to the chosen stage          |
 | `bun run db:dump:dev`                       | Dump dev DB schema + data into local Postgres |
 
 All stage-scoped scripts go through `scripts/with-env.js`, which loads `.env.<stage>` into `process.env` before spawning the inner command.
+
+`typecheck` delegates to Nuxt's own wrapper: it regenerates the `.nuxt/tsconfig.*.json` project references, then runs `vue-tsc` in build mode. A bare `tsc --noEmit` is **not** equivalent — the root `tsconfig.json` carries an empty `files` array plus `references`, so without `-b` it checks nothing and exits 0.
 
 ## Local ports
 
