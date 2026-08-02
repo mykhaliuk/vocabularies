@@ -10,15 +10,30 @@ import { ChevronUp, Play, Video } from 'lucide-vue-next';
 // delivered spec here: no poster means the feed list needs no poster URL and
 // the API is untouched. Dropping the real frame in later is a presentation
 // change plus a `posterUrl` on the list projection — deferred, not rejected.
-const props = defineProps<{
-  entryId: string;
-  durationSec: number | null;
-  width: number | null;
-  height: number | null;
-}>();
+//
+// `big` is the word-detail variant (word-detail-spec.html §Anatomy step 4):
+// the same player with the room a page affords — wider column, larger play
+// control, taller frame. Colour does not change; blue stays "media".
+const props = withDefaults(
+  defineProps<{
+    entryId: string;
+    durationSec: number | null;
+    width: number | null;
+    height: number | null;
+    variant?: 'inline' | 'big';
+  }>(),
+  { variant: 'inline' },
+);
 
 const { t } = useI18n();
 const { resolvePlayback } = useEntryPlayback();
+
+const isBig = computed(() => props.variant === 'big');
+// The collapsed row's two glyphs start from different inline sizes (the play
+// triangle reads heavier than the outline video mark), and the big variant
+// levels them at 17 — the prototype's numbers, media.jsx VideoSample.
+const playGlyphSize = computed(() => (isBig.value ? 17 : 14));
+const stripGlyphSize = computed(() => (isBig.value ? 17 : 15));
 
 const expanded = ref(false);
 const playing = ref(false);
@@ -170,7 +185,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="video">
+  <div class="video" :class="{ 'video--big': isBig }">
     <!-- collapsed: the audio player's rhythm, so the feed keeps one beat -->
     <button
       v-if="!expanded"
@@ -180,10 +195,10 @@ onUnmounted(() => {
       @click="expand"
     >
       <span class="video__play">
-        <Play :size="14" aria-hidden="true" />
+        <Play :size="playGlyphSize" aria-hidden="true" />
       </span>
       <span class="video__strip">
-        <Video :size="15" aria-hidden="true" />
+        <Video :size="stripGlyphSize" aria-hidden="true" />
       </span>
       <span class="video__dur">{{
         failed ? t('app.feed.playbackUnavailable') : durationLabel
@@ -236,9 +251,27 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
+/* Every metric that differs between the feed row and the detail page is a
+   variable, so the two variants cannot drift apart in the rules below.
+   The inline variant deliberately keeps NO max-width — that is what ships
+   in the feed today, and this ticket must not move it. */
 .video {
+  --video-btn: 36px;
+  --video-frame-portrait: 300px;
+  --video-frame-land: 176px;
+
   display: flex;
   flex-direction: column;
+}
+
+.video--big {
+  --video-btn: 44px;
+  --video-frame-portrait: 340px;
+  --video-frame-land: 202px;
+
+  width: 100%;
+  max-width: 360px;
+  margin: 0 auto;
 }
 
 /* 36px body inside a 44px tap area — the block the audio player occupies. */
@@ -259,8 +292,8 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: var(--video-btn);
+  height: var(--video-btn);
   flex: 0 0 auto;
   border: 1.5px solid var(--blue-300);
   border-radius: var(--r-sm);
@@ -277,7 +310,7 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   flex: 1;
-  height: 36px;
+  height: var(--video-btn);
   border: 1px solid var(--hairline-2);
   border-radius: var(--r-sm);
   background: var(--surface-sunk);
@@ -305,10 +338,10 @@ onUnmounted(() => {
   overflow: hidden;
 }
 .video__frame--portrait {
-  height: 300px;
+  height: var(--video-frame-portrait);
 }
 .video__frame--land {
-  height: 176px;
+  height: var(--video-frame-land);
 }
 
 .video__el {

@@ -38,6 +38,20 @@ const remember = (entryId: string, playback: PlaybackUrls) => {
 };
 
 export const useEntryPlayback = () => {
+  // The word detail screen already fetched GET /api/entries/:id — including
+  // its `playback` — to render the page. Handing that payload over here
+  // means the player it mounts does not repeat the same request on first
+  // play.
+  //
+  // A server-side call is dropped here rather than trusted to the caller:
+  // `cache` is module state, which during SSR is shared by every request the
+  // process handles, so priming it there would offer one user's presigned
+  // URLs to the next.
+  const primePlayback = (entryId: string, playback: PlaybackUrls | null) => {
+    if (!import.meta.client || !playback) return;
+    remember(entryId, playback);
+  };
+
   const resolvePlayback = async (
     entryId: string,
     force = false,
@@ -64,5 +78,5 @@ export const useEntryPlayback = () => {
     }
   };
 
-  return { resolvePlayback };
+  return { primePlayback, resolvePlayback };
 };

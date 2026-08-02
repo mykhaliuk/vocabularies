@@ -1,14 +1,24 @@
 <script setup lang="ts">
 import { Pause, Play } from 'lucide-vue-next';
 
-const props = defineProps<{
-  entryId: string;
-  peaks: number[] | null;
-  durationSec: number | null;
-}>();
+// `big` is the word-detail variant (word-detail-spec.html §Anatomy step 4):
+// the same player, given the room a page has and a feed card does not.
+// Colour is identical in both — blue is "media" (media-spec.html §236).
+const props = withDefaults(
+  defineProps<{
+    entryId: string;
+    peaks: number[] | null;
+    durationSec: number | null;
+    variant?: 'inline' | 'big';
+  }>(),
+  { variant: 'inline' },
+);
 
 const { t } = useI18n();
 const { resolvePlayback } = useEntryPlayback();
+
+const isBig = computed(() => props.variant === 'big');
+const glyphSize = computed(() => (isBig.value ? 17 : 16));
 
 // Number of bars synthesized when the entry has no analysed peaks, so the
 // row still reads as an audio waveform rather than an empty strip.
@@ -173,7 +183,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="audio">
+  <div class="audio" :class="{ 'audio--big': isBig }">
     <!-- The whole row is the control (as in the prototype), so the tap target
          clears --tap-min even though the glyph box is 38px. -->
     <button
@@ -187,8 +197,8 @@ onBeforeUnmount(() => {
         :class="{ 'audio__btn--playing': playing }"
         aria-hidden="true"
       >
-        <Pause v-if="playing" :size="16" :fill="'currentColor'" />
-        <Play v-else :size="16" :fill="'currentColor'" />
+        <Pause v-if="playing" :size="glyphSize" :fill="'currentColor'" />
+        <Play v-else :size="glyphSize" :fill="'currentColor'" />
       </span>
 
       <span class="audio__wave">
@@ -224,10 +234,22 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
+/* Every metric that differs between the feed row and the detail page is a
+   variable, so the two variants cannot drift apart in the rules below. */
 .audio {
+  --audio-max-w: 340px;
+  --audio-btn: 38px;
+  --audio-wave-h: 24px;
+
   width: 100%;
-  max-width: 340px;
+  max-width: var(--audio-max-w);
   margin: 0 auto;
+}
+
+.audio--big {
+  --audio-max-w: 360px;
+  --audio-btn: 44px;
+  --audio-wave-h: 30px;
 }
 
 .audio__row {
@@ -253,8 +275,8 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 38px;
-  height: 38px;
+  width: var(--audio-btn);
+  height: var(--audio-btn);
   border: 1.5px solid var(--blue-300);
   border-radius: var(--r-btn);
   background: transparent;
@@ -271,7 +293,7 @@ onBeforeUnmount(() => {
 .audio__wave {
   position: relative;
   flex: 1;
-  height: 24px;
+  height: var(--audio-wave-h);
   overflow: hidden;
 }
 

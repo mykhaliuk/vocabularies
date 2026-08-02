@@ -12,10 +12,17 @@ type FeedMedia = {
   error: string | null;
 };
 
-const props = defineProps<{
-  media: FeedMedia | null;
-  entryId: string;
-}>();
+// `variant` only reaches the ready players: the transient processing and
+// failed rows below are the same size everywhere, because they are a status
+// line rather than a thing you look at.
+const props = withDefaults(
+  defineProps<{
+    media: FeedMedia | null;
+    entryId: string;
+    variant?: 'inline' | 'big';
+  }>(),
+  { variant: 'inline' },
+);
 
 const isVideo = computed(() => props.media?.kind === 'video');
 </script>
@@ -51,6 +58,7 @@ const isVideo = computed(() => props.media?.kind === 'video');
       :entry-id="entryId"
       :peaks="media.peaks"
       :duration-sec="media.durationSec"
+      :variant="variant"
     />
 
     <!-- ready video: collapsed row that expands into an inline frame -->
@@ -60,6 +68,7 @@ const isVideo = computed(() => props.media?.kind === 'video');
       :duration-sec="media.durationSec"
       :width="media.width"
       :height="media.height"
+      :variant="variant"
     />
   </div>
 </template>

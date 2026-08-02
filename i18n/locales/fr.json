@@ -70,7 +70,8 @@
       "discover": "Découvrir",
       "saved": "Enregistrés",
       "profile": "Profil",
-      "compose": "Nouveau mot"
+      "compose": "Nouveau mot",
+      "back": "Retour"
     },
     "feed": {
       "pageTitle": "Fil · Vocabu",
@@ -97,6 +98,16 @@
         "months": "{n} mois",
         "years": "{n} ans"
       }
+    },
+    "entry": {
+      "pageTitle": "{word} · Vocabu",
+      "pageTitleFallback": "Mot · Vocabu",
+      "storyShow": "sens et histoire",
+      "storyHide": "masquer sens et histoire",
+      "saidOn": "dit le {date}",
+      "saidOnAged": "dit le {date} · {age}",
+      "notFound": "ce mot n'est plus là.",
+      "loadError": "impossible de charger ce mot pour l'instant."
     },
     "compose": {
       "title": "Nouveau mot",

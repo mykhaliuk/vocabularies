@@ -70,7 +70,8 @@
       "discover": "Цікаве",
       "saved": "Збережене",
       "profile": "Профіль",
-      "compose": "Нове слово"
+      "compose": "Нове слово",
+      "back": "Назад"
     },
     "feed": {
       "pageTitle": "Стрічка · Vocabu",
@@ -97,6 +98,16 @@
         "months": "{n} міс",
         "years": "{n} р"
       }
+    },
+    "entry": {
+      "pageTitle": "{word} · Vocabu",
+      "pageTitleFallback": "Слово · Vocabu",
+      "storyShow": "значення та історія",
+      "storyHide": "сховати значення та історію",
+      "saidOn": "сказано {date}",
+      "saidOnAged": "сказано {date} · {age}",
+      "notFound": "цього слова більше немає.",
+      "loadError": "не вдалося завантажити це слово зараз."
     },
     "compose": {
       "title": "Нове слово",
