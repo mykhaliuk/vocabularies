@@ -2,10 +2,15 @@
 
 These tests exercise the installed-PWA poll/claim sign-in flow and the compose
 write path end to end. They
-need a **live Postgres** and the **console email driver**, so they are **not**
-part of the CI e2e suite (`bun run test:e2e`), which deliberately covers only
-DB-free routes so CI needs no infra. They are excluded from the Playwright
-collection via `testIgnore` in `playwright.config.ts` and never run in CI.
+need a **live Postgres**, **MinIO** and the inline transcode path, so they are
+**not** part of either CI suite: `bun run test:e2e` deliberately covers only
+DB-free routes, and `bun run test:e2e:authed` (VKB-101) runs authed Playwright
+specs against a Postgres service container but no object storage. They are
+excluded from the Playwright collection via `testIgnore` in
+`playwright.config.ts` and never run in CI.
+
+New authed UI coverage belongs in `e2e/authed/` (see its README), not here —
+this runner exists for the flows that genuinely cannot run in CI.
 
 ## Run
 

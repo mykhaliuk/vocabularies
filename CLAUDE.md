@@ -87,6 +87,21 @@ checks. The coupling is the check, not a convention.
 - Lint/format: `bun run lint`, `bun run fmt:check` (oxlint + oxfmt).
 - All in-source artifacts are English (identifiers, comments, log strings).
 
+### E2E suites
+
+Two Playwright suites, both CI-enforced, split by what infra they need:
+
+- **smoke** — `bun run test:e2e`, specs in `e2e/*.spec.ts`. Routes that render
+  with no DB (landing, login, offline, 404) against a production preview. It
+  must stay infra-free: never add a spec here that needs a session.
+- **authed** — `bun run test:e2e:authed`, specs in `e2e/authed/*.spec.ts`.
+  Everything behind `middleware: 'auth'`, against a migrated Postgres with a
+  real magic-link sign-in. **A UI ticket on an authed screen adds its spec
+  here**; `e2e/authed/README.md` is the how-to.
+
+`e2e/local/` is a third runner (poll/claim + compose) that needs MinIO and
+transcoding and never runs in CI — see its own README.
+
 ### Code rules (mandatory reading before writing code)
 
 `.claude/rules/*.md` is the full rulebook for HOW code is written here —
