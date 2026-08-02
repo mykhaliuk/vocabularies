@@ -27,7 +27,7 @@ import {
 } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { homedir, tmpdir } from 'node:os';
-import { resolve, join, basename } from 'node:path';
+import { resolve, join, basename, dirname } from 'node:path';
 
 const ROOT = resolve(import.meta.dirname, '..');
 const DEST = join(ROOT, 'docs/design/prototype/project');
@@ -77,6 +77,45 @@ const findBundleRoot = (root) => {
   return null;
 };
 
+// A bundle can carry older exports of itself — under `prototype_export/`, or
+// as a bundle someone once uploaded into the design project. Copied verbatim,
+// those shadow the canonical files with stale namesakes: same names, older
+// contents, and no staleness signal in git because both arrive in one commit.
+// Any directory other than the destination that directly holds a `Vocabu/` is
+// such a copy. Prune that directory precisely — `uploads/` also carries real
+// reference screenshots, so pruning its whole subtree would lose them.
+const nestedBundleDirs = (dest) => {
+  const found = [];
+  const stack = [dest];
+  while (stack.length > 0) {
+    const dir = stack.pop();
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue;
+      if (entry.name === ANCHOR) {
+        if (dir !== dest) found.push(dir);
+        continue;
+      }
+      stack.push(join(dir, entry.name));
+    }
+  }
+  return found;
+};
+
+const pruneNestedBundles = (dest) => {
+  const pruned = [];
+  for (const dir of nestedBundleDirs(dest)) {
+    rmSync(dir, { recursive: true, force: true });
+    pruned.push(dir.replace(dest + '/', ''));
+    // Drop parents the copy was the only reason to keep.
+    let parent = dirname(dir);
+    while (parent !== dest && readdirSync(parent).length === 0) {
+      rmSync(parent, { recursive: true, force: true });
+      parent = dirname(parent);
+    }
+  }
+  return pruned;
+};
+
 const resolveSource = () => {
   const arg = process.argv[2];
   if (arg) {
@@ -117,6 +156,10 @@ const main = () => {
   rmSync(DEST, { recursive: true, force: true });
   cpSync(bundleRoot, DEST, { recursive: true });
   rmSync(work, { recursive: true, force: true });
+
+  for (const name of pruneNestedBundles(DEST)) {
+    console.log(`proto-pull: dropped nested copy of the export — ${name}/`);
+  }
 
   console.log(`proto-pull: snapshot updated → ${DEST.replace(ROOT + '/', '')}`);
   console.log('proto-pull: next, run `bun run proto:check`.');

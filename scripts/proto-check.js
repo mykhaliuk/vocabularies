@@ -33,6 +33,31 @@ const DESIGN = join(ROOT, 'docs/design');
 const CANON = join(DESIGN, 'design-system/project/_ds_manifest.json');
 const PROTO_DS_DIR = join(DESIGN, 'prototype/project/_ds');
 const BRIDGE = join(DESIGN, 'prototype/project/Vocabu/ds-bridge.css');
+const PROJECT = join(DESIGN, 'prototype/project');
+const ANCHOR = 'Vocabu';
+
+// The snapshot must hold exactly one app directory. A Claude Design bundle can
+// embed an older export of itself; `proto:pull` prunes that, but a bundle
+// unzipped by hand still lands one here, where it shadows the canonical files
+// with stale namesakes an implementer can read by mistake. Nothing references
+// the copy, so nothing but this gate would ever notice it.
+const nestedAppCopies = () => {
+  const found = [];
+  const stack = [PROJECT];
+  while (stack.length > 0) {
+    const dir = stack.pop();
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue;
+      const path = join(dir, entry.name);
+      if (entry.name === ANCHOR) {
+        if (dir !== PROJECT) found.push(path.replace(ROOT + '/', ''));
+        continue;
+      }
+      stack.push(path);
+    }
+  }
+  return found;
+};
 
 const protoTokenMap = (manifestPath) => {
   const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
@@ -65,6 +90,20 @@ const report = (head, items, mark) => {
 };
 
 const main = () => {
+  const copies = nestedAppCopies();
+  if (copies.length > 0) {
+    console.error(
+      `proto-check: ${copies.length} nested copy(ies) of the prototype app ` +
+        'inside the snapshot:\n' +
+        copies.map((path) => `  ${path}`).join('\n') +
+        '\nA bundle embedding an older export of itself was unzipped by hand — ' +
+        '`bun run proto:pull` prunes these. Delete them: they shadow ' +
+        'prototype/project/Vocabu/ with stale files nothing references.',
+    );
+    process.exitCode = 1;
+    return;
+  }
+
   const protoManifest = findProtoManifest();
   if (!protoManifest) {
     // A gate that cannot find its input must not report success: exiting 0
