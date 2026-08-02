@@ -32,6 +32,13 @@ Scripts use `nuxt dev --dotenv .env.<stage>`.
 
 ## Code Quality Tooling
 
+> **Historical record.** The commands below are the original 2026-03-27
+> decision and are kept verbatim. The shipped implementation has since
+> diverged: `typecheck` is `nuxt typecheck` (which runs `vue-tsc -b --noEmit`
+> over Nuxt's generated project references — a bare `tsc --noEmit` would check
+> nothing), and `lint` passes an explicit directory list instead of `.`.
+> The README script table is the source of truth for current commands.
+
 | Concern       | Tool                            |
 | ------------- | ------------------------------- |
 | Linting       | **OxLint**                      |
