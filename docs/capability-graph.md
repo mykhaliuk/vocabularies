@@ -22,7 +22,7 @@ None — every route has a caller and every call resolves.
 | `GET /api/entries` | `pages/feed.vue` | `entries.getFeedPage` |
 | `POST /api/entries` | `composables/useMediaUpload.ts` | `entries.createEntry` |
 | `DELETE /api/entries/:id` | _none yet — VKB-95_ | `entries.deleteOwnEntry` |
-| `GET /api/entries/:id` | `composables/useEntryPlayback.ts` | `entries.getOwnEntry` |
+| `GET /api/entries/:id` | `composables/useEntryPlayback.ts`<br>`pages/entries/[id].vue` | `entries.getOwnEntry` |
 | `PATCH /api/entries/:id` | _none yet — VKB-110_ | `entries.updateOwnEntry` |
 | `GET /api/health` | `pages/offline.vue` | _inline_ |
 | `GET /api/me` | `composables/useEntitlements.ts`<br>`composables/useSession.ts`<br>`middleware/auth.ts`<br>`pages/me.vue` | _inline_ |
@@ -60,6 +60,7 @@ Informational, not a finding — a surface may be static by design or a
 placeholder awaiting its ticket.
 
 - `app.vue`
+- `components/VAvatar.vue`
 - `components/VButton.vue`
 - `components/app/BottomNav.vue`
 - `components/app/TabPlaceholder.vue`
@@ -78,8 +79,10 @@ placeholder awaiting its ticket.
 - `components/landing/copy.uk.ts`
 - `composables/useCompose.ts`
 - `composables/usePwa.ts`
+- `composables/useSpeakerLine.ts`
 - `composables/useTheme.ts`
 - `error.vue`
+- `layouts/app-detail.vue`
 - `layouts/app.vue`
 - `layouts/default.vue`
 - `pages/discover.vue`
@@ -152,6 +155,7 @@ flowchart LR
     c_composables_useSigninPoll_ts["composables/useSigninPoll.ts"]
     c_middleware_auth_ts["middleware/auth.ts"]
     c_pages_dev_media_spike_vue["pages/dev/media-spike.vue"]
+    c_pages_entries__id__vue["pages/entries/[id].vue"]
     c_pages_feed_vue["pages/feed.vue"]
     c_pages_me_vue["pages/me.vue"]
     c_pages_offline_vue["pages/offline.vue"]
@@ -230,6 +234,7 @@ flowchart LR
   r_POST__api_entries --> o_entries_createEntry
   r_DELETE__api_entries__id --> o_entries_deleteOwnEntry
   c_composables_useEntryPlayback_ts --> r_GET__api_entries__id
+  c_pages_entries__id__vue --> r_GET__api_entries__id
   r_GET__api_entries__id --> o_entries_getOwnEntry
   r_PATCH__api_entries__id --> o_entries_updateOwnEntry
   c_pages_offline_vue --> r_GET__api_health

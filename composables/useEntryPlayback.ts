@@ -38,6 +38,23 @@ const remember = (entryId: string, playback: PlaybackUrls) => {
 };
 
 export const useEntryPlayback = () => {
+  // The word detail screen already fetched GET /api/entries/:id — including
+  // its `playback` — to render the page. Handing that payload over here
+  // means the player it mounts does not repeat the same request on first
+  // play.
+  //
+  // The client guard is prophylactic, not a fix for a leak: `resolvePlayback`
+  // is only ever reached from a user gesture, so nothing reads this cache
+  // during SSR and no presigned URL has ever crossed between requests. What
+  // the guard buys is that the shared module state is not WRITTEN on the
+  // server either — the day something does read it there, the isolation is
+  // already in place, and it sits with the cache rather than in every caller
+  // that might arrive later.
+  const primePlayback = (entryId: string, playback: PlaybackUrls | null) => {
+    if (!import.meta.client || !playback) return;
+    remember(entryId, playback);
+  };
+
   const resolvePlayback = async (
     entryId: string,
     force = false,
@@ -64,5 +81,5 @@ export const useEntryPlayback = () => {
     }
   };
 
-  return { resolvePlayback };
+  return { primePlayback, resolvePlayback };
 };

@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { speakerAgeAt } from '~/shared/speaker-age';
 import type { EntrySpeakerView } from '~/server/utils/entry-view';
 
 const props = defineProps<{
@@ -25,60 +24,56 @@ const props = defineProps<{
   };
 }>();
 
-const { t } = useI18n();
+// Bold name, faint "· relation · age" tail — shared with the word detail
+// screen, which must read identically (composables/useSpeakerLine.ts). No
+// speaker → the word is the user's own and reads "You": attribution never
+// blocks a word, so it never hides either.
+const { formatSpeakerLead, formatSpeakerTail } = useSpeakerLine();
 
-// The frozen age: birthday measured against the day the word was said,
-// never against today (speaker-spec §The age rule). Null renders nothing —
-// no birthday, or a birthday after saidAt (data can be messy).
-const ageLabel = computed(() => {
-  const sp = props.entry.speaker;
-  if (!sp) return null;
-  const age = speakerAgeAt(sp.birthday, props.entry.saidAt);
-  if (!age) return null;
-  if (age.kind === 'newborn') return t('app.feed.age.newborn');
-  if (age.kind === 'months') return t('app.feed.age.months', { n: age.n });
-  return t('app.feed.age.years', { n: age.n });
-});
-
-// Bold name, faint "· relation · age" tail. No speaker → the word is the
-// user's own and reads "You" — attribution never blocks a word, so it never
-// hides either.
-const speakerLead = computed(
-  () => props.entry.speaker?.name ?? t('app.feed.you'),
+const speakerLead = computed(() => formatSpeakerLead(props.entry.speaker));
+const speakerRest = computed(() =>
+  formatSpeakerTail(props.entry.speaker, props.entry.saidAt),
 );
-const speakerRest = computed(() => {
-  const sp = props.entry.speaker;
-  if (!sp) return null;
-  const parts = [sp.rel, ageLabel.value].filter(Boolean);
-  return parts.length > 0 ? ' · ' + parts.join(' · ') : null;
-});
 
-// The headword shrinks as the phrase grows so a single long word never
-// overflows the centered card. The ladder is the prototype's (feed.jsx
-// WordText) scaled by its handwritten branch: Caveat's x-height is far
-// smaller than Hanken's, so the design multiplies the step by 1.32
-// (app.jsx --word-scale) — the rest of that branch (zero tracking, 1.2
-// leading, descender padding) lives in the stylesheet below.
-const HAND_SCALE = 1.32;
+// utils/headword-size.ts owns the ladder; the rest of the handwritten
+// branch (zero tracking, 1.2 leading, descender padding) is in the
+// stylesheet below.
+const headwordSize = computed(() => headwordSizePx(props.entry.word));
 
-const headwordSize = computed(() => {
-  const length = props.entry.word.length;
-  const step =
-    length <= 13
-      ? 40
-      : length <= 20
-        ? 33
-        : length <= 30
-          ? 27
-          : length <= 44
-            ? 22
-            : 19;
-  return Math.round(step * HAND_SCALE);
-});
+// The card is the way into the word (word-detail-spec §Behaviour). The
+// headword itself is a real link, so the entry is reachable by keyboard,
+// announced as a link, and openable in a new tab; the click handler only
+// widens that same target to the rest of the card, the way a thumb expects.
+const entryPath = computed(
+  () => `/entries/${encodeURIComponent(props.entry.id)}`,
+);
+
+const openEntry = (event: MouseEvent) => {
+  // A tap that landed on the headword link or on a media control has
+  // already been answered — do not answer it twice. Element, not
+  // HTMLElement: a tap on a Lucide glyph reports the <svg> as its target.
+  const target = event.target as Element | null;
+  if (target?.closest('a, button')) return;
+  // A drag across the gloss ends in a click too. That click is the end of a
+  // selection, not a tap: navigating would throw away the words the reader
+  // just highlighted. A collapsed selection is the caret, which every
+  // ordinary tap leaves behind — only a range blocks.
+  //
+  // A double-click is NOT covered, and knowingly so. The events run
+  // md1 / mu1 / click1 / md2 / mu2 / click2 / dblclick, and Chromium applies
+  // the word selection on md2 — so click1 still sees a collapsed caret and
+  // opens the word. Catching it would mean holding every navigation back to
+  // wait for a possible second click, and a deliberate tap delay on a
+  // mobile-first product is the worse trade than a desktop copy gesture
+  // that opens the word.
+  const selection = window.getSelection();
+  if (selection?.isCollapsed === false) return;
+  void navigateTo(entryPath.value);
+};
 </script>
 
 <template>
-  <article class="entry">
+  <article class="entry" @click="openEntry">
     <p class="entry__speaker">
       <span class="entry__speaker-lead">{{ speakerLead }}</span
       ><span v-if="speakerRest" class="entry__speaker-rest">{{
@@ -87,8 +82,10 @@ const headwordSize = computed(() => {
     </p>
 
     <h2 class="entry__word" :style="{ fontSize: `${headwordSize}px` }">
-      <span class="entry__quote">“</span>{{ entry.word
-      }}<span class="entry__quote">”</span>
+      <NuxtLink class="entry__link" :to="entryPath">
+        <span class="entry__quote">“</span>{{ entry.word
+        }}<span class="entry__quote">”</span>
+      </NuxtLink>
     </h2>
 
     <p v-if="entry.gloss" class="entry__gloss">{{ entry.gloss }}</p>
@@ -97,10 +94,13 @@ const headwordSize = computed(() => {
          gloss · media (prototype feed.jsx); the story belongs to the detail
          screen, behind its "meaning & story" toggle. It stays on the entry
          payload for that screen. -->
+    <!-- Play is play: a tap on the player must not also open the word
+         (prototype feed.jsx:140). -->
     <FeedMediaBlock
       class="entry__media"
       :media="entry.media"
       :entry-id="entry.id"
+      @click.stop
     />
   </article>
 </template>
@@ -113,6 +113,7 @@ const headwordSize = computed(() => {
   gap: 14px;
   padding: 26px 20px;
   text-align: center;
+  cursor: pointer;
 }
 
 .entry__speaker {
@@ -146,6 +147,20 @@ const headwordSize = computed(() => {
   text-align: center;
   color: var(--ink);
   overflow-wrap: break-word;
+}
+
+/* The link carries no link styling: the word is already the loudest thing
+   on the card, and underlining it would turn a keepsake into a nav item.
+   The focus ring is what makes it visibly reachable by keyboard. */
+.entry__link {
+  color: inherit;
+  text-decoration: none;
+  border-radius: var(--r-xs);
+
+  &:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 4px;
+  }
 }
 
 .entry__quote {

@@ -70,7 +70,8 @@
       "discover": "Discover",
       "saved": "Saved",
       "profile": "Profile",
-      "compose": "New word"
+      "compose": "New word",
+      "back": "Back"
     },
     "feed": {
       "pageTitle": "Feed · Vocabu",
@@ -97,6 +98,17 @@
         "months": "{n} mo",
         "years": "{n} y"
       }
+    },
+    "entry": {
+      "pageTitle": "{word} · Vocabu",
+      "pageTitleFallback": "Word · Vocabu",
+      "barTitle": "word",
+      "storyShow": "meaning & story",
+      "storyHide": "hide meaning & story",
+      "saidOn": "said {date}",
+      "saidOnAged": "said {date} · {age}",
+      "notFound": "this word isn't here any more.",
+      "loadError": "we couldn't load this word just now."
     },
     "compose": {
       "title": "New word",
