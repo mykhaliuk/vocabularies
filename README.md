@@ -18,9 +18,9 @@ Social app for capturing and sharing short audio moments. PWA, offline-capable.
 | Auth                      | Magic links (Resend) + JWT cookie + revocable sessions |
 | Rate limit                | Upstash Redis                                          |
 | Monitoring                | Sentry                                                 |
-| Lint / Format / Typecheck | OxLint / Oxfmt / `tsc --noEmit`                        |
+| Lint / Format / Typecheck | OxLint / Oxfmt / `nuxt typecheck`                      |
 
-Implementation is plain JavaScript with co-located `.d.ts` for type contracts (see `docs/specs/2026-03-27-js-dts-convention.md`).
+Application code is TypeScript. Standalone `scripts/*.js` stay plain JS — they are excluded from typecheck and run with plain node. The original JS + co-located `.d.ts` convention was retired on 2026-07-07; see `docs/specs/2026-03-27-js-dts-convention.md` for why.
 
 ## Prerequisites
 
@@ -68,6 +68,14 @@ bun run start:preprod      # local nuxt → preprod cloud
 | `bun run lint`                              | OxLint                                        |
 | `bun run fmt` / `fmt:check`                 | Oxfmt                                         |
 | `bun run typecheck`                         | `nuxt typecheck` (`vue-tsc -b --noEmit`)      |
+| `bun run ds:check`                          | Design system sync                            |
+| `bun run proto:check`                       | Prototype vs design system drift              |
+| `bun run i18n:check`                        | i18n key parity                               |
+| `bun run layering:check`                    | Server layering rules                         |
+| `bun run graph:check`                       | Capability graph freshness                    |
+| `bun run test:unit`                         | Unit tests (`bun test tests/unit`)            |
+| `bun run test:e2e`                          | Playwright E2E smoke tests                    |
+| `bun run test:e2e:authed`                   | Authed E2E (boots Docker + migrates)          |
 | `bun run db:generate`                       | Generate Drizzle migrations from schema       |
 | `bun run db:migrate` / `:dev` / `:preprod`  | Apply migrations to the chosen stage          |
 | `bun run db:dump:dev`                       | Dump dev DB schema + data into local Postgres |
@@ -75,6 +83,8 @@ bun run start:preprod      # local nuxt → preprod cloud
 All stage-scoped scripts go through `scripts/with-env.js`, which loads `.env.<stage>` into `process.env` before spawning the inner command.
 
 `typecheck` delegates to Nuxt's own wrapper: it regenerates the `.nuxt/tsconfig.*.json` project references, then runs `vue-tsc` in build mode. A bare `tsc --noEmit` is **not** equivalent — the root `tsconfig.json` carries an empty `files` array plus `references`, so without `-b` it checks nothing and exits 0.
+
+CI runs the same gates, split across three jobs. `checks` runs `ds:check`, `proto:check`, `i18n:check`, `layering:check`, `graph:check`, `lint`, `fmt:check`, `typecheck` and `test:unit` — running that list locally reproduces it exactly. `e2e` runs `test:e2e`. `e2e-authed` runs the authenticated suite against a seeded Postgres service container; locally the equivalent is `test:e2e:authed`, which boots Docker and migrates first. See `.github/workflows/ci.yml`.
 
 ## Local ports
 
