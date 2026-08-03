@@ -28,12 +28,14 @@ const props = withDefaults(
 const { t } = useI18n();
 const { resolvePlayback } = useEntryPlayback();
 
+// Both variants' numbers live in utils/media-metrics.ts, where a unit test
+// can pin them: a ready player needs MinIO to render, so nothing in CI ever
+// looks at this component.
 const isBig = computed(() => props.variant === 'big');
-// The collapsed row's two glyphs start from different inline sizes (the play
-// triangle reads heavier than the outline video mark), and the big variant
-// levels them at 17 — the prototype's numbers, media.jsx VideoSample.
-const playGlyphSize = computed(() => (isBig.value ? 17 : 14));
-const stripGlyphSize = computed(() => (isBig.value ? 17 : 15));
+const metrics = computed(() => VIDEO_METRICS[props.variant]);
+const playGlyphSize = computed(() => metrics.value.playGlyphPx);
+const stripGlyphSize = computed(() => metrics.value.stripGlyphPx);
+const styleVars = computed(() => videoStyleVars(props.variant));
 
 const expanded = ref(false);
 const playing = ref(false);
@@ -185,7 +187,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="video" :class="{ 'video--big': isBig }">
+  <div class="video" :class="{ 'video--big': isBig }" :style="styleVars">
     <!-- collapsed: the audio player's rhythm, so the feed keeps one beat -->
     <button
       v-if="!expanded"
@@ -251,26 +253,21 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-/* Every metric that differs between the feed row and the detail page is a
-   variable, so the two variants cannot drift apart in the rules below.
-   The inline variant deliberately keeps NO max-width — that is what ships
-   in the feed today, and this ticket must not move it. */
+/* Every metric that differs between the feed row and the detail page arrives
+   as a custom property from utils/media-metrics.ts, so no number below can
+   belong to one variant only. The inline variant resolves --video-max-w to
+   `none` — it deliberately keeps NO max-width, that is what ships in the
+   feed today, and this ticket must not move it. */
 .video {
-  --video-btn: 36px;
-  --video-frame-portrait: 300px;
-  --video-frame-land: 176px;
-
   display: flex;
   flex-direction: column;
+  max-width: var(--video-max-w);
 }
 
+/* A cross-axis auto margin cancels the flex item's stretch, so the width has
+   to be asked for explicitly before the max-width above can centre it. */
 .video--big {
-  --video-btn: 44px;
-  --video-frame-portrait: 340px;
-  --video-frame-land: 202px;
-
   width: 100%;
-  max-width: 360px;
   margin: 0 auto;
 }
 

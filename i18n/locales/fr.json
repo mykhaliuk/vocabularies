@@ -102,8 +102,9 @@
     "entry": {
       "pageTitle": "{word} · Vocabu",
       "pageTitleFallback": "Mot · Vocabu",
-      "storyShow": "sens et histoire",
-      "storyHide": "masquer sens et histoire",
+      "barTitle": "mot",
+      "storyShow": "le sens et l'histoire",
+      "storyHide": "masquer le sens et l'histoire",
       "saidOn": "dit le {date}",
       "saidOnAged": "dit le {date} · {age}",
       "notFound": "ce mot n'est plus là.",

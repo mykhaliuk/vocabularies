@@ -36,6 +36,8 @@ export const useSpeakerLine = () => {
     saidAt: string,
   ): string | null => {
     if (!speaker) return null;
+    // Relation before age — the spec's own metaline, "Theo · my son · 3"
+    // (word-detail-spec.html §Thin entries).
     const parts = [speaker.rel, formatAgeLabel(speaker, saidAt)].filter(
       Boolean,
     );

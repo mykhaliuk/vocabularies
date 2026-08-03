@@ -43,10 +43,13 @@ export const useEntryPlayback = () => {
   // means the player it mounts does not repeat the same request on first
   // play.
   //
-  // A server-side call is dropped here rather than trusted to the caller:
-  // `cache` is module state, which during SSR is shared by every request the
-  // process handles, so priming it there would offer one user's presigned
-  // URLs to the next.
+  // The client guard is prophylactic, not a fix for a leak: `resolvePlayback`
+  // is only ever reached from a user gesture, so nothing reads this cache
+  // during SSR and no presigned URL has ever crossed between requests. What
+  // the guard buys is that the shared module state is not WRITTEN on the
+  // server either — the day something does read it there, the isolation is
+  // already in place, and it sits with the cache rather than in every caller
+  // that might arrive later.
   const primePlayback = (entryId: string, playback: PlaybackUrls | null) => {
     if (!import.meta.client || !playback) return;
     remember(entryId, playback);

@@ -102,6 +102,7 @@
     "entry": {
       "pageTitle": "{word} · Vocabu",
       "pageTitleFallback": "Слово · Vocabu",
+      "barTitle": "слово",
       "storyShow": "значення та історія",
       "storyHide": "сховати значення та історію",
       "saidOn": "сказано {date}",

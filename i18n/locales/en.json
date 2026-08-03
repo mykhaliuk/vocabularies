@@ -102,6 +102,7 @@
     "entry": {
       "pageTitle": "{word} · Vocabu",
       "pageTitleFallback": "Word · Vocabu",
+      "barTitle": "word",
       "storyShow": "meaning & story",
       "storyHide": "hide meaning & story",
       "saidOn": "said {date}",

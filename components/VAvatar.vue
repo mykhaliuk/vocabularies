@@ -12,26 +12,18 @@ const props = withDefaults(
   { tone: null, size: 40 },
 );
 
-const initial = computed(() => {
-  // Spread, not [0]: an emoji or any astral character is a surrogate pair
-  // and indexing would render half of it.
-  const [first] = [...props.name.trim()];
-  return first === undefined ? '' : first.toUpperCase();
-});
+// The initial and the tone's token pair are pure, and live in utils/avatar.ts
+// so a unit test can pin them — bun test cannot mount this file.
+const initial = computed(() => avatarInitial(props.name));
 
-// No tone (a word kept before tones existed, or the user's own) reads ink —
-// the quiet neutral, never a colour picked at random.
-const toneClass = computed(() => `v-avatar--${props.tone ?? 'ink'}`);
+const style = computed(() => ({
+  '--v-avatar-size': `${props.size}px`,
+  ...avatarToneVars(props.tone),
+}));
 </script>
 
 <template>
-  <span
-    class="v-avatar"
-    :class="toneClass"
-    :style="{ '--v-avatar-size': `${size}px` }"
-    aria-hidden="true"
-    >{{ initial }}</span
-  >
+  <span class="v-avatar" :style="style" aria-hidden="true">{{ initial }}</span>
 </template>
 
 <style scoped>
@@ -43,6 +35,8 @@ const toneClass = computed(() => `v-avatar--${props.tone ?? 'ink'}`);
   width: var(--v-avatar-size);
   height: var(--v-avatar-size);
   border-radius: var(--r-pill);
+  background: var(--v-avatar-bg);
+  color: var(--v-avatar-fg);
   font-family: var(--font-sans);
   font-weight: var(--w-bold);
   /* 0.42 of the disc — the prototype's ratio, so the letter keeps its
@@ -51,25 +45,5 @@ const toneClass = computed(() => `v-avatar--${props.tone ?? 'ink'}`);
   line-height: 1;
   letter-spacing: var(--tracking-snug);
   user-select: none;
-}
-
-/* The soft pairs, NOT the --rose-200 / --blue-200 the spec mock draws: those
-   steps are deliberately left at their light values in theme-dark.css, so a
-   dark-theme viewer would get a bright pink disc on a near-black page — and
-   ds:check would pass, because they are perfectly legal tokens. Every pair
-   below is re-themed for dark. */
-.v-avatar--rose {
-  background: var(--primary-soft);
-  color: var(--on-primary-soft);
-}
-
-.v-avatar--blue {
-  background: var(--secondary-soft);
-  color: var(--on-secondary-soft);
-}
-
-.v-avatar--ink {
-  background: var(--surface-sunk);
-  color: var(--ink-2);
 }
 </style>

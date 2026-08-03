@@ -54,6 +54,20 @@ const openEntry = (event: MouseEvent) => {
   // HTMLElement: a tap on a Lucide glyph reports the <svg> as its target.
   const target = event.target as Element | null;
   if (target?.closest('a, button')) return;
+  // A drag across the gloss ends in a click too. That click is the end of a
+  // selection, not a tap: navigating would throw away the words the reader
+  // just highlighted. A collapsed selection is the caret, which every
+  // ordinary tap leaves behind — only a range blocks.
+  //
+  // A double-click is NOT covered, and knowingly so. The events run
+  // md1 / mu1 / click1 / md2 / mu2 / click2 / dblclick, and Chromium applies
+  // the word selection on md2 — so click1 still sees a collapsed caret and
+  // opens the word. Catching it would mean holding every navigation back to
+  // wait for a possible second click, and a deliberate tap delay on a
+  // mobile-first product is the worse trade than a desktop copy gesture
+  // that opens the word.
+  const selection = window.getSelection();
+  if (selection?.isCollapsed === false) return;
   void navigateTo(entryPath.value);
 };
 </script>

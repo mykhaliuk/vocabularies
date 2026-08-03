@@ -17,8 +17,11 @@ const props = withDefaults(
 const { t } = useI18n();
 const { resolvePlayback } = useEntryPlayback();
 
-const isBig = computed(() => props.variant === 'big');
-const glyphSize = computed(() => (isBig.value ? 17 : 16));
+// Both variants' numbers live in utils/media-metrics.ts, where a unit test
+// can pin them: a ready player needs MinIO to render, so nothing in CI ever
+// looks at this component.
+const glyphSize = computed(() => AUDIO_METRICS[props.variant].glyphPx);
+const styleVars = computed(() => audioStyleVars(props.variant));
 
 // Number of bars synthesized when the entry has no analysed peaks, so the
 // row still reads as an audio waveform rather than an empty strip.
@@ -183,7 +186,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="audio" :class="{ 'audio--big': isBig }">
+  <div class="audio" :style="styleVars">
     <!-- The whole row is the control (as in the prototype), so the tap target
          clears --tap-min even though the glyph box is 38px. -->
     <button
@@ -234,22 +237,13 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-/* Every metric that differs between the feed row and the detail page is a
-   variable, so the two variants cannot drift apart in the rules below. */
+/* Every metric that differs between the feed row and the detail page arrives
+   as a custom property from utils/media-metrics.ts, so no number below can
+   belong to one variant only. */
 .audio {
-  --audio-max-w: 340px;
-  --audio-btn: 38px;
-  --audio-wave-h: 24px;
-
   width: 100%;
   max-width: var(--audio-max-w);
   margin: 0 auto;
-}
-
-.audio--big {
-  --audio-max-w: 360px;
-  --audio-btn: 44px;
-  --audio-wave-h: 30px;
 }
 
 .audio__row {

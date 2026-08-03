@@ -59,6 +59,13 @@ click-and-read-code helper used by both client suites.
 
 Exit code is non-zero if any assertion fails.
 
+## Named gaps neither CI suite can close
+
+- `ready` media on the word detail screen (VKB-115). The last hop of the
+  metrics binding — `:style="styleVars"` with `variant="big"` — only renders
+  once a real transcode has produced a playable manifest, which needs MinIO.
+  The authed suite reaches `processing` and stops there.
+
 ## What still needs a real device
 
 The actual iOS standalone-PWA jar isolation (the reason the flow exists) can

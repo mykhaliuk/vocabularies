@@ -61,7 +61,11 @@ const entryId = String(route.params.id);
 // $fetch to an internal route does not), so the first render is
 // authenticated instead of 401ing into the error state.
 const requestFetch = useRequestFetch();
-const { data, error, refresh } = await useAsyncData(`entry:${entryId}`, () =>
+const {
+  data,
+  error: fetchError,
+  refresh,
+} = await useAsyncData(`entry:${entryId}`, () =>
   requestFetch<EntryDetailResponse>(
     `/api/entries/${encodeURIComponent(entryId)}`,
   ),
@@ -70,22 +74,77 @@ const { data, error, refresh } = await useAsyncData(`entry:${entryId}`, () =>
 const entry = computed(() => data.value?.entry ?? null);
 const media = computed(() => data.value?.media ?? null);
 
-// A 404 is an answer, not a hiccup: the word is gone (or never was), and
-// offering "try again" would only promise a retry that cannot succeed.
+// A 4xx is an answer, not a hiccup: the word is gone, was never there, or
+// was never askable — an id that is not a uuid fails the route's own
+// `z.string().uuid()` and comes back 400, not 404. Offering "try again" for
+// any of them would promise a retry that re-issues the identical request
+// forever. 408 and 429 are the two that really do mean "later"; they join
+// 5xx and the network failures (no status at all) in the retryable branch.
 //
-// `undefined`, not `null`: useAsyncData types its error ref as
-// `Ref<NuxtError | undefined>` and clears it by writing `void 0`, so a
-// null check would call every successful load a failure.
-const isMissing = computed(() => error.value?.statusCode === 404);
-const hasLoadError = computed(
-  () => error.value !== undefined && !isMissing.value,
-);
+// Short and stable, so an array rather than a Set.
+const RETRYABLE_CLIENT_STATUSES = [408, 429];
 
-// No try/catch: refresh() cannot reject. Nuxt catches inside its own
-// promise chain, parks the failure on the `error` ref above and resolves —
-// so a failed retry surfaces as a re-render, never as a throw.
-const retry = () => {
-  void refresh();
+// 401 is the one 4xx that says nothing about the word at all: the entry may
+// be perfectly fine and the reader is simply no longer signed in. The route
+// guard cannot have caught it — it skips its session probe when both sides
+// of the hop are authed routes (middleware/auth.ts), which is exactly the
+// feed → word tap this screen adds, so a session revoked from another
+// device first surfaces right here.
+const UNAUTHORIZED = 401;
+
+// Two questions kept apart, because one boolean cannot answer both: is a
+// retry meaningful, and what actually happened. `null` is a healthy load —
+// useAsyncData types its error ref as `Ref<NuxtError | undefined>` and
+// clears it by writing `void 0`, so an `undefined` check is the one that
+// does not call every successful load a failure.
+type LoadFailure = 'signed-out' | 'gone' | 'hiccup';
+
+const failure = computed<LoadFailure | null>(() => {
+  if (fetchError.value === undefined) return null;
+  const status = fetchError.value.statusCode;
+  if (status === UNAUTHORIZED) return 'signed-out';
+  if (status === undefined) return 'hiccup';
+  if (RETRYABLE_CLIENT_STATUSES.includes(status)) return 'hiccup';
+  return status >= 400 && status < 500 ? 'gone' : 'hiccup';
+});
+
+// Signed out is answered the way /me already answers it (pages/me.vue) —
+// hand the reader to sign-in. Telling them their word is gone would be a
+// statement of fact about someone else's data that we never checked.
+const redirectWhenSignedOut = async () => {
+  if (failure.value !== 'signed-out') return;
+  await navigateTo('/login');
+};
+await redirectWhenSignedOut();
+
+// The state block's one line of copy. 'signed-out' deliberately renders
+// nothing: the redirect above is already in flight, and a frame of "this
+// word isn't here any more" would be a lie on the way out.
+const stateCopy = computed(() => {
+  if (failure.value === 'gone') return t('app.entry.notFound');
+  if (failure.value === 'hiccup') return t('app.entry.loadError');
+  return '';
+});
+
+// No try/catch around refresh(): it cannot reject. Nuxt catches inside its
+// own promise chain, parks the failure on the error ref above and resolves —
+// so a failed retry surfaces as a re-render, never as a throw. A retry that
+// comes back 401 (the session died while the state block was on screen) is
+// the same answer as a first load that does, and gets the same redirect.
+const retry = async () => {
+  await refresh();
+  try {
+    await redirectWhenSignedOut();
+  } catch (error) {
+    // navigateTo CAN reject — a stale precache or a failed chunk after a
+    // deploy (pages/login.vue hits the same). By this point refresh()'s own
+    // catch has already set error.value and reset data.value to null, so
+    // entry is null, failure is 'signed-out' and stateCopy is '' for that
+    // case — v-else-if="stateCopy" (line 292) then renders neither branch,
+    // leaving the reader looking at the bare top bar over an empty column.
+    // There is no state left to fall back to; logging is all that is left.
+    console.error('[entry] sign-in redirect failed', error);
+  }
 };
 
 // Seed the playback cache from the payload this page already holds, so the
@@ -111,6 +170,11 @@ const speakerRest = computed(() =>
 
 const headwordSize = computed(() => headwordSizePx(entry.value?.word ?? ''));
 
+// A bare `en` tag resolves to the US region, which prints "Aug 2, 2026";
+// the spec draws "10 May 2026", and fr/uk already put the day first. Only
+// the date layer is regionalised — the i18n locale key stays `en`.
+const DATE_REGIONS: Record<string, string> = { en: 'en-GB' };
+
 // The said-on date is the one date the app renders as text, and it is
 // rendered in the reader's locale: the mocks' fixed "10 May 2026" would be
 // a bug in fr and uk. saidAt is a plain YYYY-MM-DD, so it is formatted in
@@ -121,7 +185,8 @@ const saidAtLabel = computed(() => {
   if (!value) return '';
   const parsed = new Date(`${value}T00:00:00Z`);
   if (Number.isNaN(parsed.getTime())) return value;
-  return new Intl.DateTimeFormat(locale.value, {
+  const tag = DATE_REGIONS[locale.value] ?? locale.value;
+  return new Intl.DateTimeFormat(tag, {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
@@ -152,7 +217,11 @@ useHead(() => ({
 </script>
 
 <template>
-  <NuxtLayout name="app-detail" :title="entry?.word ?? ''">
+  <!-- The bar carries the literal word "word" (spec §Metrics, detail.jsx),
+       not the headword: the entry's own phrase is never truncated anywhere,
+       and a 54px bar could only ellipsise it. It reads the same on the
+       states below, where there is no entry to name. -->
+  <NuxtLayout name="app-detail" :title="t('app.entry.barTitle')">
     <article v-if="entry" class="detail">
       <div class="detail__head">
         <VAvatar
@@ -168,6 +237,9 @@ useHead(() => ({
           }}</span>
         </p>
 
+        <!-- The ladder is an inline size, not a class: utils/headword-size.ts
+             owns the steps and the feed card reads the same function, so the
+             two screens shrink a long saying in lockstep. -->
         <h1 class="detail__word" :style="{ fontSize: `${headwordSize}px` }">
           <span class="detail__quote">“</span>{{ entry.word
           }}<span class="detail__quote">”</span>
@@ -221,14 +293,19 @@ useHead(() => ({
       </p>
     </article>
 
-    <div v-else-if="isMissing || hasLoadError" class="detail__state">
+    <div v-else-if="stateCopy" class="detail__state">
       <span class="detail__state-icon" aria-hidden="true">
         <CircleAlert :size="30" />
       </span>
-      <p class="detail__state-msg">
-        {{ isMissing ? t('app.entry.notFound') : t('app.entry.loadError') }}
-      </p>
-      <VButton v-if="hasLoadError" variant="secondary" size="sm" @click="retry">
+      <!-- The one line of copy IS the heading: a dead link must not land a
+           screen-reader user on a page with no heading at all. -->
+      <h1 class="detail__state-msg">{{ stateCopy }}</h1>
+      <VButton
+        v-if="failure === 'hiccup'"
+        variant="secondary"
+        size="sm"
+        @click="retry"
+      >
         {{ t('offline.tryAgain') }}
       </VButton>
     </div>
@@ -256,12 +333,19 @@ useHead(() => ({
   text-align: center;
 }
 
+/* One line, never wrapped (spec §Anatomy step 1) — so it must be clipped
+   instead. Name and relation are 200 chars each server-side, and without a
+   cap the nowrap line widens this centred column until the whole PAGE
+   scrolls sideways on a phone. Same treatment as the top bar's title. */
 .detail__meta {
   margin: -4px 0 0;
+  max-width: 100%;
   font-family: var(--font-sans);
   font-size: var(--text-sm);
   line-height: 1.3;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .detail__meta-lead {
@@ -404,11 +488,14 @@ useHead(() => ({
   color: var(--danger);
 }
 
+/* A heading by markup, a sentence by weight — it is the page's only line of
+   copy, and shouting it would be the wrong voice for bad news. */
 .detail__state-msg {
   margin: 0;
   max-width: 300px;
   font-family: var(--font-sans);
   font-size: var(--text-base);
+  font-weight: var(--w-regular);
   line-height: var(--leading-normal);
   color: var(--ink-2);
 }
