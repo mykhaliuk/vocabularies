@@ -267,6 +267,22 @@ silently skipping it.
   Linear issues instead of expanding the diff. One ticket = one branch =
   one PR; if the session or branch setup conflicts with that, flag it
   BEFORE implementing instead of following the setup.
+- **Extractions ship first.** When a ticket needs code pulled out of an
+  already-shipped component into a shared module, that extraction is its
+  own PR, merged BEFORE the feature PR that motivated it. The extraction
+  carries the regression risk — it changes code already in use — while the
+  new surface carries almost none, because nothing depended on it yet;
+  bundling them buries the risky half inside the harmless half. The split
+  also changes the question each review answers: an extraction PR is
+  reviewed as "did behaviour stay identical?", a mechanical and checkable
+  question, and the feature PR as "is this right?". So PR 1 must be
+  behaviour-neutral by construction — same rendered output, same numbers,
+  ideally pinned by a unit test against what shipped before. Name the
+  extractions when scoping, not mid-implementation. If an extraction only
+  makes sense once its consumer exists, the abstraction is being invented
+  rather than discovered: write the feature inline and extract in a
+  follow-up. Applies to component/composable/util extractions and
+  shared-type moves; not to brand-new modules only the new feature uses.
 - **Pre-PR checklist:** run `docs/PR-CHECKLIST.md` before opening a PR or
   flipping it ready — including the adversarial `/code-review` pass; fix
   confirmed findings first.
