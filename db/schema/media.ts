@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm';
 import {
   index,
   integer,
@@ -6,6 +7,7 @@ import {
   real,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
 import { entries } from './entries';
@@ -26,6 +28,12 @@ export const media = pgTable(
     // an entry.
     entryId: uuid('entry_id').references(() => entries.id, {
       onDelete: 'cascade',
+    }),
+    // Claimed at the ready transition — ADR-0009, "Replacing an entry's
+    // moment". `set null` because a deleted entry moots the swap; the media
+    // row is not the entry's to take with it.
+    pendingEntryId: uuid('pending_entry_id').references(() => entries.id, {
+      onDelete: 'set null',
     }),
     ownerId: uuid('owner_id')
       .notNull()
@@ -50,5 +58,10 @@ export const media = pgTable(
   (table) => [
     index('media_entry_id_idx').on(table.entryId),
     index('media_owner_id_idx').on(table.ownerId),
+    // One moment per entry: getFeedPage left-joins media and caps the JOINED
+    // rows, so a second row would list the entry twice and skew the cursor.
+    uniqueIndex('media_entry_id_unique')
+      .on(table.entryId)
+      .where(sql`${table.entryId} is not null`),
   ],
 );

@@ -5,5 +5,16 @@
     { "path": "./.nuxt/tsconfig.server.json" },
     { "path": "./.nuxt/tsconfig.shared.json" },
     { "path": "./.nuxt/tsconfig.node.json" }
-  ]
+  ],
+  // Nuxt writes these aliases into .nuxt/tsconfig.*.json, which `bun test`
+  // never reads — it resolves from the tsconfig nearest the imported file, so
+  // a unit test importing a server module died on `~/db/schema/...`. Declaring
+  // them here is inert for the build: this project has "files": [], so it
+  // compiles nothing, and the mapping matches what Nuxt generates.
+  "compilerOptions": {
+    "paths": {
+      "~/*": ["./*"],
+      "~~/*": ["./*"]
+    }
+  }
 }
