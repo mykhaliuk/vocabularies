@@ -21,7 +21,7 @@ None — every route has a caller and every call resolves.
 | `GET /api/dev/error` | `pages/me.vue` | _inline_ |
 | `GET /api/entries` | `pages/feed.vue` | `entries.getFeedPage` |
 | `POST /api/entries` | `composables/useMediaUpload.ts` | `entries.createEntry` |
-| `DELETE /api/entries/:id` | _none yet — VKB-95_ | `entries.deleteOwnEntry` |
+| `DELETE /api/entries/:id` | `pages/entries/[id].vue` | `entries.deleteOwnEntry` |
 | `GET /api/entries/:id` | `composables/useEntryPlayback.ts`<br>`pages/entries/[id].vue` | `entries.getOwnEntry` |
 | `PATCH /api/entries/:id` | _none yet — VKB-110_ | `entries.updateOwnEntry` |
 | `DELETE /api/entries/:id/media` | _none yet — VKB-110_ | `entries.removeEntryMedia` |
@@ -52,7 +52,6 @@ finding, so the note cannot outlive the gap.
 
 | Route | Tracked by | Note |
 | --- | --- | --- |
-| `DELETE /api/entries/:id` | VKB-95 | no delete affordance exists yet; neither the feed nor compose ticket covers it. |
 | `PATCH /api/entries/:id` | VKB-110 | compose edit mode is the first caller |
 | `DELETE /api/entries/:id/media` | VKB-110 | compose edit mode is the only client that will call this |
 | `POST /api/entries/:id/media` | VKB-110 | compose edit mode is the only client that will call this |
@@ -71,6 +70,8 @@ placeholder awaiting its ticket.
 - `components/app/TopBar.vue`
 - `components/compose/MediaAttach.vue`
 - `components/compose/PremiumSheet.vue`
+- `components/entry/ActionsMenu.vue`
+- `components/entry/DeleteSheet.vue`
 - `components/feed/AudioPlayer.vue`
 - `components/feed/EmptyState.vue`
 - `components/feed/EntryCard.vue`
@@ -82,6 +83,7 @@ placeholder awaiting its ticket.
 - `components/landing/copy.fr.ts`
 - `components/landing/copy.uk.ts`
 - `composables/useCompose.ts`
+- `composables/useEntryRemoval.ts`
 - `composables/usePwa.ts`
 - `composables/useSpeakerLine.ts`
 - `composables/useTheme.ts`
@@ -173,7 +175,7 @@ flowchart LR
     r_GET__api_dev_error["GET /api/dev/error"]
     r_GET__api_entries["GET /api/entries"]
     r_POST__api_entries["POST /api/entries"]
-    r_DELETE__api_entries__id("DELETE /api/entries/:id")
+    r_DELETE__api_entries__id["DELETE /api/entries/:id"]
     r_GET__api_entries__id["GET /api/entries/:id"]
     r_PATCH__api_entries__id("PATCH /api/entries/:id")
     r_DELETE__api_entries__id_media("DELETE /api/entries/:id/media")
@@ -240,6 +242,7 @@ flowchart LR
   r_GET__api_entries --> o_entries_getFeedPage
   c_composables_useMediaUpload_ts --> r_POST__api_entries
   r_POST__api_entries --> o_entries_createEntry
+  c_pages_entries__id__vue --> r_DELETE__api_entries__id
   r_DELETE__api_entries__id --> o_entries_deleteOwnEntry
   c_composables_useEntryPlayback_ts --> r_GET__api_entries__id
   c_pages_entries__id__vue --> r_GET__api_entries__id

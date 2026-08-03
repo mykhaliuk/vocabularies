@@ -3,9 +3,9 @@ import { ArrowLeft } from 'lucide-vue-next';
 
 // Two variants of the same 54px frosted bar (prototype chrome.jsx):
 //   default — centred logo + wordmark, the authed tab shell.
-//   back    — back arrow left, title centred, right slot reserved.
-// The right slot is deliberately an empty spacer today: it keeps the title
-// optically centred, and the ⋯ menu drops into it with VKB-95.
+//   back    — back arrow left, title centred, `right` slot on the end.
+// The right slot falls back to an empty spacer, which is what keeps the title
+// optically centred on the screens that put nothing there.
 const props = withDefaults(defineProps<{ back?: boolean; title?: string }>(), {
   back: false,
   title: undefined,
@@ -59,7 +59,9 @@ const goBack = () => {
            <h1>, and a second one here would only repeat it. -->
       <span class="top-bar__title">{{ title }}</span>
 
-      <span class="top-bar__side" aria-hidden="true" />
+      <slot name="right">
+        <span class="top-bar__side" aria-hidden="true" />
+      </slot>
     </template>
 
     <template v-else>

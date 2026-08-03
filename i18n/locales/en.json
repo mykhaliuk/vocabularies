@@ -110,7 +110,24 @@
       "saidOn": "said {date}",
       "saidOnAged": "said {date} · {age}",
       "notFound": "this word isn't here any more.",
-      "loadError": "we couldn't load this word just now."
+      "loadError": "we couldn't load this word just now.",
+      "actions": {
+        "menu": "More actions",
+        "edit": "edit word",
+        "delete": "delete…"
+      },
+      "delete": {
+        "question": "Let this one go?",
+        "losesStory": "Its story goes with it.",
+        "losesStoryVoice": "Its story and the voice go with it.",
+        "losesStoryVideo": "Its story and the video go with it.",
+        "losesVoice": "The voice goes with it.",
+        "losesVideo": "The video goes with it.",
+        "irreversible": "There's no getting it back.",
+        "confirm": "Delete word",
+        "cancel": "Cancel",
+        "failed": "we couldn't delete this word just now."
+      }
     },
     "compose": {
       "title": "New word",

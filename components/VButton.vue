@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Loader2 } from 'lucide-vue-next';
 
-type Variant = 'primary' | 'blue' | 'secondary' | 'ghost';
+type Variant = 'primary' | 'blue' | 'secondary' | 'ghost' | 'danger';
 type Size = 'sm' | 'md' | 'lg';
 
 const props = withDefaults(
@@ -144,6 +144,20 @@ const anchorRel = computed(() =>
 
   &.v-btn--blue {
     --v-btn-bg: var(--secondary-action);
+    --v-btn-fg: var(--text-on-accent);
+    background: var(--v-btn-bg);
+    color: var(--v-btn-fg);
+
+    &:not(:disabled):not([aria-disabled='true']):hover {
+      filter: brightness(0.94);
+    }
+  }
+
+  /* Destructive confirmation only — never a resting affordance. Sits on the
+     AA-safe --danger-action step for the same reason primary does, and carries
+     no float shadow: it must not read as the page's happy path. */
+  &.v-btn--danger {
+    --v-btn-bg: var(--danger-action);
     --v-btn-fg: var(--text-on-accent);
     background: var(--v-btn-bg);
     color: var(--v-btn-fg);

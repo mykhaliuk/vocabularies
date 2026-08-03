@@ -3,13 +3,14 @@ import { Bookmark, Calendar, ChevronDown, CircleAlert } from 'lucide-vue-next';
 
 definePageMeta({ layout: false, middleware: 'auth' });
 
-// The word detail, read half (word-detail-spec.html). One centred column:
-// the person, the word, the meaning, the media, the story, where it is
-// filed, and the day it was said — in decreasing weight around the word.
+// The word detail (word-detail-spec.html). One centred column: the person, the
+// word, the meaning, the media, the story, where it is filed, and the day it
+// was said — in decreasing weight around the word. The ⋯ menu on the bar holds
+// the rare actions (entry-actions-spec.html).
 //
-// Not here on purpose, each pinned to its own ticket: the ⋯ menu and delete
-// (VKB-95), editing the said-on date (VKB-111), and the whole social row,
-// which v0 cuts as one piece.
+// Not here on purpose, each pinned to its own ticket: editing the said-on date
+// (VKB-111), compose's edit mode behind the menu's flag (VKB-110), and the
+// whole social row, which v0 cuts as one piece.
 
 // Shapes returned by GET /api/entries/:id (declared inline — no DTO layer).
 type EntryMedia = {
@@ -209,6 +210,113 @@ const saidLine = computed(() => {
 // and the fold is a reader's tool for a long one, not a gate.
 const isStoryOpen = ref(true);
 
+// ── delete (entry-actions-spec.html) ────────────────────────────────────────
+
+const router = useRouter();
+const { notifyRemoved } = useEntryRemoval();
+
+const actionsMenu = ref<{ focusTrigger: () => void } | null>(null);
+const isConfirmOpen = ref(false);
+const isDeleting = ref(false);
+const hasDeleteError = ref(false);
+
+// A DELETE answered 404 is not a failure to report: the word is gone, which is
+// precisely what the tap asked for. Another tab, or another device, got there
+// first — and telling this reader it went wrong would be a lie about an
+// outcome they already have.
+const ALREADY_GONE = 404;
+
+type DeleteOutcome = 'deleted' | 'signed-out' | 'failed';
+
+const requestDelete = async (): Promise<DeleteOutcome> => {
+  try {
+    await $fetch(`/api/entries/${encodeURIComponent(entryId)}`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+    return 'deleted';
+  } catch (error) {
+    const status = (error as { statusCode?: number }).statusCode;
+    if (status === UNAUTHORIZED) return 'signed-out';
+    if (status === ALREADY_GONE) return 'deleted';
+    console.error('[entry] delete failed', error);
+    return 'failed';
+  }
+};
+
+// Where the back arrow would have gone, with the one difference a deleted word
+// earns: reached cold there is nothing of ours behind it, and REPLACE is what
+// keeps the OS back button from walking into a word that no longer exists.
+const leaveTheDeletedWord = async () => {
+  const previous = router.options.history.state.back;
+  if (typeof previous === 'string') {
+    router.back();
+    return;
+  }
+  await navigateTo('/feed', { replace: true });
+};
+
+const confirmDelete = async () => {
+  if (isDeleting.value) return;
+  isDeleting.value = true;
+  hasDeleteError.value = false;
+
+  const outcome = await requestDelete();
+
+  if (outcome === 'signed-out') {
+    // Same answer the load path gives a 401: hand the reader to sign-in
+    // rather than report a delete that may well have been refused for
+    // nothing to do with the word. navigateTo CAN reject (see retry above),
+    // and the word is still there when it does, so the sheet says so instead
+    // of spinning on a redirect that never happened.
+    try {
+      await navigateTo('/login');
+    } catch (error) {
+      console.error('[entry] sign-in redirect failed', error);
+      isDeleting.value = false;
+      hasDeleteError.value = true;
+    }
+    return;
+  }
+  if (outcome === 'failed') {
+    isDeleting.value = false;
+    hasDeleteError.value = true;
+    return;
+  }
+
+  // The feed drops the row on this signal, without a fetch of its own.
+  notifyRemoved(entryId);
+  try {
+    await leaveTheDeletedWord();
+  } catch (error) {
+    // The word IS gone; only the way out failed. Saying "we couldn't delete
+    // this word" here would be the one lie this sheet must not tell, so the
+    // sheet simply releases — the screen behind it is already a word that no
+    // longer exists, and the back arrow still works.
+    console.error('[entry] leaving the deleted word failed', error);
+    isDeleting.value = false;
+    isConfirmOpen.value = false;
+  }
+};
+
+const cancelDelete = async () => {
+  if (isDeleting.value) return;
+  isConfirmOpen.value = false;
+  hasDeleteError.value = false;
+  // The sheet took focus from the ⋯ and the ⋯ was inert while it stood; both
+  // have to settle before focus can go back, or it lands on <body> and a
+  // keyboard reader restarts from the top of the document.
+  await nextTick();
+  actionsMenu.value?.focusTrigger();
+};
+
+// A moment that never finished transcoding is already lost; naming it among
+// what "goes with it" would overstate what this tap costs.
+const keptMediaKind = computed(() => {
+  const kept = media.value;
+  return kept && kept.status !== 'failed' ? kept.kind : null;
+});
+
 useHead(() => ({
   title: entry.value
     ? t('app.entry.pageTitle', { word: entry.value.word })
@@ -222,6 +330,17 @@ useHead(() => ({
        and a 54px bar could only ellipsise it. It reads the same on the
        states below, where there is no entry to name. -->
   <NuxtLayout name="app-detail" :title="t('app.entry.barTitle')">
+    <!-- Only over a word that actually loaded: the load-failure states have
+         nothing to act on, and a ⋯ there would offer to delete an entry the
+         screen never got. -->
+    <template v-if="entry" #bar-right>
+      <EntryActionsMenu
+        ref="actionsMenu"
+        :disabled="isConfirmOpen"
+        @delete="isConfirmOpen = true"
+      />
+    </template>
+
     <article v-if="entry" class="detail">
       <div class="detail__head">
         <VAvatar
@@ -309,6 +428,18 @@ useHead(() => ({
         {{ t('offline.tryAgain') }}
       </VButton>
     </div>
+
+    <EntryDeleteSheet
+      v-if="entry"
+      :open="isConfirmOpen"
+      :word="entry.word"
+      :has-story="Boolean(entry.story)"
+      :media-kind="keptMediaKind"
+      :busy="isDeleting"
+      :failed="hasDeleteError"
+      @confirm="confirmDelete"
+      @cancel="cancelDelete"
+    />
   </NuxtLayout>
 </template>
 
