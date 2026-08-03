@@ -16,6 +16,35 @@ import { SERVER_LOG_PATH } from './e2e/authed/server-log';
 const PORT = 3100;
 const baseURL = `http://localhost:${PORT}`;
 
+// Presigning (server/utils/storage.ts) is a local HMAC signature over these
+// values — it signs against S3_ENDPOINT, it never dials it — so minting an
+// upload slot needs no reachable bucket. The authed suite deliberately runs
+// with no MinIO (see e2e/authed/README.md): a spec that creates an entry
+// with media never PUTs the signed URL or confirms the upload, so the media
+// row stays 'processing' forever — exactly the state
+// e2e/authed/entry-detail.spec.ts asserts against. Real upload + playback
+// against a live bucket is e2e/local's job (VKB-115), never this suite's.
+//
+// Every placeholder defers to a real value first, so a local run against
+// MinIO (.env.local) is unaffected — these only take over when nothing is
+// set, i.e. in CI. Names and host are deliberately non-functional: `.invalid`
+// is the RFC 2606 reserved TLD for addresses that must not resolve, and the
+// key/secret/bucket strings say outright that they authorize nothing.
+const STORAGE_PLACEHOLDER_ENV = {
+  S3_ENDPOINT: process.env.S3_ENDPOINT ?? 'http://s3.invalid',
+  S3_ACCESS_KEY_ID:
+    process.env.S3_ACCESS_KEY_ID ?? 'authed-suite-no-minio-placeholder-key',
+  S3_SECRET_ACCESS_KEY:
+    process.env.S3_SECRET_ACCESS_KEY ??
+    'authed-suite-no-minio-placeholder-secret',
+  S3_BUCKET_MEDIA:
+    process.env.S3_BUCKET_MEDIA ?? 'authed-suite-placeholder-media-bucket',
+  S3_BUCKET_ORIGINALS:
+    process.env.S3_BUCKET_ORIGINALS ??
+    'authed-suite-placeholder-originals-bucket',
+  S3_FORCE_PATH_STYLE: process.env.S3_FORCE_PATH_STYLE ?? 'true',
+};
+
 const REQUIRED_ENV = ['DATABASE_URL', 'JWT_SECRET'];
 const missing = REQUIRED_ENV.filter((key) => !process.env[key]);
 if (missing.length > 0) {
@@ -77,6 +106,7 @@ export default defineConfig({
     reuseExistingServer: false,
     timeout: 240_000,
     env: {
+      ...STORAGE_PLACEHOLDER_ENV,
       APP_URL: baseURL,
       NITRO_PORT: String(PORT),
       E2E_SERVER_LOG: SERVER_LOG_PATH,
