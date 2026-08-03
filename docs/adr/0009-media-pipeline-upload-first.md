@@ -40,6 +40,15 @@ rules. All stages read `S3_BUCKET_MEDIA` + `S3_BUCKET_ORIGINALS`; the
 legacy single-bucket `S3_BUCKET` fallback was dropped once production
 migrated to the two-bucket vars (VKB-72).
 
+> **Scoped tokens are not implemented (noted 2026-08-03).** `create()` in
+> `server/utils/storage.ts` builds ONE `S3Client` from ONE key pair and
+> selects a bucket per call, so the app path has no per-bucket scoping: an
+> app credential that leaks reaches `originals` — the private ingest — as
+> readily as `media`. The rest of the paragraph holds; separate buckets,
+> per-bucket CORS and independent lifecycle rules are real. Splitting the
+> runtime in two is a code change, not configuration, because every caller
+> reaches the single cached client through `useStorage()`.
+
 **Async normalization with ffmpeg, in the Nitro app on Vercel.** Confirm
 returns immediately (`processing`); a queued job downloads the original,
 probes it, enforces the 20s cap, and produces: video → 720p H.264/AAC MP4
