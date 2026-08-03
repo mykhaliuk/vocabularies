@@ -28,6 +28,13 @@ All modes run the Nuxt dev server locally. The difference is which backends they
 
 Scripts use `nuxt dev --dotenv .env.<stage>`.
 
+> **Historical record.** The command above is the original 2026-03-27 decision
+> and is kept verbatim. The shipped implementation has since diverged: every
+> stage script goes through `node scripts/with-env.js <stage> nuxt dev`, which
+> loads `.env.<stage>` into `process.env` before spawning the inner command,
+> rather than passing `--dotenv` to Nuxt. The README script table is the source
+> of truth for current commands.
+
 ---
 
 ## Code Quality Tooling
@@ -58,6 +65,12 @@ Scripts use `nuxt dev --dotenv .env.<stage>`.
 
 ## Testing
 
+> **Historical record.** The table below is the original 2026-03-27 decision
+> and is kept verbatim. The shipped implementation has since diverged: the unit
+> runner is Bun's built-in test runner — `test:unit` is `bun test tests/unit`,
+> and Vitest is a dependency of neither `package.json` section. Playwright is
+> unchanged.
+
 | Tool           | Scope                             |
 | -------------- | --------------------------------- |
 | **Vitest**     | Unit / integration                |
@@ -66,6 +79,14 @@ Scripts use `nuxt dev --dotenv .env.<stage>`.
 ---
 
 ## CI/CD
+
+> **Historical record.** The list below is the original 2026-03-27 decision and
+> is kept verbatim. The shipped `.github/workflows/ci.yml` has since diverged
+> into three jobs: `checks` runs `ds:check`, `proto:check`, `i18n:check`,
+> `layering:check`, `graph:check`, `lint`, `fmt:check`, `typecheck` and
+> `test:unit`; `e2e` runs `test:e2e`; and `e2e-authed` runs the authenticated
+> Playwright suite against a seeded Postgres service container. There is no
+> Vitest step.
 
 - **On PR:** lint + fmt:check + typecheck + vitest + playwright
 - **On merge to main:** Vercel auto-deploys production
