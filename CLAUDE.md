@@ -283,6 +283,28 @@ silently skipping it.
   rather than discovered: write the feature inline and extract in a
   follow-up. Applies to component/composable/util extractions and
   shared-type moves; not to brand-new modules only the new feature uses.
+- **Comments are a liability, not a deliverable.** The code carries the
+  explanation; a comment is what is left over when it cannot. Before writing
+  one, decide which of three it is:
+  - **Restates what the code does → delete it.** It is a second source of
+    truth that no check verifies, and it rots the moment the code moves.
+    VKB-107 shipped six comments dating the media swap "at confirm" after
+    the swap had moved to the ready transition — one of them contradicting
+    the correct paragraph three lines below it. The reviewer's findings were
+    all prose, no code.
+  - **Records a decision, a rejected alternative or a trade-off → it belongs
+    in the ADR or the ticket**, where it is dated, reviewed and findable.
+    Reference it from the code only if the pointer earns its line.
+  - **Names a genuinely non-obvious local constraint** — a platform bug, an
+    ordering the types cannot express → keep it, one or two lines.
+
+  Reach for a better name, a smaller function or an extracted helper before
+  reaching for a comment. Prose above a five-line function is a sign the
+  function is misnamed, not that it is subtle. A file whose comment count
+  approaches its code count is a design smell, not thoroughness — and this
+  applies to tests as much as to source: a test name that needs a paragraph
+  above it is a test name that has not been written yet.
+
 - **Pre-PR checklist:** run `docs/PR-CHECKLIST.md` before opening a PR or
   flipping it ready — including the adversarial `/code-review` pass; fix
   confirmed findings first.
