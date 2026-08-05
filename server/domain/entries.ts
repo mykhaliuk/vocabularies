@@ -63,7 +63,7 @@ export const createEntry = async (
 
   let minted;
   try {
-    minted = await mintUploadSlot(user, mediaInput, entry.id);
+    minted = await mintUploadSlot(user, mediaInput, { entryId: entry.id });
   } catch (error) {
     // No half-created moments: an entry whose upload slot failed to mint
     // (entitlement or storage) must not linger in the feed.
@@ -147,6 +147,41 @@ export const getOwnEntry = async (
     throw new DomainError(DOMAIN_ERROR_CODES.entryNotFound, 'entry not found');
   }
   return { entry: row.entry, speaker: row.speaker, media: row.media };
+};
+
+export interface AttachedMedia {
+  media: MediaRow;
+  upload: UploadSlot;
+}
+
+export const attachEntryMedia = async (
+  user: AuthUser,
+  entryId: string,
+  mediaInput: UploadSlotInput,
+): Promise<AttachedMedia> => {
+  await getOwnEntry(user.id, entryId);
+  const minted = await mintUploadSlot(user, mediaInput, {
+    pendingEntryId: entryId,
+  });
+  return { media: minted.row, upload: minted.slot };
+};
+
+const cancelUploadsAimedAt = (ownerId: string, entryId: string) =>
+  useDb()
+    .update(media)
+    .set({ pendingEntryId: null, updatedAt: new Date() })
+    .where(and(eq(media.pendingEntryId, entryId), eq(media.ownerId, ownerId)));
+
+export const removeEntryMedia = async (
+  ownerId: string,
+  entryId: string,
+): Promise<void> => {
+  const current = await getOwnEntry(ownerId, entryId);
+  await cancelUploadsAimedAt(ownerId, entryId);
+  if (!current.media) return;
+  await useDb()
+    .delete(media)
+    .where(and(eq(media.id, current.media.id), eq(media.ownerId, ownerId)));
 };
 
 // The domain's own shape for a partial update — deliberately NOT derived

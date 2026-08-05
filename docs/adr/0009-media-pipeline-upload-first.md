@@ -110,6 +110,49 @@ only, never read from the QStash worker's request body, so a
 retried/redelivered message can never use it to defeat the guard it exists
 to be an exception to.
 
+## Replacing an entry's moment (VKB-107, 2026-08-05)
+
+An entry holds at most one moment (partial unique index on
+`media.entry_id`). Replacing it therefore has to retire the incumbent, and
+the only question is **when**.
+
+**Decision: at the `ready` transition.** `POST /api/entries/:id/media` mints
+a slot and records the destination in `media.pending_entry_id`, changing
+nothing the user can see; `recordMediaReady` then claims the entry —
+delete the incumbent, bind the replacement, clear the pointer — in one
+transaction that locks the `entries` row first. Locking the entry before
+any `media` row matches the order `DELETE /api/entries/:id` acquires them
+through its cascade (no deadlock), and serialises two uploads racing for
+one entry; without it that race raises `23505`, reproduced against local
+Postgres. Clearing the pointer inside the transaction is what makes the
+claim exactly-once under QStash's at-least-once delivery.
+
+Rejected alternatives, both of which lose a recording the user still has:
+
+- **At mint.** A slot is a promise of bytes. The client may never PUT and
+  never confirm — a cancelled sheet, a dropped connection, a presign
+  expiring after 600s — so the incumbent would be traded for nothing.
+- **At confirm.** Tempting, because confirm is the first point the bytes
+  provably exist: transport has just seen the object with `HeadObject`.
+  But an object in a bucket is not yet a moment. Everything that can
+  reject a file runs _after_ confirm — the duration cap, "could not read
+  this file as audio or video", and the entitlement re-check on the
+  **probed** kind (which exists precisely because the declared content
+  type is untrusted). Replacing a kept 20s voice note with a 3-minute
+  clip would delete the incumbent and leave a `failed` row.
+
+At `ready` the replacement is transcoded, within limits and entitled, so
+the delete is a retirement rather than a loss. Consistent with "originals
+are kept forever": the retired row goes, its R2 objects stay.
+
+`pending_entry_id` is `ON DELETE SET NULL`, not `cascade` — if the entry
+is deleted mid-upload the swap is moot, but the media row is not the
+entry's to take with it. It is deliberately unconstrained: any number of
+uploads may be aimed at one entry, and only the one that reaches `ready`
+takes it. `removeEntryMedia` clears pending pointers, since nothing else
+expires them and an abandoned replace would otherwise restore a moment
+the user had explicitly removed.
+
 ## Open ends (tracked, not blocking)
 
 - **Async transport is QStash — final** (decided with the owner

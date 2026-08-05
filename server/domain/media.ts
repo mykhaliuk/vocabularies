@@ -1,4 +1,5 @@
 import { and, eq, ne } from 'drizzle-orm';
+import { entries } from '~/db/schema/entries';
 import { media } from '~/db/schema/media';
 import {
   derivedKeys,
@@ -29,6 +30,14 @@ export interface UploadSlotInput {
   sizeBytes: number;
 }
 
+// Bound to its entry at mint (createEntry only, whose entry cannot already
+// hold a moment) or aimed at one to claim at ready — never both, which the
+// `never` arms make a typecheck error rather than a runtime guard.
+export type SlotTarget =
+  | { entryId?: never; pendingEntryId?: never }
+  | { entryId: string; pendingEntryId?: never }
+  | { entryId?: never; pendingEntryId: string };
+
 export interface UploadSlot {
   mediaId: string;
   key: string;
@@ -45,14 +54,14 @@ const kindOfContentType = (contentType: string): 'audio' | 'video' =>
   contentType.startsWith('video/') ? 'video' : 'audio';
 
 // The single enforcement point for the videoUpload capability: every upload
-// slot — entry-bound (POST /api/entries) or standalone (POST
-// /api/media/upload) — is minted here, so the rest of the pipeline stays
-// role-agnostic.
+// slot is minted here, so the rest of the pipeline stays role-agnostic.
 export const mintUploadSlot = async (
   user: AuthUser,
   input: UploadSlotInput,
-  entryId: string | null,
+  target: SlotTarget = {},
 ): Promise<MintedSlot> => {
+  const entryId = target.entryId ?? null;
+  const pendingEntryId = target.pendingEntryId ?? null;
   const kind = kindOfContentType(input.contentType);
   if (kind === 'video' && !user.entitlements.videoUpload) {
     throw new DomainError(
@@ -99,6 +108,7 @@ export const mintUploadSlot = async (
     .values({
       id: mediaId,
       entryId,
+      pendingEntryId,
       ownerId: user.id,
       kind,
       originalKey: key,
@@ -154,6 +164,65 @@ export const confirmMediaUpload = async (
   return { status: 'processing', transport };
 };
 
+// Why the claim waits for `ready` rather than mint or confirm: ADR-0009,
+// "Replacing an entry's moment". The entries row is locked FIRST so this
+// cannot deadlock against DELETE /api/entries/:id, which takes the same two
+// locks in that order through its cascade.
+const claimPendingEntry = async (
+  ownerId: string,
+  mediaId: string,
+  entryId: string,
+) => {
+  const db = useDb();
+  await db.transaction(async (tx) => {
+    const [entry] = await tx
+      .select({ id: entries.id, ownerId: entries.ownerId })
+      .from(entries)
+      .where(eq(entries.id, entryId))
+      .for('update')
+      .limit(1);
+
+    if (!entry || entry.ownerId !== ownerId) {
+      await tx
+        .update(media)
+        .set({ pendingEntryId: null, updatedAt: new Date() })
+        .where(and(eq(media.id, mediaId), eq(media.ownerId, ownerId)));
+      if (entry) {
+        console.error('[domain.media] pending entry belongs to another user', {
+          mediaId,
+          entryId,
+          mediaOwnerId: ownerId,
+          entryOwnerId: entry.ownerId,
+        });
+      } else {
+        console.warn('[domain.media] pending entry gone before claim', {
+          mediaId,
+          entryId,
+        });
+      }
+      return;
+    }
+
+    await tx
+      .delete(media)
+      .where(
+        and(
+          eq(media.entryId, entryId),
+          eq(media.ownerId, ownerId),
+          ne(media.id, mediaId),
+        ),
+      );
+    const bound = await tx
+      .update(media)
+      .set({ entryId, pendingEntryId: null, updatedAt: new Date() })
+      .where(and(eq(media.id, mediaId), eq(media.ownerId, ownerId)))
+      .returning({ id: media.id });
+    if (bound.length === 0) {
+      throw new Error('[domain.media] pending claim bound no row');
+    }
+  });
+};
+
 // Retries must never regress a ready row (failed→ready self-heals,
 // ready→failed would be permanent) — mirrors the manifest no-clobber rule
 // in media-process.ts.
@@ -179,11 +248,16 @@ const recordMediaReady = async (
       updatedAt: new Date(),
     })
     .where(and(eq(media.id, mediaId), eq(media.ownerId, ownerId)))
-    .returning({ id: media.id });
-  if (updated.length === 0) {
+    .returning({ id: media.id, pendingEntryId: media.pendingEntryId });
+  const row = updated[0];
+  if (!row) {
     // Pre-schema spike uploads have manifests but no rows — the outcome is
     // still recorded in R2, so this is loud but not fatal.
     console.warn('[domain.media] ready outcome for unknown row', { mediaId });
+    return;
+  }
+  if (row.pendingEntryId) {
+    await claimPendingEntry(ownerId, mediaId, row.pendingEntryId);
   }
 };
 
