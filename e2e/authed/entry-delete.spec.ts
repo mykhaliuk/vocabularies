@@ -122,9 +122,19 @@ test.describe('deleting a word (authed)', () => {
     await authedPage.goto(`/entries/${entryId}`);
     await openMenu(authedPage);
 
+    // Both sides proved non-null BEFORE they are compared. Optional-chaining
+    // them instead would make a renamed `.actions__scrim` read as
+    // `expect(undefined).toBe(undefined)` — green while asserting nothing, on
+    // the one test whose entire purpose is that the scrim is not 53px tall.
     const viewport = authedPage.viewportSize();
     const scrim = await authedPage.locator('.actions__scrim').boundingBox();
-    expect(scrim?.height).toBe(viewport?.height);
+    expect(viewport).not.toBeNull();
+    expect(scrim).not.toBeNull();
+    if (!viewport || !scrim) return;
+    // Tolerance rather than equality: sub-pixel layout and device scale factor
+    // move this by fractions. The bug was 53px against 844, so ±1 keeps every
+    // bit of the signal and none of the brittleness.
+    expect(Math.abs(scrim.height - viewport.height)).toBeLessThanOrEqual(1);
 
     // Aimed at a real control, because a scrim that dismisses is only half of
     // it: the tap must be swallowed rather than also folding the story away.
