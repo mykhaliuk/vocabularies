@@ -137,25 +137,11 @@ watch(error, async (raw) => {
   if (raw && isUnauthorized(raw)) await handleSignedOut();
 });
 
-// A word deleted on its detail screen leaves the feed here, on a signal rather
-// than a fetch (VKB-95). Not merely an optimisation: an installed PWA answers
-// GET /api/entries from a NetworkFirst cache whenever the network takes longer
-// than 3s (service-worker/sw.js), and that cached page can be up to an hour
-// old — so the reload this screen does on the way back is perfectly capable of
-// handing back a list the deleted word is still in.
-//
-// Filtered rather than spliced, which keeps that true of every later page and
-// poll merge as well: the word cannot walk back in on the next `loadMore`.
 const { removedIds } = useEntryRemoval();
 const visibleEntries = computed(() =>
   entries.value.filter((entry) => !removedIds.value.includes(entry.id)),
 );
 
-// The empty state REPLACES the list, "show more" included, so it must not
-// stand in for a page the filter above happened to empty while further pages
-// are still waiting behind the cursor — that would strand them with no control
-// to reach them. The server never sends an empty page with a cursor set; this
-// keeps that invariant true once the client can subtract rows too.
 const isEmpty = computed(
   () => visibleEntries.value.length === 0 && nextCursor.value === null,
 );

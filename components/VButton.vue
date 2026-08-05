@@ -153,9 +153,6 @@ const anchorRel = computed(() =>
     }
   }
 
-  /* Destructive confirmation only — never a resting affordance. Sits on the
-     AA-safe --danger-action step for the same reason primary does, and carries
-     no float shadow: it must not read as the page's happy path. */
   &.v-btn--danger {
     --v-btn-bg: var(--danger-action);
     --v-btn-fg: var(--text-on-accent);

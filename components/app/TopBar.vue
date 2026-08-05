@@ -4,8 +4,6 @@ import { ArrowLeft } from 'lucide-vue-next';
 // Two variants of the same 54px frosted bar (prototype chrome.jsx):
 //   default — centred logo + wordmark, the authed tab shell.
 //   back    — back arrow left, title centred, `right` slot on the end.
-// The right slot falls back to an empty spacer, which is what keeps the title
-// optically centred on the screens that put nothing there.
 const props = withDefaults(defineProps<{ back?: boolean; title?: string }>(), {
   back: false,
   title: undefined,

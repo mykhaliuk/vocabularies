@@ -1,15 +1,9 @@
 <script setup lang="ts">
-// The delete confirm (entry-actions-spec.html §The surfaces). A bottom sheet
-// over the detail: the word itself does the emotional work, one honest
-// sentence names what leaves with it, and there is one Delete/Cancel pair.
-//
-// No undo toast — that shape needs soft delete server-side and is VKB-102.
 const props = withDefaults(
   defineProps<{
     open: boolean;
     word: string;
     hasStory: boolean;
-    // The kept moment, if the entry has one that survived transcoding.
     mediaKind?: 'audio' | 'video' | null;
     busy?: boolean;
     failed?: boolean;
@@ -21,14 +15,8 @@ const emit = defineEmits<{ confirm: []; cancel: [] }>();
 
 const { t } = useI18n();
 
-// The middle sentence is assembled from what the entry actually has, never a
-// generic warning (spec §The surfaces). The bare word is deliberately absent
-// from the table: there is nothing to name, and inventing a clause for it would
-// overstate what the tap costs.
-//
-// Spelt as t() calls rather than key strings so scripts/i18n-check.js can see
-// them — a table of bare key names is invisible to it, and a typo there would
-// reach the sheet as its own key.
+// A table of key names would be invisible to scripts/i18n-check.js, which
+// scans for translation calls lexically.
 const consequence = computed(() => {
   const story = props.hasStory ? 'story' : 'none';
   const media = props.mediaKind ?? 'none';
@@ -52,22 +40,21 @@ const sentence = computed(() =>
     .join(' '),
 );
 
-const cancel = ref<HTMLElement | null>(null);
+const cancelWrapper = ref<HTMLElement | null>(null);
 
-// Focus lands on Cancel, never on the destructive button: a sheet that opens
-// with Delete under the keyboard turns one stray Enter into a lost keepsake.
+const focusCancel = () => {
+  cancelWrapper.value?.querySelector('button')?.focus();
+};
+
 watch(
   () => props.open,
   async (isOpen) => {
     if (!isOpen) return;
     await nextTick();
-    cancel.value?.querySelector('button')?.focus();
+    focusCancel();
   },
 );
 
-// Both ways out of the sheet without answering it. Refused mid-delete: the
-// request is already in flight, and dismissing the sheet would leave the reader
-// on a word that is about to vanish under them.
 const dismiss = () => {
   if (!props.busy) emit('cancel');
 };
@@ -81,8 +68,6 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
 </script>
 
 <template>
-  <!-- `inert` rather than aria-hidden alone, matching the compose sheet: the
-       closed sheet's two buttons must leave the tab order entirely. -->
   <div
     class="confirm"
     :class="{ 'confirm--open': open }"
@@ -91,9 +76,6 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
   >
     <div class="confirm__scrim" @click="dismiss" />
 
-    <!-- Named by the word rather than by the question: the question is the
-         first sentence of the body below, so labelling with it would have a
-         screen reader read it twice and never name the entry at stake. -->
     <section
       class="confirm__sheet"
       role="dialog"
@@ -109,8 +91,6 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
 
       <p class="confirm__body">{{ sentence }}</p>
 
-      <!-- Never swallowed: the word is still there, and saying nothing would
-           read exactly like a deletion that worked. -->
       <p v-if="failed" class="confirm__error" role="alert">
         {{ t('app.entry.delete.failed') }}
       </p>
@@ -125,7 +105,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
         >
           {{ t('app.entry.delete.confirm') }}
         </VButton>
-        <span ref="cancel" class="confirm__cancel">
+        <span ref="cancelWrapper" class="confirm__cancel">
           <VButton
             variant="secondary"
             size="lg"
@@ -192,8 +172,6 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
   background: var(--hairline-2);
 }
 
-/* The handwritten face, as everywhere a headword is rendered — this sheet is
-   asking about THIS word, and the word is the argument. */
 .confirm__word {
   margin: 0;
   max-width: 100%;

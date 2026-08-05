@@ -1,29 +1,13 @@
 <script setup lang="ts">
 import { MoreHorizontal, Pencil, Trash2 } from 'lucide-vue-next';
 
-// The ⋯ menu in the word detail's top bar (entry-actions-spec.html §The
-// surfaces). Rare actions earn a quiet home: nothing is drawn at rest, and the
-// feed stays a reading surface with no per-card affordances at all.
-//
-// Unconditionally rendered for the reader who got here, because there is no
-// other kind: getOwnEntry filters by ownerId and throws otherwise
-// (server/domain/entries.ts), so the API cannot hand this screen an entry that
-// is not the reader's own. The spec's "someone else's entry" branch waits for
-// the sharing it describes.
-// `disabled` is how the confirm sheet takes the bar out of play. It matters
-// more than it looks: this menu opens inside the bar's z-index 20, the sheet
-// sits at 60, so a ⋯ still reachable by Shift+Tab from behind the scrim would
-// put keyboard focus into a menu rendered UNDERNEATH it.
 const props = withDefaults(defineProps<{ disabled?: boolean }>(), {
   disabled: false,
 });
 
 const emit = defineEmits<{ edit: []; delete: [] }>();
 
-// The edit item ships with its menu but stays dark until VKB-110 gives compose
-// an edit mode. A module constant rather than runtime config on purpose: a
-// half-built affordance must not be switchable on in dev or preview, where it
-// would open nothing.
+// Flipped on by VKB-110, which gives compose the edit mode this opens.
 const IS_EDIT_ENABLED = false;
 
 const { t } = useI18n();
@@ -40,9 +24,6 @@ const items = () =>
 const close = ({ restoreFocus = false } = {}) => {
   if (!isOpen.value) return;
   isOpen.value = false;
-  // Only when the menu was dismissed by keyboard or by choosing an item:
-  // pulling focus back after a tap would summon the on-screen keyboard's
-  // focus ring on a screen the user has already moved past.
   if (restoreFocus) trigger.value?.focus();
 };
 
@@ -58,25 +39,18 @@ const toggle = () => {
   else void open();
 };
 
-// Tab out and the menu is done — the WAI-ARIA menu pattern asks for it, and
-// without it the window-level arrow handling below keeps stealing keys from a
-// reader who has already walked away.
 const onFocusOut = (event: FocusEvent) => {
   const next = event.relatedTarget;
   if (next instanceof Node && menu.value?.contains(next)) return;
   close();
 };
 
-// Focus is handed back rather than dropped: the sheet took it from here, so
-// dismissing the sheet has somewhere to return it to (pages/entries/[id].vue).
 const focusTrigger = () => {
   trigger.value?.focus();
 };
 
 defineExpose({ focusTrigger });
 
-// Both close before they emit, never after: delete raises a sheet over this
-// bar, and a menu still standing behind it would be a second dismissable layer.
 const chooseEdit = () => {
   close();
   emit('edit');
@@ -87,8 +61,6 @@ const chooseDelete = () => {
   emit('delete');
 };
 
-// Roving focus over whatever items the flag above leaves standing, so the
-// menu answers the arrow keys role="menu" promises.
 const moveFocus = (step: number) => {
   const focusable = items();
   if (focusable.length === 0) return;
@@ -133,14 +105,9 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
       <MoreHorizontal :size="21" aria-hidden="true" />
     </button>
 
-    <!-- Tap anywhere else to dismiss (spec §The surfaces). A real element
-         rather than a document listener, so the dismissing tap is swallowed
-         instead of also landing on whatever it was over.
-         Teleported, and that is load-bearing: the top bar carries a
-         backdrop-filter, which makes it the containing block for every fixed
-         descendant. Left in place, `inset: 0` resolves to the 54px BAR — the
-         scrim covers the one strip of screen nobody taps to dismiss, and the
-         menu can only be closed by the ⋯ itself. -->
+    <!-- backdrop-filter on the bar makes it the containing block for fixed
+         descendants, so an in-bar scrim resolves `inset: 0` to the bar's 54px.
+         Hence the Teleport. -->
     <Teleport to="body">
       <div
         v-if="isOpen"
@@ -169,8 +136,6 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
         }}
       </button>
 
-      <!-- The ellipsis is the standard promise that a confirm follows —
-           nothing destructive happens on this tap. -->
       <button
         type="button"
         role="menuitem"
@@ -214,17 +179,13 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
     transform: scale(0.9);
   }
 
-  /* Inert behind the confirm, not hidden: the bar keeps its shape, so the
-     title does not jump sideways as the sheet rises. */
   &:disabled {
     cursor: default;
     color: var(--ink-3);
   }
 }
 
-/* Teleported to <body>, so this sits in the ROOT stacking context: one step
-   under the bar's own z-index 20, which puts it over the column and under the
-   menu (a child of the bar, and so painted with it). */
+/* One under the bar's z-index 20: over the column, under the menu. */
 .actions__scrim {
   position: fixed;
   inset: 0;
@@ -270,8 +231,6 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
   }
 }
 
-/* First of the two terracotta marks the spec allows (the confirm button is the
-   other). Foreground here, so it takes --danger, which re-themes. */
 .actions__item--danger {
   color: var(--danger);
 }

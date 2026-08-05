@@ -82,10 +82,7 @@
      override. --primary / --secondary stay for non-text accent use. */
   --primary-action: #cf3a60; /* white text → 4.74:1 */
   --secondary-action: #1378a6; /* white text → 4.93:1 */
-  /* Same argument for the destructive fill (VKB-95's delete confirm). --danger
-     is authored as a FOREGROUND — it lightens in the dark theme, so white on
-     it reaches only 3.87:1 light / 2.67:1 dark. This is the darker step of the
-     same terracotta, and like the two above it does not re-theme. */
+  /* Destructive fill; --danger is a foreground and lightens in the dark. */
   --danger-action: #b0574a; /* white text → 4.87:1 */
 
   --link: var(--blue-600);
