@@ -82,6 +82,8 @@
      override. --primary / --secondary stay for non-text accent use. */
   --primary-action: #cf3a60; /* white text → 4.74:1 */
   --secondary-action: #1378a6; /* white text → 4.93:1 */
+  /* Destructive fill; --danger is a foreground and lightens in the dark. */
+  --danger-action: #b0574a; /* white text → 4.87:1 */
 
   --link: var(--blue-600);
   --like: var(--rose-500); /* heart / love a moment */

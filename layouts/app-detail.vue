@@ -10,7 +10,11 @@ defineProps<{ title?: string }>();
 
 <template>
   <div class="detail-shell">
-    <AppTopBar back :title="title" />
+    <AppTopBar back :title="title">
+      <template v-if="$slots['bar-right']" #right>
+        <slot name="bar-right" />
+      </template>
+    </AppTopBar>
     <main class="detail-shell__main">
       <slot />
     </main>

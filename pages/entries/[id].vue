@@ -3,13 +3,7 @@ import { Bookmark, Calendar, ChevronDown, CircleAlert } from 'lucide-vue-next';
 
 definePageMeta({ layout: false, middleware: 'auth' });
 
-// The word detail, read half (word-detail-spec.html). One centred column:
-// the person, the word, the meaning, the media, the story, where it is
-// filed, and the day it was said — in decreasing weight around the word.
-//
-// Not here on purpose, each pinned to its own ticket: the ⋯ menu and delete
-// (VKB-95), editing the said-on date (VKB-111), and the whole social row,
-// which v0 cuts as one piece.
+// Read layout: word-detail-spec.html. ⋯ menu: entry-actions-spec.html.
 
 // Shapes returned by GET /api/entries/:id (declared inline — no DTO layer).
 type EntryMedia = {
@@ -209,6 +203,93 @@ const saidLine = computed(() => {
 // and the fold is a reader's tool for a long one, not a gate.
 const isStoryOpen = ref(true);
 
+const router = useRouter();
+const { notifyRemoved } = useEntryRemoval();
+
+const actionsMenu = ref<{ focusTrigger: () => void } | null>(null);
+const isConfirmOpen = ref(false);
+const isDeleting = ref(false);
+const hasDeleteError = ref(false);
+
+const ALREADY_GONE = 404;
+
+type DeleteOutcome = 'deleted' | 'signed-out' | 'failed';
+
+const requestDelete = async (): Promise<DeleteOutcome> => {
+  try {
+    await $fetch(`/api/entries/${encodeURIComponent(entryId)}`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+    return 'deleted';
+  } catch (error) {
+    const status = (error as { statusCode?: number }).statusCode;
+    if (status === UNAUTHORIZED) return 'signed-out';
+    if (status === ALREADY_GONE) return 'deleted';
+    console.error('[entry] delete failed', error);
+    return 'failed';
+  }
+};
+
+const leaveTheDeletedWord = async () => {
+  const previous = router.options.history.state.back;
+  if (typeof previous === 'string') {
+    router.back();
+    return;
+  }
+  await navigateTo('/feed', { replace: true });
+};
+
+const confirmDelete = async () => {
+  if (isDeleting.value) return;
+  isDeleting.value = true;
+  hasDeleteError.value = false;
+
+  const outcome = await requestDelete();
+
+  if (outcome === 'signed-out') {
+    try {
+      await navigateTo('/login');
+    } catch (error) {
+      console.error('[entry] sign-in redirect failed', error);
+      isDeleting.value = false;
+      hasDeleteError.value = true;
+    }
+    return;
+  }
+  if (outcome === 'failed') {
+    isDeleting.value = false;
+    hasDeleteError.value = true;
+    return;
+  }
+
+  notifyRemoved(entryId);
+  try {
+    await leaveTheDeletedWord();
+  } catch (error) {
+    // The word is gone; only the exit failed, so this must not report a
+    // delete error.
+    console.error('[entry] leaving the deleted word failed', error);
+    isDeleting.value = false;
+    isConfirmOpen.value = false;
+  }
+};
+
+const cancelDelete = async () => {
+  if (isDeleting.value) return;
+  isConfirmOpen.value = false;
+  hasDeleteError.value = false;
+  // The ⋯ is still `disabled` until this render lands; focusing it before
+  // then silently does nothing.
+  await nextTick();
+  actionsMenu.value?.focusTrigger();
+};
+
+const keptMediaKind = computed(() => {
+  const kept = media.value;
+  return kept && kept.status !== 'failed' ? kept.kind : null;
+});
+
 useHead(() => ({
   title: entry.value
     ? t('app.entry.pageTitle', { word: entry.value.word })
@@ -222,6 +303,14 @@ useHead(() => ({
        and a 54px bar could only ellipsise it. It reads the same on the
        states below, where there is no entry to name. -->
   <NuxtLayout name="app-detail" :title="t('app.entry.barTitle')">
+    <template v-if="entry" #bar-right>
+      <EntryActionsMenu
+        ref="actionsMenu"
+        :disabled="isConfirmOpen"
+        @delete="isConfirmOpen = true"
+      />
+    </template>
+
     <article v-if="entry" class="detail">
       <div class="detail__head">
         <VAvatar
@@ -309,6 +398,18 @@ useHead(() => ({
         {{ t('offline.tryAgain') }}
       </VButton>
     </div>
+
+    <EntryDeleteSheet
+      v-if="entry"
+      :open="isConfirmOpen"
+      :word="entry.word"
+      :has-story="Boolean(entry.story)"
+      :media-kind="keptMediaKind"
+      :busy="isDeleting"
+      :failed="hasDeleteError"
+      @confirm="confirmDelete"
+      @cancel="cancelDelete"
+    />
   </NuxtLayout>
 </template>
 

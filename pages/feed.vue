@@ -137,6 +137,15 @@ watch(error, async (raw) => {
   if (raw && isUnauthorized(raw)) await handleSignedOut();
 });
 
+const { removedIds } = useEntryRemoval();
+const visibleEntries = computed(() =>
+  entries.value.filter((entry) => !removedIds.value.includes(entry.id)),
+);
+
+const isEmpty = computed(
+  () => visibleEntries.value.length === 0 && nextCursor.value === null,
+);
+
 const isInitialLoading = computed(
   () => status.value === 'pending' && entries.value.length === 0,
 );
@@ -147,7 +156,7 @@ const isRefreshing = computed(
     (status.value === 'pending' && entries.value.length > 0),
 );
 const hasLoadError = computed(
-  () => status.value === 'error' && entries.value.length === 0,
+  () => status.value === 'error' && visibleEntries.value.length === 0,
 );
 
 const retry = async () => {
@@ -195,7 +204,7 @@ const loadMore = async () => {
 // manual refresh. A changed set is evidence of new work, so it earns a fresh
 // budget; a set that never changes still exhausts one and stops.
 const processingKey = computed(() =>
-  entries.value
+  visibleEntries.value
     .filter((entry) => entry.media?.status === 'processing')
     .map((entry) => entry.id)
     .join(','),
@@ -317,10 +326,10 @@ onUnmounted(() => {
       <p class="feed__state-msg">{{ $t('app.feed.loading') }}</p>
     </div>
 
-    <FeedEmptyState v-else-if="entries.length === 0" />
+    <FeedEmptyState v-else-if="isEmpty" />
 
     <div v-else class="feed__list">
-      <template v-for="(entry, index) in entries" :key="entry.id">
+      <template v-for="(entry, index) in visibleEntries" :key="entry.id">
         <div v-if="index > 0" class="feed__divider" aria-hidden="true" />
         <FeedEntryCard :entry="entry" />
       </template>
@@ -340,7 +349,7 @@ onUnmounted(() => {
               : $t('app.feed.loadMore')
           }}
         </button>
-        <p v-else-if="entries.length > 0" class="feed__end">
+        <p v-else-if="visibleEntries.length > 0" class="feed__end">
           {{ $t('app.feed.end') }}
         </p>
       </div>

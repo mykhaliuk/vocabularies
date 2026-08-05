@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Loader2 } from 'lucide-vue-next';
 
-type Variant = 'primary' | 'blue' | 'secondary' | 'ghost';
+type Variant = 'primary' | 'blue' | 'secondary' | 'ghost' | 'danger';
 type Size = 'sm' | 'md' | 'lg';
 
 const props = withDefaults(
@@ -144,6 +144,17 @@ const anchorRel = computed(() =>
 
   &.v-btn--blue {
     --v-btn-bg: var(--secondary-action);
+    --v-btn-fg: var(--text-on-accent);
+    background: var(--v-btn-bg);
+    color: var(--v-btn-fg);
+
+    &:not(:disabled):not([aria-disabled='true']):hover {
+      filter: brightness(0.94);
+    }
+  }
+
+  &.v-btn--danger {
+    --v-btn-bg: var(--danger-action);
     --v-btn-fg: var(--text-on-accent);
     background: var(--v-btn-bg);
     color: var(--v-btn-fg);

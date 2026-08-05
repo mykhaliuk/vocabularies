@@ -110,7 +110,24 @@
       "saidOn": "dit le {date}",
       "saidOnAged": "dit le {date} · {age}",
       "notFound": "ce mot n'est plus là.",
-      "loadError": "impossible de charger ce mot pour l'instant."
+      "loadError": "impossible de charger ce mot pour l'instant.",
+      "actions": {
+        "menu": "Plus d'actions",
+        "edit": "modifier le mot",
+        "delete": "supprimer…"
+      },
+      "delete": {
+        "question": "On laisse partir celui-ci ?",
+        "losesStory": "Son histoire part avec lui.",
+        "losesStoryVoice": "Son histoire et la voix partent avec lui.",
+        "losesStoryVideo": "Son histoire et la vidéo partent avec lui.",
+        "losesVoice": "La voix part avec lui.",
+        "losesVideo": "La vidéo part avec lui.",
+        "irreversible": "On ne pourra pas le récupérer.",
+        "confirm": "Supprimer le mot",
+        "cancel": "Annuler",
+        "failed": "impossible de supprimer ce mot pour l'instant."
+      }
     },
     "compose": {
       "title": "Nouveau mot",
