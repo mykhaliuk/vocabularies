@@ -46,21 +46,17 @@ useHead(() => ({ title: t('app.feed.pageTitle') }));
 const POLL_INTERVAL_MS = 4000;
 const POLL_MAX_ATTEMPTS = 75; // ~5 minutes, matching the worker's own ceiling
 
-// Survives route hops so a return renders instantly; user data, so both
-// the logout path (me.vue) and the 401 path below must purge it.
 const entries = useState<FeedEntry[]>('feed-cache-entries', () => []);
 const nextCursor = useState<string | null>('feed-cache-cursor', () => null);
 const loadingMore = ref(false);
 
-// A hard load also arrives with a non-empty cache (its own SSR just seeded
-// it, seconds old) — `isHydrating` is what separates it from a real SPA
-// revisit. Must be read before the seeding below erases the distinction.
+// A hard load also lands with a seeded cache (its own SSR pass); only
+// isHydrating tells it from a revisit, and only before the seeding below.
 const isRevisit = !useNuxtApp().isHydrating && entries.value.length > 0;
 
 const FEED_CACHE_MAX_ENTRIES = 200;
 
-// Responses apply in REQUEST order: a slower, older response is dropped
-// rather than allowed to overwrite what a newer one already wrote.
+// Responses apply in request order; an older in-flight response is dropped.
 let fetchSeq = 0;
 let appliedSeq = 0;
 let asyncDataSeq = 0;
@@ -69,10 +65,9 @@ const isOlderThan = (entry: FeedEntry, boundary: FeedEntry) =>
   entry.createdAt < boundary.createdAt ||
   (entry.createdAt === boundary.createdAt && entry.id < boundary.id);
 
-// The single writer of `entries`: the fresh first page replaces the window
-// it covers; entries paged in below it survive as the tail with their own
-// cursor. A trimmed tail gets a client-minted cursor — "<createdAt>_<id>"
-// (server/api/entries/index.get.ts) is derivable from the row itself.
+// Fresh page 1 replaces the window it covers; paged-in entries below it
+// survive as the tail. A trimmed tail gets a client-minted cursor —
+// "<createdAt>_<id>" (server/api/entries/index.get.ts).
 const applyFirstPage = (res: FeedResponse | null | undefined, seq: number) => {
   if (!res || seq <= appliedSeq) return;
   appliedSeq = seq;
@@ -94,9 +89,8 @@ const applyFirstPage = (res: FeedResponse | null | undefined, seq: number) => {
   }
 };
 
-// The auth middleware skips its probe on tab hops because "the server
-// re-authorizes every data request" — so a 401 here must be acted on, not
-// swallowed behind the cached words.
+// Tab hops skip the auth middleware probe — a 401 here IS the
+// re-authorization answer and must not hide behind the cached words.
 const isUnauthorized = (error: unknown) => {
   const status = error as { statusCode?: number; status?: number };
   return status?.statusCode === 401 || status?.status === 401;
@@ -105,26 +99,22 @@ const isUnauthorized = (error: unknown) => {
 const handleSignedOut = () => {
   entries.value = [];
   nextCursor.value = null;
-  // Left in place, the seed below would replant the asyncData payload for
-  // whoever signs in next from this tab.
+  // Or the seed below replants it for the next account in this tab.
   clearNuxtData('feed');
   return navigateTo('/login');
 };
 
-// The seq guards order writers within ONE mount; a request outliving its
-// mount would re-enter a later visit (or a later account) with a frozen
-// watermark. Aborted on unmount: no feed request survives leaving the page.
+// No feed request survives leaving the page: a late resolution would write
+// into a later visit (or account) with a stale seq watermark.
 const disposal = new AbortController();
 
 // useRequestFetch forwards the incoming request's cookies during SSR (a bare
 // $fetch to an internal route does not), so the first render is authenticated
 // instead of 401ing into the error state. On the client it is a normal $fetch.
 //
-// `lazy` is the VKB-144 fix: awaited WITHOUT lazy, this suspends the route
-// transition and freezes the previous view for the whole round-trip; with
-// lazy the await resolves at once on client navigation while SSR still
-// renders fully-formed HTML. immediate fires only with nothing cached to
-// show — a revisit refreshes via onMounted below instead.
+// Without `lazy` this await suspends the route transition itself — the
+// VKB-144 freeze; with it, client navigation lands at once and SSR still
+// awaits the data.
 const requestFetch = useRequestFetch();
 const { data, status, error, refresh } = await useAsyncData(
   'feed',
@@ -135,13 +125,12 @@ const { data, status, error, refresh } = await useAsyncData(
   { lazy: true, immediate: entries.value.length === 0 },
 );
 
-// The server-pass seed (hydration gets the result via the useState
-// payload and skips). Seq is minted here, not read from asyncDataSeq: when
-// `data` came out of a cache the handler never ran, and a zero seq would
-// lose to appliedSeq's initial zero and silently drop the seed.
+// Server-pass seed; hydration gets it via the useState payload. Seq is
+// minted because a cached `data` never ran the handler — asyncDataSeq
+// would still be 0 and lose to appliedSeq's 0.
 if (entries.value.length === 0) applyFirstPage(data.value, ++fetchSeq);
-// Acted on IN setup so SSR still tracks the redirect; from a watcher the
-// server can finalize the response before navigateTo lands.
+// In setup, where SSR still tracks the redirect; a watcher can lose the
+// race against response finalization.
 if (error.value && isUnauthorized(error.value)) await handleSignedOut();
 watch(data, (res) => applyFirstPage(res, asyncDataSeq));
 watch(error, async (raw) => {
@@ -151,8 +140,6 @@ watch(error, async (raw) => {
 const isInitialLoading = computed(
   () => status.value === 'pending' && entries.value.length === 0,
 );
-// A failed (non-401) background refresh just drops the bar: the cached
-// words stay.
 const revalidating = ref(false);
 const isRefreshing = computed(
   () =>
@@ -183,8 +170,7 @@ const loadMore = async () => {
       '/api/entries?cursor=' + encodeURIComponent(cursor),
       { credentials: 'include', signal: disposal.signal },
     );
-    // A refresh landing mid-flight can slide the first-page window over
-    // rows this page also carries — dedup instead of double-rendering.
+    // A refresh landing mid-flight can already carry rows from this page.
     const known = new Set(entries.value.map((entry) => entry.id));
     const appended = res.entries.filter((entry) => !known.has(entry.id));
     entries.value = [...entries.value, ...appended];
@@ -215,8 +201,7 @@ const processingKey = computed(() =>
     .join(','),
 );
 
-// One shared refresh path for poll ticks, compose and revisits.
-// Single-flight; the seq guard covers the writer this flag cannot see
+// Single-flight; the seq guard covers the one writer this flag cannot see
 // (the asyncData resolutions).
 let refreshInFlight = false;
 
@@ -242,9 +227,8 @@ const refreshFirstPage = async () => {
   }
 };
 
-// Gated on isRevisit, not on the cache being non-empty: a hard load also
-// reaches here with a cache its own SSR just seeded, and re-fetching it
-// would double every first load.
+// isRevisit, not cache-non-empty: a hard load reaches here with its own
+// SSR's seed and would double-fetch every first load.
 onMounted(async () => {
   if (!isRevisit) return;
   revalidating.value = true;
