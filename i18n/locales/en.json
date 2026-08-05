@@ -86,6 +86,8 @@
       "playbackUnavailable": "this one won't play right now.",
       "failed": "couldn't process this one",
       "loadError": "we couldn't load your words just now.",
+      "loading": "loading your words…",
+      "refreshing": "updating your words",
       "normalizing": "normalizing…",
       "videoFailed": "this video didn't make it through.",
       "videoPlay": "play video",
