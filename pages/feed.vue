@@ -350,6 +350,7 @@ onUnmounted(() => {
 
 <style scoped>
 .feed {
+  position: relative;
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -358,8 +359,11 @@ onUnmounted(() => {
   margin-inline: auto;
 }
 
+/* Overlaid, not in flow: appearing and disappearing must never shift the
+   list under the reader. */
 .feed__refresh {
-  position: relative;
+  position: absolute;
+  inset: 0 0 auto;
   height: 2px;
   overflow: hidden;
   border-radius: var(--r-pill);
