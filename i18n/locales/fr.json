@@ -86,6 +86,8 @@
       "playbackUnavailable": "impossible de lire celui-ci pour l'instant.",
       "failed": "impossible de traiter celui-ci",
       "loadError": "impossible de charger vos mots pour l'instant.",
+      "loading": "chargement de vos mots…",
+      "refreshing": "mise à jour de vos mots",
       "normalizing": "normalisation…",
       "videoFailed": "cette vidéo n'est pas passée.",
       "videoPlay": "lire la vidéo",

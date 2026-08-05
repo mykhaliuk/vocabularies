@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { CircleAlert, RotateCcw } from 'lucide-vue-next';
+import { CircleAlert, Loader2, RotateCcw } from 'lucide-vue-next';
 
 definePageMeta({ layout: 'app', middleware: 'auth' });
 
@@ -46,30 +46,106 @@ useHead(() => ({ title: t('app.feed.pageTitle') }));
 const POLL_INTERVAL_MS = 4000;
 const POLL_MAX_ATTEMPTS = 75; // ~5 minutes, matching the worker's own ceiling
 
-const entries = ref<FeedEntry[]>([]);
-const nextCursor = ref<string | null>(null);
+const entries = useState<FeedEntry[]>('feed-cache-entries', () => []);
+const nextCursor = useState<string | null>('feed-cache-cursor', () => null);
 const loadingMore = ref(false);
+
+// A hard load also lands with a seeded cache (its own SSR pass); only
+// isHydrating tells it from a revisit, and only before the seeding below.
+const isRevisit = !useNuxtApp().isHydrating && entries.value.length > 0;
+
+const FEED_CACHE_MAX_ENTRIES = 200;
+
+// Responses apply in request order; an older in-flight response is dropped.
+let fetchSeq = 0;
+let appliedSeq = 0;
+let asyncDataSeq = 0;
+
+const isOlderThan = (entry: FeedEntry, boundary: FeedEntry) =>
+  entry.createdAt < boundary.createdAt ||
+  (entry.createdAt === boundary.createdAt && entry.id < boundary.id);
+
+// Fresh page 1 replaces the window it covers; paged-in entries below it
+// survive as the tail. A trimmed tail gets a client-minted cursor —
+// "<createdAt>_<id>" (server/api/entries/index.get.ts).
+const applyFirstPage = (res: FeedResponse | null | undefined, seq: number) => {
+  if (!res || seq <= appliedSeq) return;
+  appliedSeq = seq;
+  const fresh = res.entries;
+  const boundary = fresh[fresh.length - 1];
+  if (!boundary) {
+    entries.value = [];
+    nextCursor.value = res.nextCursor;
+    return;
+  }
+  const tail = entries.value.filter((entry) => isOlderThan(entry, boundary));
+  const kept = [...fresh, ...tail].slice(0, FEED_CACHE_MAX_ENTRIES);
+  entries.value = kept;
+  if (tail.length === 0) {
+    nextCursor.value = res.nextCursor;
+  } else if (kept.length < fresh.length + tail.length) {
+    const lastKept = kept[kept.length - 1] as FeedEntry;
+    nextCursor.value = `${lastKept.createdAt}_${lastKept.id}`;
+  }
+};
+
+// Tab hops skip the auth middleware probe — a 401 here IS the
+// re-authorization answer and must not hide behind the cached words.
+const isUnauthorized = (error: unknown) => {
+  const status = error as { statusCode?: number; status?: number };
+  return status?.statusCode === 401 || status?.status === 401;
+};
+
+const handleSignedOut = () => {
+  entries.value = [];
+  nextCursor.value = null;
+  // Or the seed below replants it for the next account in this tab.
+  clearNuxtData('feed');
+  return navigateTo('/login');
+};
+
+// No feed request survives leaving the page: a late resolution would write
+// into a later visit (or account) with a stale seq watermark.
+const disposal = new AbortController();
 
 // useRequestFetch forwards the incoming request's cookies during SSR (a bare
 // $fetch to an internal route does not), so the first render is authenticated
 // instead of 401ing into the error state. On the client it is a normal $fetch.
+//
+// Without `lazy` this await suspends the route transition itself — the
+// VKB-144 freeze; with it, client navigation lands at once and SSR still
+// awaits the data.
 const requestFetch = useRequestFetch();
-const { data, status, refresh } = await useAsyncData('feed', () =>
-  requestFetch<FeedResponse>('/api/entries'),
+const { data, status, error, refresh } = await useAsyncData(
+  'feed',
+  () => {
+    asyncDataSeq = ++fetchSeq;
+    return requestFetch<FeedResponse>('/api/entries');
+  },
+  { lazy: true, immediate: entries.value.length === 0 },
 );
 
-const seed = (res: FeedResponse | null | undefined) => {
-  if (!res) return;
-  entries.value = [...res.entries];
-  nextCursor.value = res.nextCursor;
-};
+// Server-pass seed; hydration gets it via the useState payload. Seq is
+// minted because a cached `data` never ran the handler — asyncDataSeq
+// would still be 0 and lose to appliedSeq's 0.
+if (entries.value.length === 0) applyFirstPage(data.value, ++fetchSeq);
+// In setup, where SSR still tracks the redirect; a watcher can lose the
+// race against response finalization.
+if (error.value && isUnauthorized(error.value)) await handleSignedOut();
+watch(data, (res) => applyFirstPage(res, asyncDataSeq));
+watch(error, async (raw) => {
+  if (raw && isUnauthorized(raw)) await handleSignedOut();
+});
 
-// Seed once from the resolved payload. We deliberately do NOT watch `data`:
-// pagination and polling mutate `entries` locally, and a blind re-seed would
-// drop every appended page.
-seed(data.value);
-
-const isInitialLoading = computed(() => status.value === 'pending');
+const isInitialLoading = computed(
+  () => status.value === 'pending' && entries.value.length === 0,
+);
+const revalidating = ref(false);
+const isRefreshing = computed(
+  () =>
+    revalidating.value ||
+    (status.value === 'pending' && entries.value.length > 0),
+);
 const hasLoadError = computed(
   () => status.value === 'error' && entries.value.length === 0,
 );
@@ -77,7 +153,6 @@ const hasLoadError = computed(
 const retry = async () => {
   try {
     await refresh();
-    seed(data.value);
   } catch (error) {
     console.error('feed retry failed', error);
   }
@@ -93,11 +168,19 @@ const loadMore = async () => {
   try {
     const res = await $fetch<FeedResponse>(
       '/api/entries?cursor=' + encodeURIComponent(cursor),
-      { credentials: 'include' },
+      { credentials: 'include', signal: disposal.signal },
     );
-    entries.value = [...entries.value, ...res.entries];
+    // A refresh landing mid-flight can already carry rows from this page.
+    const known = new Set(entries.value.map((entry) => entry.id));
+    const appended = res.entries.filter((entry) => !known.has(entry.id));
+    entries.value = [...entries.value, ...appended];
     nextCursor.value = res.nextCursor;
   } catch (error) {
+    if (disposal.signal.aborted) return;
+    if (isUnauthorized(error)) {
+      await handleSignedOut();
+      return;
+    }
     console.error('feed loadMore failed', error);
     loadMoreFailed.value = true;
   } finally {
@@ -118,36 +201,43 @@ const processingKey = computed(() =>
     .join(','),
 );
 
-// Merge the freshest first page into local state: update media/status on
-// entries we already show and prepend any entries composed since last load,
-// while preserving the order of pages the user has already paged in.
-// Single-flight: overlapping polls could otherwise land out of order and let
-// an older response push a 'ready' entry back to 'processing'.
-let merging = false;
+// Single-flight; the seq guard covers the one writer this flag cannot see
+// (the asyncData resolutions).
+let refreshInFlight = false;
 
-const mergeFirstPage = async () => {
-  if (merging) return;
-  merging = true;
+const refreshFirstPage = async () => {
+  if (refreshInFlight) return;
+  refreshInFlight = true;
+  const seq = ++fetchSeq;
   try {
     const res = await $fetch<FeedResponse>('/api/entries', {
       credentials: 'include',
+      signal: disposal.signal,
     });
-    const freshById = new Map(res.entries.map((entry) => [entry.id, entry]));
-    const knownIds = new Set(entries.value.map((entry) => entry.id));
-
-    const prepended = res.entries.filter((entry) => !knownIds.has(entry.id));
-    const updated = entries.value.map((entry) => {
-      const fresh = freshById.get(entry.id);
-      return fresh ? { ...entry, media: fresh.media } : entry;
-    });
-
-    entries.value = [...prepended, ...updated];
+    applyFirstPage(res, seq);
   } catch (error) {
-    console.error('feed poll failed', error);
+    if (disposal.signal.aborted) return;
+    if (isUnauthorized(error)) {
+      await handleSignedOut();
+      return;
+    }
+    console.error('feed refresh failed', error);
   } finally {
-    merging = false;
+    refreshInFlight = false;
   }
 };
+
+// isRevisit, not cache-non-empty: a hard load reaches here with its own
+// SSR's seed and would double-fetch every first load.
+onMounted(async () => {
+  if (!isRevisit) return;
+  revalidating.value = true;
+  try {
+    await refreshFirstPage();
+  } finally {
+    revalidating.value = false;
+  }
+});
 
 let pollTimer: ReturnType<typeof setInterval> | null = null;
 let pollAttempts = 0;
@@ -168,7 +258,7 @@ const startPolling = () => {
       stopPolling();
       return;
     }
-    void mergeFirstPage();
+    void refreshFirstPage();
   }, POLL_INTERVAL_MS);
 };
 
@@ -182,18 +272,30 @@ watch(
 );
 
 // A word composed via the sheet lands as a processing entry; pull it into
-// view right away. The merge changes the processing set, so the watcher
+// view right away. The refresh changes the processing set, so the watcher
 // above restarts the poll with a fresh attempt budget.
 const { postedVersion } = useCompose();
 watch(postedVersion, () => {
-  void mergeFirstPage();
+  void refreshFirstPage();
 });
 
-onUnmounted(stopPolling);
+onUnmounted(() => {
+  stopPolling();
+  disposal.abort();
+});
 </script>
 
 <template>
   <div class="feed">
+    <div
+      v-if="isRefreshing"
+      class="feed__refresh"
+      role="progressbar"
+      :aria-label="$t('app.feed.refreshing')"
+    >
+      <span class="feed__refresh-bar" aria-hidden="true" />
+    </div>
+
     <div v-if="hasLoadError" class="feed__state">
       <span class="feed__state-icon" aria-hidden="true">
         <CircleAlert :size="30" />
@@ -205,7 +307,17 @@ onUnmounted(stopPolling);
       </VButton>
     </div>
 
-    <FeedEmptyState v-else-if="entries.length === 0 && !isInitialLoading" />
+    <div v-else-if="isInitialLoading" class="feed__state" role="status">
+      <span
+        class="feed__state-icon feed__state-icon--loading"
+        aria-hidden="true"
+      >
+        <Loader2 :size="30" />
+      </span>
+      <p class="feed__state-msg">{{ $t('app.feed.loading') }}</p>
+    </div>
+
+    <FeedEmptyState v-else-if="entries.length === 0" />
 
     <div v-else class="feed__list">
       <template v-for="(entry, index) in entries" :key="entry.id">
@@ -244,6 +356,34 @@ onUnmounted(stopPolling);
   width: 100%;
   max-width: 620px;
   margin-inline: auto;
+}
+
+.feed__refresh {
+  position: relative;
+  height: 2px;
+  overflow: hidden;
+  border-radius: var(--r-pill);
+}
+
+.feed__refresh-bar {
+  display: block;
+  height: 100%;
+  width: 40%;
+  border-radius: var(--r-pill);
+  background: var(--primary);
+  animation: feed-sweep 1100ms ease-in-out infinite;
+}
+
+/* The bar is 40% of the track: -100% of itself starts fully off-screen left,
+   350% of itself (= 140% of the track) ends fully off-screen right. */
+@keyframes feed-sweep {
+  from {
+    transform: translateX(-100%);
+  }
+
+  to {
+    transform: translateX(350%);
+  }
 }
 
 .feed__list {
@@ -317,6 +457,19 @@ onUnmounted(stopPolling);
   color: var(--danger);
 }
 
+/* After the base rule: same specificity, so source order is what lets the
+   loading variant drop the error red. */
+.feed__state-icon--loading {
+  color: var(--ink-3);
+  animation: feed-spin 700ms linear infinite;
+}
+
+@keyframes feed-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .feed__state-msg {
   margin: 0;
   max-width: 300px;
@@ -329,6 +482,23 @@ onUnmounted(stopPolling);
 @media (prefers-reduced-motion: reduce) {
   .feed__more {
     transition: none;
+  }
+
+  /* Still perceivable, no longer travelling: the bar breathes in place. */
+  .feed__refresh-bar {
+    width: 100%;
+    animation: feed-pulse 1600ms ease-in-out infinite;
+  }
+
+  @keyframes feed-pulse {
+    0%,
+    100% {
+      opacity: 0.25;
+    }
+
+    50% {
+      opacity: 0.6;
+    }
   }
 }
 </style>

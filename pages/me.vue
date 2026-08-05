@@ -196,6 +196,11 @@ async function logout() {
       }
     }
   }
+  // Same privacy motive as the cache purge above: logout navigates
+  // client-side, so the feed's in-memory caches (pages/feed.vue) would
+  // otherwise survive into the next account's session.
+  clearNuxtState(['feed-cache-entries', 'feed-cache-cursor']);
+  clearNuxtData('feed');
   await navigateTo('/');
 }
 </script>
