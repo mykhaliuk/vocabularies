@@ -419,7 +419,7 @@ useHead(() => ({
   flex-direction: column;
   flex: 1;
   width: 100%;
-  max-width: 620px;
+  max-width: var(--app-column);
   margin-inline: auto;
 }
 

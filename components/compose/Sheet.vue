@@ -298,6 +298,9 @@ const onKeep = async () => {
   bottom: 0;
   display: flex;
   flex-direction: column;
+  width: 100%;
+  max-width: var(--app-column);
+  margin-inline: auto;
   max-height: 94%;
   background: var(--surface);
   border-top-left-radius: var(--r-xl);

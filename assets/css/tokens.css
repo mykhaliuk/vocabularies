@@ -61,6 +61,7 @@
   --space-16: 64px;
 
   --gutter: 16px; /* screen edge padding */
+  --app-column: 620px; /* centred content column above phone widths */
   --tap-min: 44px; /* minimum touch target */
   --bottom-nav-h: 62px; /* thumb-zone tab bar height */
   --safe-bottom: env(safe-area-inset-bottom, 0px);
