@@ -196,11 +196,9 @@ async function logout() {
       }
     }
   }
-  // Same privacy motive as the cache purge above, for the in-memory copies:
-  // the feed keeps its list in useState and its first page in the asyncData
-  // payload (pages/feed.vue, VKB-144), and logout navigates client-side, so
-  // without this the next account signing in from this tab would flash the
-  // previous user's words.
+  // Same privacy motive as the cache purge above: logout navigates
+  // client-side, so the feed's in-memory caches (pages/feed.vue) would
+  // otherwise survive into the next account's session.
   clearNuxtState(['feed-cache-entries', 'feed-cache-cursor']);
   clearNuxtData('feed');
   await navigateTo('/');
