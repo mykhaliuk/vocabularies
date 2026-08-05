@@ -123,6 +123,9 @@ const isUnauthorized = (error: unknown) => {
 const handleSignedOut = () => {
   entries.value = [];
   nextCursor.value = null;
+  // The asyncData payload holds the same words: left in place, the seed
+  // below would replant them for whoever signs in next from this tab.
+  clearNuxtData('feed');
   return navigateTo('/login');
 };
 
