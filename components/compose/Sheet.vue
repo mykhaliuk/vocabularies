@@ -117,13 +117,16 @@ onBeforeUnmount(() => {
 
 const onKeep = async () => {
   if (!canPost.value) return;
-  const result = await submit({
-    word: word.value,
-    gloss: gloss.value,
-    sid: sid.value,
-    story: story.value,
-    file: file.value,
-  });
+  const result = await submit(
+    {
+      word: word.value,
+      gloss: gloss.value,
+      sid: sid.value,
+      story: story.value,
+      file: file.value,
+    },
+    { entryId: null },
+  );
   if (!result) return; // phase === 'error', errorMessage shown inline
   notifyPosted();
   close();
