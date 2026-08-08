@@ -385,6 +385,26 @@ describe('attach path', () => {
     ]);
   });
 
+  test('a create after a failed attach never resumes the entry slot', async () => {
+    const upload = useMediaUpload();
+    const input = composeInput({ file: audioFile() });
+    failing.add('/api/media/confirm');
+
+    expect(await upload.submit(input, { entryId: OTHER_ENTRY_ID })).toBeNull();
+
+    failing.clear();
+    requests.length = 0;
+    const result = await upload.submit(input, { entryId: null });
+
+    expect(result).toEqual({ entryId: ENTRY_ID });
+    expect(sequence()).toEqual([
+      'POST /api/entries',
+      `PUT ${UPLOAD_URL}`,
+      'POST /api/media/confirm',
+    ]);
+    expect(bodyOf('/api/media/confirm')).toStrictEqual({ key: SLOT.key });
+  });
+
   test('a new target never resumes the previous entry slot', async () => {
     const upload = useMediaUpload();
     const input = composeInput({ file: audioFile() });

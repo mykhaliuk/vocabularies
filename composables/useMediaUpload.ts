@@ -31,6 +31,7 @@ interface UploadSlot {
 interface PendingUpload {
   entryId: string;
   upload: UploadSlot | null;
+  openedFor: string | null;
 }
 
 const messageFromError = (error: unknown, fallback: string): string => {
@@ -94,7 +95,7 @@ const createEntry = async (input: ComposeInput): Promise<PendingUpload> => {
       media: input.file ? toMediaDeclaration(input.file) : undefined,
     },
   });
-  return { entryId: created.entry.id, upload: created.upload };
+  return { entryId: created.entry.id, upload: created.upload, openedFor: null };
 };
 
 const attachMedia = async (
@@ -109,7 +110,7 @@ const attachMedia = async (
       body: toMediaDeclaration(file),
     },
   );
-  return { entryId, upload: attached.upload };
+  return { entryId, upload: attached.upload, openedFor: entryId };
 };
 
 export const useMediaUpload = () => {
@@ -156,11 +157,9 @@ export const useMediaUpload = () => {
     const attachTo = target.entryId;
     const { file } = input;
 
-    // A slot belongs to the entry it was opened for; another target is a new
-    // submission, not a retry.
-    if (resumeFrom && attachTo !== null && resumeFrom.entryId !== attachTo) {
-      resumeFrom = null;
-    }
+    // A slot belongs to the target it was opened for — `null` (a fresh word)
+    // included; any other target is a new submission, not a retry.
+    if (resumeFrom && resumeFrom.openedFor !== attachTo) resumeFrom = null;
 
     // Attaching nothing makes no request, so it must never occupy the resume
     // slot — a later submit carrying a file still has to reach the server.
