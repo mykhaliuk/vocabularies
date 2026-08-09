@@ -31,7 +31,9 @@ export const reportRatelimitFailOpen = (source: string, error: unknown) => {
       const exception =
         error instanceof Error
           ? error
-          : new Error(`[ratelimit] fail-open (${source}): ${String(error)}`);
+          : new Error(`[ratelimit] fail-open (${source}): ${String(error)}`, {
+              cause: error,
+            });
       Sentry.captureException(exception);
     });
   } catch (reportError) {
