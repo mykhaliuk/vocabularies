@@ -1,10 +1,12 @@
 # Vocabu — Tech Stack Design
 
-> **Historical record.** This document is the original 2026-03-25 decision and
-> is kept verbatim. The shipped implementation has since diverged in most of
-> its sections — the drift is document-wide, so it carries one banner here
-> rather than one per section. Read it as what was decided then, not as a
-> description of Vocabu today.
+> **Historical record.** This document is the original 2026-03-25 decision, and
+> its body is kept verbatim with one exception: the preview-deploy bullet under
+> CI/CD was rewritten in place on 2026-07-12 (`e3cb00d`) and describes current
+> behaviour, so it is the one line here not to read as historical. The rest has
+> diverged in most of its sections — the drift is document-wide, so it carries
+> one banner here rather than one per section. Read it as what was decided
+> then, not as a description of Vocabu today.
 >
 > **The product model changed outright.** Vocabu is a personal dictionary, not
 > a social app: there is no sharing, no follows, no visibility tiers and no
@@ -22,7 +24,7 @@
 > transitive dependency), and offline is service-worker caching alone, with no
 > cache-first audio strategy.
 >
-> **The media and CI sections are superseded.** `shared/media-types.ts` is the
+> **The media sections and the CI job list are superseded.** `shared/media-types.ts` is the
 > format roster; the size and duration caps are entitlements
 > (`maxUploadBytes`, `maxVideoDurationSec`, `maxAudioDurationSec` — ADR-0012),
 > and video upload is itself a per-plan capability; the upload pipeline is
