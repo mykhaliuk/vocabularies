@@ -33,10 +33,39 @@ const OTHER_SLOT = {
 
 const requests: RecordedCall[] = [];
 const failing = new Set<string>();
+// A PUT answered with a non-2xx status and an S3/R2 error body, as opposed to
+// `failing`, which drops the connection before any answer arrives.
+const refusals = new Map<string, { status: number; body: string }>();
 const phaseTrail: string[] = [];
 let watched: { value: string } | null = null;
 let contentTypeSent = '';
 let uploadStatus = 200;
+
+// Parks a request mid-flight so a phase can be cancelled while it is the
+// current one. Gates queue per url — each call takes the next one — so two
+// overlapping runs can be parked and released independently.
+const gates = new Map<string, Promise<void>[]>();
+const releases = new Map<string, (() => void)[]>();
+const heldUploads = new Set<string>();
+
+const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+const holdRequest = (url: string) => {
+  const queued = gates.get(url) ?? [];
+  const waiting = releases.get(url) ?? [];
+  queued.push(
+    new Promise<void>((resolve) => {
+      waiting.push(resolve);
+    }),
+  );
+  gates.set(url, queued);
+  releases.set(url, waiting);
+};
+
+const releaseRequest = async (url: string) => {
+  releases.get(url)?.shift()?.();
+  await tick();
+};
 
 const sequence = () => requests.map((call) => `${call.method} ${call.url}`);
 const callTo = (url: string) => requests.find((call) => call.url === url);
@@ -58,6 +87,8 @@ const fakeFetch = async (url: string, options: Record<string, unknown>) => {
     body: options.body,
     credentials: options.credentials,
   });
+  const gate = gates.get(url)?.shift();
+  if (gate !== undefined) await gate;
   if (failing.has(url)) throw new Error(`refused ${url}`);
   if (url === '/api/entries') {
     const body = options.body as { media?: unknown };
@@ -70,8 +101,13 @@ const fakeFetch = async (url: string, options: Record<string, unknown>) => {
   return {};
 };
 
+const refusalBody = (code: string) =>
+  `<?xml version="1.0" encoding="UTF-8"?><Error><Code>${code}</Code>` +
+  `<Message>whatever R2 says</Message></Error>`;
+
 class FakeXhr {
   status = 0;
+  responseText = '';
   upload = {
     addEventListener: (name: string, handler: (event: unknown) => void) => {
       if (name === 'progress') this.onProgress = handler;
@@ -100,10 +136,13 @@ class FakeXhr {
     this.call.body = body;
     samplePhase();
     requests.push(this.call);
-    this.status = uploadStatus;
+    const refusal = refusals.get(this.call.url);
+    this.status = refusal ? refusal.status : uploadStatus;
+    this.responseText = refusal ? refusal.body : '';
+    if (heldUploads.has(this.call.url)) return;
     const failed = failing.has(this.call.url);
     queueMicrotask(() => {
-      if (!failed) {
+      if (!failed && !refusal) {
         this.onProgress?.({ lengthComputable: true, loaded: 5, total: 10 });
       }
       this.listeners.get(failed ? 'error' : 'load')?.();
@@ -135,6 +174,10 @@ beforeEach(() => {
   requests.length = 0;
   phaseTrail.length = 0;
   failing.clear();
+  refusals.clear();
+  gates.clear();
+  releases.clear();
+  heldUploads.clear();
   watched = null;
   uploadStatus = 200;
   contentTypeSent = '';
@@ -308,6 +351,65 @@ describe('create path', () => {
     ]);
   });
 
+  test('swap() attaches the next file to the word already created', async () => {
+    const upload = useMediaUpload();
+    failing.add(UPLOAD_URL);
+
+    expect(
+      await upload.submit(composeInput({ file: audioFile() }), {
+        entryId: undefined,
+      }),
+    ).toBeNull();
+
+    failing.clear();
+    requests.length = 0;
+    upload.swap();
+    const result = await upload.submit(composeInput({ file: audioFile() }), {
+      entryId: undefined,
+    });
+
+    expect(result).toEqual({ entryId: ENTRY_ID });
+    expect(sequence()).toEqual([
+      `POST /api/entries/${ENTRY_ID}/media`,
+      `PUT ${UPLOAD_URL}`,
+      'POST /api/media/confirm',
+    ]);
+  });
+
+  test('swap() then keeping without a file adds no second word', async () => {
+    const upload = useMediaUpload();
+    failing.add(UPLOAD_URL);
+
+    await upload.submit(composeInput({ file: audioFile() }), {
+      entryId: undefined,
+    });
+
+    failing.clear();
+    requests.length = 0;
+    upload.swap();
+    const result = await upload.submit(composeInput(), { entryId: undefined });
+
+    expect(result).toEqual({ entryId: ENTRY_ID });
+    expect(sequence()).toEqual([]);
+    expect(upload.phase.value).toBe('done');
+  });
+
+  test('swap() clears the failure the panel is showing', async () => {
+    const upload = useMediaUpload();
+    failing.add(UPLOAD_URL);
+
+    await upload.submit(composeInput({ file: audioFile() }), {
+      entryId: undefined,
+    });
+    expect(upload.phase.value).toBe('error');
+
+    upload.swap();
+
+    expect(upload.phase.value).toBe('idle');
+    expect(upload.errorMessage.value).toBeUndefined();
+    expect(upload.progress.value).toBe(0);
+  });
+
   test('reset() lets the next submit create a second entry', async () => {
     const upload = useMediaUpload();
     const input = composeInput({ file: audioFile() });
@@ -322,6 +424,347 @@ describe('create path', () => {
       `PUT ${UPLOAD_URL}`,
       'POST /api/media/confirm',
     ]);
+  });
+});
+
+describe('cancelling is a discard', () => {
+  const deleteUrl = `/api/entries/${ENTRY_ID}`;
+
+  const keeping = (upload: ReturnType<typeof useMediaUpload>) =>
+    upload.submit(composeInput({ file: audioFile() }), { entryId: undefined });
+
+  test('creating: awaits the id rather than aborting, then deletes it', async () => {
+    const upload = useMediaUpload();
+    holdRequest('/api/entries');
+
+    const run = keeping(upload);
+    await tick();
+    expect(upload.phase.value).toBe('creating');
+
+    upload.cancel();
+    await releaseRequest('/api/entries');
+
+    expect(await run).toBeNull();
+    expect(sequence()).toEqual(['POST /api/entries', `DELETE ${deleteUrl}`]);
+    expect(upload.phase.value).toBe('idle');
+  });
+
+  test('uploading: aborts the bytes, then deletes', async () => {
+    const upload = useMediaUpload();
+    heldUploads.add(UPLOAD_URL);
+
+    const run = keeping(upload);
+    await tick();
+    expect(upload.phase.value).toBe('uploading');
+
+    upload.cancel();
+
+    expect(await run).toBeNull();
+    expect(sequence()).toEqual([
+      'POST /api/entries',
+      `PUT ${UPLOAD_URL}`,
+      `DELETE ${deleteUrl}`,
+    ]);
+    expect(upload.phase.value).toBe('idle');
+  });
+
+  test('finalizing: lets the confirm land, then deletes', async () => {
+    const upload = useMediaUpload();
+    holdRequest('/api/media/confirm');
+
+    const run = keeping(upload);
+    await tick();
+    expect(upload.phase.value).toBe('finalizing');
+
+    upload.cancel();
+    await releaseRequest('/api/media/confirm');
+
+    expect(await run).toBeNull();
+    expect(sequence()).toEqual([
+      'POST /api/entries',
+      `PUT ${UPLOAD_URL}`,
+      'POST /api/media/confirm',
+      `DELETE ${deleteUrl}`,
+    ]);
+    expect(upload.phase.value).toBe('idle');
+  });
+
+  test('error: the word created on the way out goes too', async () => {
+    const upload = useMediaUpload();
+    failing.add('/api/media/confirm');
+
+    await keeping(upload);
+    expect(upload.phase.value).toBe('error');
+    requests.length = 0;
+
+    upload.cancel();
+
+    expect(sequence()).toEqual([`DELETE ${deleteUrl}`]);
+    expect(upload.phase.value).toBe('idle');
+    expect(upload.errorMessage.value).toBeUndefined();
+  });
+
+  test('idle: with nothing created there is nothing to delete', async () => {
+    const upload = useMediaUpload();
+
+    upload.cancel();
+
+    expect(sequence()).toEqual([]);
+    expect(upload.phase.value).toBe('idle');
+  });
+
+  test('an entry the caller brought is never deleted, mid-upload', async () => {
+    const upload = useMediaUpload();
+    heldUploads.add(UPLOAD_URL);
+
+    const run = upload.submit(composeInput({ file: audioFile() }), {
+      entryId: ENTRY_ID,
+    });
+    await tick();
+    upload.cancel();
+
+    expect(await run).toBeNull();
+    expect(sequence()).toEqual([
+      `POST /api/entries/${ENTRY_ID}/media`,
+      `PUT ${UPLOAD_URL}`,
+    ]);
+  });
+
+  test('an entry the caller brought is never deleted, after a failure', async () => {
+    const upload = useMediaUpload();
+    failing.add('/api/media/confirm');
+
+    await upload.submit(composeInput({ file: audioFile() }), {
+      entryId: ENTRY_ID,
+    });
+    requests.length = 0;
+
+    upload.cancel();
+
+    expect(sequence()).toEqual([]);
+  });
+
+  test('a re-mint that fails while cancelled still takes the word', async () => {
+    const upload = useMediaUpload();
+    refusals.set(UPLOAD_URL, {
+      status: 403,
+      body: refusalBody('AccessDenied'),
+    });
+
+    await keeping(upload);
+    expect(upload.phase.value).toBe('error');
+
+    const attachUrl = `/api/entries/${ENTRY_ID}/media`;
+    refusals.clear();
+    failing.add(attachUrl);
+    holdRequest(attachUrl);
+    requests.length = 0;
+
+    const run = keeping(upload);
+    await tick();
+    upload.cancel();
+    await releaseRequest(attachUrl);
+
+    expect(await run).toBeNull();
+    expect(sequence()).toEqual([`POST ${attachUrl}`, `DELETE ${deleteUrl}`]);
+    expect(upload.phase.value).toBe('idle');
+  });
+
+  test('a word already kept is not this session to throw away', async () => {
+    const upload = useMediaUpload();
+
+    expect(await keeping(upload)).toEqual({ entryId: ENTRY_ID });
+    requests.length = 0;
+
+    upload.cancel();
+
+    expect(sequence()).toEqual([]);
+  });
+
+  test('cancelling twice deletes both words and revives neither', async () => {
+    const upload = useMediaUpload();
+    holdRequest('/api/entries');
+    holdRequest('/api/entries');
+
+    const first = keeping(upload);
+    await tick();
+    upload.cancel();
+
+    upload.reset();
+    const second = keeping(upload);
+    await tick();
+    upload.cancel();
+
+    await releaseRequest('/api/entries');
+    await releaseRequest('/api/entries');
+
+    expect(await first).toBeNull();
+    expect(await second).toBeNull();
+    expect(sequence()).toEqual([
+      'POST /api/entries',
+      'POST /api/entries',
+      `DELETE ${deleteUrl}`,
+      `DELETE ${deleteUrl}`,
+    ]);
+    expect(upload.phase.value).toBe('idle');
+  });
+
+  test('cancelling aborts every upload still running', async () => {
+    const upload = useMediaUpload();
+    heldUploads.add(UPLOAD_URL);
+
+    const first = keeping(upload);
+    await tick();
+    const second = keeping(upload);
+    await tick();
+
+    upload.cancel();
+
+    expect(await first).toBeNull();
+    expect(await second).toBeNull();
+    expect(upload.phase.value).toBe('idle');
+  });
+
+  test('a discard asked before the word landed still takes it', async () => {
+    const upload = useMediaUpload();
+    holdRequest('/api/media/confirm');
+
+    const run = keeping(upload);
+    await tick();
+    expect(upload.phase.value).toBe('finalizing');
+
+    upload.askCancel();
+    await releaseRequest('/api/media/confirm');
+    expect(await run).toEqual({ entryId: ENTRY_ID });
+    expect(upload.phase.value).toBe('done');
+
+    requests.length = 0;
+    upload.cancel();
+
+    expect(sequence()).toEqual([`DELETE ${deleteUrl}`]);
+    expect(upload.phase.value).toBe('idle');
+  });
+
+  test('un-asking leaves the word that landed meanwhile alone', async () => {
+    const upload = useMediaUpload();
+    holdRequest('/api/media/confirm');
+
+    const run = keeping(upload);
+    await tick();
+    upload.askCancel();
+    await releaseRequest('/api/media/confirm');
+    expect(await run).toEqual({ entryId: ENTRY_ID });
+
+    requests.length = 0;
+    upload.unaskCancel();
+    upload.cancel();
+
+    expect(sequence()).toEqual([]);
+  });
+
+  test('a cancelled run leaves the word that replaced it alone', async () => {
+    const upload = useMediaUpload();
+    holdRequest('/api/entries');
+
+    const abandoned = keeping(upload);
+    await tick();
+    upload.cancel();
+
+    // The sheet closed and reopened: a second word runs to completion while
+    // the cancelled one is still parked on its create.
+    upload.reset();
+    const kept = keeping(upload);
+    await tick();
+    await releaseRequest('/api/entries');
+
+    expect(await abandoned).toBeNull();
+    expect(await kept).toEqual({ entryId: ENTRY_ID });
+    expect(upload.phase.value).toBe('done');
+  });
+});
+
+describe('a refused PUT', () => {
+  const keep = (upload: ReturnType<typeof useMediaUpload>) =>
+    upload.submit(composeInput({ file: audioFile() }), { entryId: undefined });
+
+  test('keeps the code R2 named instead of only the status', async () => {
+    const upload = useMediaUpload();
+    refusals.set(UPLOAD_URL, {
+      status: 403,
+      body: refusalBody('SignatureDoesNotMatch'),
+    });
+
+    expect(await keep(upload)).toBeNull();
+    expect(upload.phase.value).toBe('error');
+    expect(upload.errorCode.value).toBe('SignatureDoesNotMatch');
+  });
+
+  test('re-mints the slot when the signature is the thing refused', async () => {
+    const upload = useMediaUpload();
+    refusals.set(UPLOAD_URL, {
+      status: 403,
+      body: refusalBody('AccessDenied'),
+    });
+
+    expect(await keep(upload)).toBeNull();
+    expect(upload.errorCode.value).toBe('AccessDenied');
+
+    refusals.clear();
+    requests.length = 0;
+    const retry = await keep(upload);
+
+    expect(retry).toEqual({ entryId: ENTRY_ID });
+    expect(sequence()).toEqual([
+      `POST /api/entries/${ENTRY_ID}/media`,
+      `PUT ${UPLOAD_URL}`,
+      'POST /api/media/confirm',
+    ]);
+  });
+
+  test('resumes the same slot when the bytes were the problem', async () => {
+    const upload = useMediaUpload();
+    refusals.set(UPLOAD_URL, {
+      status: 400,
+      body: refusalBody('EntityTooLarge'),
+    });
+
+    expect(await keep(upload)).toBeNull();
+    expect(upload.errorCode.value).toBe('EntityTooLarge');
+
+    refusals.clear();
+    requests.length = 0;
+    await keep(upload);
+
+    expect(sequence()).toEqual([
+      `PUT ${UPLOAD_URL}`,
+      'POST /api/media/confirm',
+    ]);
+  });
+
+  test('reads an unnamed refusal as transient, not as a dead slot', async () => {
+    const upload = useMediaUpload();
+    refusals.set(UPLOAD_URL, { status: 503, body: '' });
+
+    expect(await keep(upload)).toBeNull();
+    expect(upload.errorCode.value).toBeUndefined();
+
+    refusals.clear();
+    requests.length = 0;
+    await keep(upload);
+
+    expect(sequence()).toEqual([
+      `PUT ${UPLOAD_URL}`,
+      'POST /api/media/confirm',
+    ]);
+  });
+
+  test('a dropped connection carries no code at all', async () => {
+    const upload = useMediaUpload();
+    failing.add(UPLOAD_URL);
+
+    expect(await keep(upload)).toBeNull();
+    expect(upload.errorCode.value).toBeUndefined();
+    expect(upload.errorMessage.value).toBe('The upload did not finish.');
   });
 });
 

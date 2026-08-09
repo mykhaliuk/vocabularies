@@ -6,12 +6,40 @@ import type { SpeakerView } from '~/server/utils/speaker-view';
 // adapted to upload-first (VKB-67). Rises over the blurred app behind it.
 const { t } = useI18n();
 const { isOpen, close, notifyPosted } = useCompose();
-const { phase, progress, errorMessage, errorCode, submit, reset, cancel } =
-  useMediaUpload();
+const {
+  phase,
+  progress,
+  errorMessage,
+  errorCode,
+  submit,
+  reset,
+  swap,
+  cancel,
+  askCancel,
+  unaskCancel,
+} = useMediaUpload();
 // Shapes the picker only — the server stays the gate (ADR-0012).
 const { entitlements } = useEntitlements();
 
 const premiumOpen = ref(false);
+const confirmOpen = ref(false);
+
+// A submit that finishes while "Discard this word?" is on screen must not
+// answer it: onKeep parks here, and whatever the user taps decides.
+let answerQuestion: ((keep: boolean) => void) | null = null;
+
+const questionAnswered = () =>
+  new Promise<boolean>((resolve) => {
+    answerQuestion = resolve;
+  });
+
+const settleQuestion = (keep: boolean) => {
+  if (keep) unaskCancel();
+  confirmOpen.value = false;
+  const notify = answerQuestion;
+  answerQuestion = null;
+  notify?.(keep);
+};
 
 const videoLimitLabel = computed(() => {
   const seconds = entitlements.value?.maxVideoDurationSec;
@@ -90,6 +118,7 @@ watch(isOpen, (open) => {
     // The premium sheet teleports to <body>, so the closed sheet's `inert`
     // never reaches it — left open it would float over a closed compose.
     premiumOpen.value = false;
+    settleQuestion(true);
     return;
   }
   resetForm();
@@ -97,16 +126,50 @@ watch(isOpen, (open) => {
   focusTimer = setTimeout(() => wordInput.value?.focus(), 280);
 });
 
-// Cancelling mid-upload aborts the request rather than trapping the user in a
-// modal with no way out; the entry itself is already saved and will show up
-// without its media until they retry.
-const onCancel = () => {
-  if (isBusy.value) cancel();
+// Dismissing is a discard (VKB-154): the sheet goes at once and the composable
+// deletes behind it, so a half-written word never survives as a text-only
+// entry nobody asked for. The confirm is the guard against a mis-tap.
+const isDirty = computed(
+  () =>
+    word.value.trim().length > 0 ||
+    gloss.value.trim().length > 0 ||
+    story.value.trim().length > 0 ||
+    sid.value !== undefined ||
+    !!file.value,
+);
+
+const discardNow = () => {
+  settleQuestion(false);
+  cancel();
   close();
 };
 
+const onCancel = () => {
+  if (isDirty.value) {
+    askCancel();
+    confirmOpen.value = true;
+    return;
+  }
+  discardNow();
+};
+
+const keepEditing = () => {
+  settleQuestion(true);
+  void nextTick(() => {
+    if (isOpen.value) wordInput.value?.focus();
+  });
+};
+
 const onKeydown = (event: KeyboardEvent) => {
-  if (event.key === 'Escape' && isOpen.value) onCancel();
+  if (event.key !== 'Escape' || !isOpen.value) return;
+  if (confirmOpen.value) {
+    keepEditing();
+    return;
+  }
+  // The premium sheet answers Escape itself; without this the compose sheet
+  // would ask to discard a word the user never tried to dismiss.
+  if (premiumOpen.value) return;
+  onCancel();
 };
 
 onMounted(() => window.addEventListener('keydown', onKeydown));
@@ -128,6 +191,9 @@ const onKeep = async () => {
     { entryId: undefined },
   );
   if (!result) return; // phase === 'error', errorMessage shown inline
+  // Asked mid-flight: their answer outranks the completion that landed under
+  // it, because the request came first.
+  if (confirmOpen.value && !(await questionAnswered())) return;
   notifyPosted();
   close();
   resetForm();
@@ -152,6 +218,7 @@ const onKeep = async () => {
       role="dialog"
       aria-modal="true"
       :aria-label="t('app.compose.title')"
+      :inert="confirmOpen"
     >
       <div class="compose__handle" aria-hidden="true" />
 
@@ -226,7 +293,7 @@ const onKeep = async () => {
           :error-message="errorMessage"
           @update:file="file = $event"
           @retry="onKeep"
-          @reset="reset"
+          @swap="swap"
           @see-premium="premiumOpen = true"
         />
 
@@ -257,6 +324,12 @@ const onKeep = async () => {
         {{ liveStatus }}
       </span>
     </section>
+
+    <ComposeDiscardSheet
+      :open="confirmOpen"
+      @confirm="discardNow"
+      @cancel="keepEditing"
+    />
 
     <ComposePremiumSheet
       :open="premiumOpen"

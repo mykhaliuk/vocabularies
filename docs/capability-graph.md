@@ -21,7 +21,7 @@ None — every route has a caller and every call resolves.
 | `GET /api/dev/error` | `pages/me.vue` | _inline_ |
 | `GET /api/entries` | `pages/feed.vue` | `entries.getFeedPage` |
 | `POST /api/entries` | `composables/useMediaUpload.ts` | `entries.createEntry` |
-| `DELETE /api/entries/:id` | `pages/entries/[id].vue` | `entries.deleteOwnEntry` |
+| `DELETE /api/entries/:id` | `composables/useMediaUpload.ts`<br>`pages/entries/[id].vue` | `entries.deleteOwnEntry` |
 | `GET /api/entries/:id` | `composables/useEntryPlayback.ts`<br>`pages/entries/[id].vue` | `entries.getOwnEntry` |
 | `PATCH /api/entries/:id` | _none yet — VKB-110_ | `entries.updateOwnEntry` |
 | `DELETE /api/entries/:id/media` | _none yet — VKB-110_ | `entries.removeEntryMedia` |
@@ -69,6 +69,7 @@ placeholder awaiting its ticket.
 - `components/app/BottomNav.vue`
 - `components/app/TabPlaceholder.vue`
 - `components/app/TopBar.vue`
+- `components/compose/DiscardSheet.vue`
 - `components/compose/MediaAttach.vue`
 - `components/compose/PremiumSheet.vue`
 - `components/entry/ActionsMenu.vue`
@@ -243,6 +244,7 @@ flowchart LR
   r_GET__api_entries --> o_entries_getFeedPage
   c_composables_useMediaUpload_ts --> r_POST__api_entries
   r_POST__api_entries --> o_entries_createEntry
+  c_composables_useMediaUpload_ts --> r_DELETE__api_entries__id
   c_pages_entries__id__vue --> r_DELETE__api_entries__id
   r_DELETE__api_entries__id --> o_entries_deleteOwnEntry
   c_composables_useEntryPlayback_ts --> r_GET__api_entries__id
