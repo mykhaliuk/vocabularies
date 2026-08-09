@@ -1,4 +1,4 @@
-/* @ds-bundle: {"format":3,"namespace":"VocabuDesignSystem_fc456a","components":[],"sourceHashes":{"ui_kits/app/Compose.jsx":"6a2ff5723934","ui_kits/app/Detail.jsx":"127d5d825040","ui_kits/app/WordCard.jsx":"d8c57ed2e1f7","ui_kits/app/app.jsx":"7d8919458aca","ui_kits/app/chrome.jsx":"a3ac2fa42788","ui_kits/app/data.jsx":"fd520cffd876","ui_kits/app/primitives.jsx":"c92a8f48c6ac","ui_kits/app/screens.jsx":"48daa4dd1295"},"inlinedExternals":[],"unexposedExports":[]} */
+/* @ds-bundle: {"format":4,"namespace":"VocabuDesignSystem_fc456a","components":[{"name":"WordCard","sourcePath":"components/WordCard.jsx"}],"sourceHashes":{"components/WordCard.jsx":"b082688104cf","ui_kits/app/app.jsx":"94450d4447d0","ui_kits/app/chrome.jsx":"a3ac2fa42788","ui_kits/app/compose.jsx":"6a2ff5723934","ui_kits/app/data.jsx":"fd520cffd876","ui_kits/app/detail.jsx":"127d5d825040","ui_kits/app/primitives.jsx":"c92a8f48c6ac","ui_kits/app/screens.jsx":"48daa4dd1295","ui_kits/app/word-card.jsx":"d8c57ed2e1f7"},"inlinedExternals":[],"unexposedExports":[]} */
 
 (() => {
 
@@ -8,7 +8,698 @@ const __ds_scope = {};
 
 (__ds_ns.__errors = __ds_ns.__errors || []);
 
-// ui_kits/app/Compose.jsx
+// components/WordCard.jsx
+try { (() => {
+// Vocabu — WordCard: the core feed unit, a dictionary entry for a captured word.
+// Self-contained: inline icons + avatar, tokens from colors_and_type.css.
+const _wcPaths = {
+  heart: /*#__PURE__*/React.createElement("path", {
+    d: "M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"
+  }),
+  "message-circle": /*#__PURE__*/React.createElement("path", {
+    d: "M7.9 20A9 9 0 1 0 4 16.1L2 22Z"
+  }),
+  bookmark: /*#__PURE__*/React.createElement("path", {
+    d: "m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"
+  }),
+  "bookmark-check": /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("path", {
+    d: "m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "m9 10 2 2 4-4"
+  })),
+  "chevron-down": /*#__PURE__*/React.createElement("path", {
+    d: "m6 9 6 6 6-6"
+  }),
+  "more-horizontal": /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("circle", {
+    cx: "12",
+    cy: "12",
+    r: "1"
+  }), /*#__PURE__*/React.createElement("circle", {
+    cx: "19",
+    cy: "12",
+    r: "1"
+  }), /*#__PURE__*/React.createElement("circle", {
+    cx: "5",
+    cy: "12",
+    r: "1"
+  })),
+  play: /*#__PURE__*/React.createElement("path", {
+    d: "m6 3 14 9-14 9V3z"
+  }),
+  pause: /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("rect", {
+    x: "14",
+    y: "4",
+    width: "4",
+    height: "16",
+    rx: "1"
+  }), /*#__PURE__*/React.createElement("rect", {
+    x: "4",
+    y: "4",
+    width: "4",
+    height: "16",
+    rx: "1"
+  }))
+};
+function WcIcon({
+  name,
+  size = 18,
+  fill = "none",
+  stroke = 2,
+  style
+}) {
+  return /*#__PURE__*/React.createElement("svg", {
+    width: size,
+    height: size,
+    viewBox: "0 0 24 24",
+    fill: fill,
+    stroke: "currentColor",
+    strokeWidth: stroke,
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    style: style,
+    "aria-hidden": "true"
+  }, _wcPaths[name]);
+}
+function WcAvatar({
+  name,
+  tone = "rose",
+  size = 38
+}) {
+  const initials = name.split(/\s+/).map(w => w[0]).slice(0, 2).join("").toUpperCase();
+  return /*#__PURE__*/React.createElement("span", {
+    style: {
+      width: size,
+      height: size,
+      borderRadius: "var(--r-pill)",
+      flex: "0 0 auto",
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      background: `var(--${tone}-200)`,
+      color: `var(--${tone}-700)`,
+      fontFamily: "var(--font-sans)",
+      fontSize: size * 0.37,
+      fontWeight: 700
+    }
+  }, initials);
+}
+function WcAudio({
+  audio
+}) {
+  const [playing, setPlaying] = React.useState(false);
+  const tRef = React.useRef();
+  const secs = (() => {
+    const [m, s] = audio.dur.split(":").map(Number);
+    return m * 60 + s;
+  })();
+  const toggle = e => {
+    e.stopPropagation();
+    if (playing) {
+      setPlaying(false);
+      return;
+    }
+    setPlaying(true);
+    clearTimeout(tRef.current);
+    tRef.current = setTimeout(() => setPlaying(false), secs * 1000);
+  };
+  const bars = color => /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 3,
+      height: "100%",
+      width: "100%"
+    }
+  }, audio.wave.map((h, i) => /*#__PURE__*/React.createElement("span", {
+    key: i,
+    style: {
+      flex: 1,
+      height: `${20 + h * 80}%`,
+      background: color,
+      borderRadius: 2,
+      minWidth: 1.5
+    }
+  })));
+  return /*#__PURE__*/React.createElement("div", {
+    onClick: toggle,
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 12,
+      marginTop: 14,
+      cursor: "pointer"
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    "aria-label": playing ? "Pause" : "Play",
+    style: {
+      width: 32,
+      height: 32,
+      borderRadius: "50%",
+      flex: "0 0 auto",
+      border: "1.5px solid var(--blue-300)",
+      background: playing ? "var(--blue-50)" : "transparent",
+      color: "var(--blue-600)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      cursor: "pointer"
+    }
+  }, /*#__PURE__*/React.createElement(WcIcon, {
+    name: playing ? "pause" : "play",
+    size: 13,
+    fill: "currentColor",
+    stroke: 0
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "relative",
+      flex: 1,
+      height: 20,
+      overflow: "hidden"
+    }
+  }, bars("var(--blue-200)"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "absolute",
+      inset: 0,
+      overflow: "hidden",
+      width: playing ? "100%" : "0%",
+      transition: playing ? `width ${secs}s linear` : "width 200ms var(--ease-out)"
+    }
+  }, bars("var(--blue-500)"))), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontFamily: "var(--font-sans)",
+      fontSize: 12,
+      fontWeight: 500,
+      color: "var(--ink-3)",
+      fontVariantNumeric: "tabular-nums",
+      flex: "0 0 auto"
+    }
+  }, audio.dur));
+}
+function WcAction({
+  icon,
+  count,
+  active,
+  fill,
+  onClick,
+  color
+}) {
+  return /*#__PURE__*/React.createElement("button", {
+    onClick: onClick,
+    style: {
+      display: "inline-flex",
+      alignItems: "center",
+      gap: 6,
+      border: 0,
+      background: "transparent",
+      cursor: "pointer",
+      fontFamily: "var(--font-sans)",
+      fontSize: 13,
+      fontWeight: 600,
+      color: active ? color || "var(--like)" : "var(--ink-2)",
+      padding: 0
+    }
+  }, /*#__PURE__*/React.createElement(WcIcon, {
+    name: icon,
+    size: 18,
+    fill: active && fill ? "currentColor" : "none"
+  }), count > 0 && /*#__PURE__*/React.createElement("span", null, count));
+}
+function WordCard({
+  m,
+  onOpen,
+  compact,
+  expanded: forceExpanded
+}) {
+  const [liked, setLiked] = React.useState(!!m.liked);
+  const [likes, setLikes] = React.useState(m.likes || 0);
+  const [saved, setSaved] = React.useState(!!m.saved);
+  const [pop, setPop] = React.useState(false);
+  const [open, setOpen] = React.useState(!!forceExpanded);
+  const toggleLike = e => {
+    e.stopPropagation();
+    setLiked(v => {
+      const nv = !v;
+      setLikes(c => c + (nv ? 1 : -1));
+      if (nv) {
+        setPop(true);
+        setTimeout(() => setPop(false), 260);
+      }
+      return nv;
+    });
+  };
+  return /*#__PURE__*/React.createElement("article", {
+    onClick: () => onOpen && onOpen(m),
+    style: {
+      background: "var(--surface)",
+      border: "1px solid var(--hairline)",
+      borderRadius: "var(--r-card)",
+      padding: "14px 16px",
+      boxShadow: "var(--shadow-sm)",
+      cursor: onOpen ? "pointer" : "default"
+    }
+  }, /*#__PURE__*/React.createElement("header", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 10,
+      marginBottom: 10
+    }
+  }, /*#__PURE__*/React.createElement(WcAvatar, {
+    name: m.speaker,
+    tone: m.tone,
+    size: 38
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      flexDirection: "column",
+      lineHeight: 1.25,
+      minWidth: 0
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontFamily: "var(--font-sans)",
+      fontSize: 14,
+      fontWeight: 600,
+      color: "var(--ink)"
+    }
+  }, m.speaker), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontFamily: "var(--font-sans)",
+      fontSize: 12.5,
+      color: "var(--ink-2)"
+    }
+  }, m.rel, " \xB7 ", m.time)), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginLeft: "auto",
+      color: "var(--ink-2)",
+      display: "flex"
+    }
+  }, /*#__PURE__*/React.createElement(WcIcon, {
+    name: "more-horizontal",
+    size: 20
+  }))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      alignItems: "baseline",
+      gap: 14,
+      flexWrap: "wrap"
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontFamily: "var(--font-hand)",
+      fontSize: m.word.length > 26 ? 28 : m.word.length > 13 ? 33 : 40,
+      fontWeight: 700,
+      letterSpacing: "0",
+      color: "var(--ink)",
+      lineHeight: 1.05
+    }
+  }, m.word), m.gloss && /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontFamily: "var(--font-sans)",
+      fontSize: 15,
+      fontWeight: 400,
+      color: "var(--ink-2)"
+    }
+  }, m.gloss)), m.audio && !compact && /*#__PURE__*/React.createElement(WcAudio, {
+    audio: m.audio
+  }), !compact && m.desc && /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 12
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: e => {
+      e.stopPropagation();
+      setOpen(v => !v);
+    },
+    style: {
+      display: "inline-flex",
+      alignItems: "center",
+      gap: 5,
+      border: 0,
+      background: "transparent",
+      cursor: "pointer",
+      padding: 0,
+      fontFamily: "var(--font-sans)",
+      fontSize: 12.5,
+      fontWeight: 600,
+      color: "var(--blue-600)"
+    }
+  }, /*#__PURE__*/React.createElement(WcIcon, {
+    name: "chevron-down",
+    size: 15,
+    style: {
+      transform: open ? "rotate(180deg)" : "none",
+      transition: "transform var(--dur-base) var(--ease-out)"
+    }
+  }), open ? "Hide meaning" : "Meaning & story"), open && /*#__PURE__*/React.createElement("p", {
+    style: {
+      fontFamily: "var(--font-sans)",
+      fontSize: 15,
+      lineHeight: 1.55,
+      color: "var(--ink)",
+      margin: "8px 0 0"
+    }
+  }, m.desc)), m.collection && /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 12
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      display: "inline-flex",
+      alignItems: "center",
+      gap: 5,
+      fontFamily: "var(--font-sans)",
+      fontSize: 12,
+      fontWeight: 600,
+      color: "var(--ink-2)",
+      background: "var(--surface-sunk)",
+      padding: "4px 9px",
+      borderRadius: "var(--r-sm)"
+    }
+  }, /*#__PURE__*/React.createElement(WcIcon, {
+    name: "bookmark",
+    size: 12
+  }), " ", m.collection)), /*#__PURE__*/React.createElement("footer", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 26,
+      marginTop: 14
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      transform: pop ? "scale(1.25)" : "scale(1)",
+      transition: "transform var(--dur-base) var(--ease-out)",
+      display: "inline-flex"
+    }
+  }, /*#__PURE__*/React.createElement(WcAction, {
+    icon: "heart",
+    count: likes,
+    active: liked,
+    fill: true,
+    onClick: toggleLike
+  })), /*#__PURE__*/React.createElement(WcAction, {
+    icon: "message-circle",
+    count: m.replies || 0,
+    onClick: e => {
+      e.stopPropagation();
+      onOpen && onOpen(m);
+    }
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginLeft: "auto"
+    }
+  }, /*#__PURE__*/React.createElement(WcAction, {
+    icon: saved ? "bookmark-check" : "bookmark",
+    active: saved,
+    color: "var(--blue-600)",
+    onClick: e => {
+      e.stopPropagation();
+      setSaved(v => !v);
+    }
+  }))));
+}
+Object.assign(__ds_scope, { WordCard });
+})(); } catch (e) { __ds_ns.__errors.push({ path: "components/WordCard.jsx", error: String((e && e.message) || e) }); }
+
+// ui_kits/app/app.jsx
+try { (() => {
+/* global React, ReactDOM, FeedScreen, DiscoverScreen, SavedScreen, ProfileScreen, DetailScreen, Compose, BottomNav */
+// Vocabu UI kit — app shell
+
+function App() {
+  const [tab, setTab] = React.useState("feed");
+  const [detail, setDetail] = React.useState(null);
+  const [composeOpen, setComposeOpen] = React.useState(false);
+  const [entries, setEntries] = React.useState(window.VOCABU_ENTRIES);
+  const open = m => setDetail(m);
+  const post = ({
+    word,
+    speaker,
+    gloss,
+    story,
+    collection,
+    audio
+  }) => {
+    const m = {
+      id: "n" + Date.now(),
+      speaker: speaker || "You",
+      tone: "rose",
+      rel: "just now",
+      time: "now",
+      word,
+      gloss,
+      desc: story,
+      audio: audio ? {
+        dur: "0:03",
+        wave: [.3, .6, .5, .8, .6, .9, .7, 1, .6, .5, .7, .4, .8, .6, .3, .7, .5, .9, .5, .6]
+      } : null,
+      collection,
+      likes: 0,
+      liked: false,
+      replies: 0,
+      saved: false
+    };
+    setEntries(arr => [m, ...arr]);
+    setComposeOpen(false);
+    setTab("feed");
+  };
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "absolute",
+      inset: 0,
+      display: "flex",
+      flexDirection: "column",
+      background: "var(--paper)",
+      overflow: "hidden"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      display: "flex",
+      flexDirection: "column",
+      overflow: "hidden"
+    }
+  }, tab === "feed" && /*#__PURE__*/React.createElement(FeedScreen, {
+    entries: entries,
+    onOpen: open
+  }), tab === "discover" && /*#__PURE__*/React.createElement(DiscoverScreen, null), tab === "saved" && /*#__PURE__*/React.createElement(SavedScreen, {
+    collections: window.VOCABU_COLLECTIONS,
+    entries: entries,
+    onOpen: open
+  }), tab === "profile" && /*#__PURE__*/React.createElement(ProfileScreen, {
+    entries: entries,
+    onOpen: open
+  })), /*#__PURE__*/React.createElement(BottomNav, {
+    active: tab,
+    onNav: setTab,
+    onCompose: () => setComposeOpen(true)
+  }), detail && /*#__PURE__*/React.createElement(DetailScreen, {
+    m: detail,
+    onBack: () => setDetail(null)
+  }), /*#__PURE__*/React.createElement(Compose, {
+    open: composeOpen,
+    onClose: () => setComposeOpen(false),
+    onPost: post
+  }));
+}
+const vocabuMount = document.getElementById("vocabu-app");
+if (vocabuMount) ReactDOM.createRoot(vocabuMount).render(/*#__PURE__*/React.createElement(App, null));
+})(); } catch (e) { __ds_ns.__errors.push({ path: "ui_kits/app/app.jsx", error: String((e && e.message) || e) }); }
+
+// ui_kits/app/chrome.jsx
+try { (() => {
+/* global React, Icon, IconButton */
+// Vocabu UI kit — app chrome (top bar + bottom tab nav)
+
+function TopBar({
+  title,
+  onBack,
+  action,
+  serif
+}) {
+  return /*#__PURE__*/React.createElement("header", {
+    style: {
+      position: "sticky",
+      top: 0,
+      zIndex: 20,
+      height: 52,
+      display: "flex",
+      alignItems: "center",
+      padding: "0 8px",
+      background: "var(--bar-bg)",
+      backdropFilter: "blur(12px)",
+      WebkitBackdropFilter: "blur(12px)",
+      borderBottom: "1px solid var(--hairline)"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: 44,
+      display: "flex",
+      justifyContent: "flex-start"
+    }
+  }, onBack && /*#__PURE__*/React.createElement(IconButton, {
+    name: "arrow-left",
+    onClick: onBack,
+    color: "var(--ink)"
+  })), /*#__PURE__*/React.createElement("h1", {
+    style: {
+      flex: 1,
+      textAlign: "center",
+      margin: 0,
+      fontFamily: "var(--font-sans)",
+      fontSize: 17,
+      fontWeight: 700,
+      color: "var(--ink)",
+      letterSpacing: "-0.01em"
+    }
+  }, title), /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: 44,
+      display: "flex",
+      justifyContent: "flex-end"
+    }
+  }, action));
+}
+function FeedTopBar() {
+  return /*#__PURE__*/React.createElement("header", {
+    style: {
+      position: "sticky",
+      top: 0,
+      zIndex: 20,
+      height: 52,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+      position: "relative",
+      background: "var(--bar-bg)",
+      backdropFilter: "blur(12px)",
+      WebkitBackdropFilter: "blur(12px)",
+      borderBottom: "1px solid var(--hairline)"
+    }
+  }, /*#__PURE__*/React.createElement("img", {
+    src: "../../assets/logo-mark.svg",
+    alt: "",
+    width: "24",
+    height: "24",
+    style: {
+      display: "block"
+    }
+  }), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontFamily: "var(--font-sans)",
+      fontSize: 21,
+      fontWeight: 600,
+      letterSpacing: "-0.025em",
+      color: "var(--ink)"
+    }
+  }, "Vocabu"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "absolute",
+      right: 4,
+      top: "50%",
+      transform: "translateY(-50%)"
+    }
+  }, /*#__PURE__*/React.createElement(ThemeToggle, null)));
+}
+const TABS = [{
+  id: "feed",
+  icon: "home",
+  label: "Feed"
+}, {
+  id: "discover",
+  icon: "search",
+  label: "Discover"
+}, {
+  id: "compose",
+  icon: "feather",
+  label: "",
+  fab: true
+}, {
+  id: "saved",
+  icon: "bookmark",
+  label: "Saved"
+}, {
+  id: "profile",
+  icon: "user",
+  label: "You"
+}];
+function BottomNav({
+  active,
+  onNav,
+  onCompose
+}) {
+  return /*#__PURE__*/React.createElement("nav", {
+    style: {
+      position: "absolute",
+      left: 0,
+      right: 0,
+      bottom: 0,
+      zIndex: 30,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-around",
+      padding: "6px 6px calc(6px + var(--safe-bottom))",
+      height: "var(--bottom-nav-h)",
+      background: "var(--bar-bg)",
+      backdropFilter: "blur(14px)",
+      WebkitBackdropFilter: "blur(14px)",
+      borderTop: "1px solid var(--hairline)"
+    }
+  }, TABS.map(t => t.fab ? /*#__PURE__*/React.createElement("button", {
+    key: t.id,
+    onClick: onCompose,
+    style: {
+      width: 52,
+      height: 52,
+      marginTop: -8,
+      borderRadius: "50%",
+      border: 0,
+      cursor: "pointer",
+      background: "var(--rose-500)",
+      color: "#fff",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      boxShadow: "var(--shadow-float)"
+    }
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "feather",
+    size: 23
+  })) : /*#__PURE__*/React.createElement("button", {
+    key: t.id,
+    onClick: () => onNav(t.id),
+    style: {
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      gap: 3,
+      background: "transparent",
+      border: 0,
+      cursor: "pointer",
+      width: 56,
+      height: 46,
+      justifyContent: "center",
+      color: active === t.id ? "var(--rose-600)" : "var(--ink-3)",
+      fontFamily: "var(--font-sans)",
+      fontSize: 10,
+      fontWeight: 600
+    }
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: t.icon,
+    size: 23,
+    fill: active === t.id && t.id !== "search" ? "none" : "none"
+  }), t.label)));
+}
+Object.assign(window, {
+  TopBar,
+  FeedTopBar,
+  BottomNav
+});
+})(); } catch (e) { __ds_ns.__errors.push({ path: "ui_kits/app/chrome.jsx", error: String((e && e.message) || e) }); }
+
+// ui_kits/app/compose.jsx
 try { (() => {
 /* global React, Icon, Avatar, Button, IconButton, Chip */
 // Vocabu UI kit — Compose: capture a word or phrase someone said
@@ -284,9 +975,129 @@ function Compose({
 Object.assign(window, {
   Compose
 });
-})(); } catch (e) { __ds_ns.__errors.push({ path: "ui_kits/app/Compose.jsx", error: String((e && e.message) || e) }); }
+})(); } catch (e) { __ds_ns.__errors.push({ path: "ui_kits/app/compose.jsx", error: String((e && e.message) || e) }); }
 
-// ui_kits/app/Detail.jsx
+// ui_kits/app/data.jsx
+try { (() => {
+/* global React */
+// Vocabu UI kit — sample data.
+// A personal dictionary of how the people you love talk: a kid's first words,
+// a friend's catchphrase, a grandparent's saying. Each entry = a word/phrase,
+// an optional short meaning (gloss), a story, and an optional audio sample.
+
+window.VOCABU_USER = {
+  name: "Sam",
+  handle: "you",
+  tone: "rose"
+};
+
+// A static waveform shape (bar heights 0–1) reused for audio samples
+const WAVE = [.3, .6, .45, .8, .55, .9, .7, 1, .65, .5, .75, .4, .85, .6, .3, .7, .5, .9, .45, .6, .35, .55, .4, .8, .5];
+window.VOCABU_ENTRIES = [{
+  id: "w1",
+  speaker: "Mira",
+  tone: "rose",
+  rel: "my daughter · 22 mo",
+  time: "2d",
+  word: "Appo",
+  gloss: "apple",
+  desc: "Points at the fruit bowl every morning and says it twice, fast — appo-appo. The 'l' disappears completely.",
+  audio: {
+    dur: "0:03",
+    wave: WAVE
+  },
+  collection: "Mira's words",
+  likes: 14,
+  liked: true,
+  replies: 3,
+  saved: false
+}, {
+  id: "w2",
+  speaker: "Dad",
+  tone: "blue",
+  rel: "my dad",
+  time: "5h",
+  word: "Measure twice, cut once.",
+  gloss: null,
+  desc: "He says it for everything now — taxes, breakups, picking paint. I've started hearing it in his voice before I do anything dumb.",
+  audio: {
+    dur: "0:04",
+    wave: WAVE
+  },
+  collection: "Dad's wisdom",
+  likes: 38,
+  liked: false,
+  replies: 6,
+  saved: true
+}, {
+  id: "w3",
+  speaker: "Theo",
+  tone: "amber",
+  rel: "best friend",
+  time: "1d",
+  word: "It's giving… Tuesday.",
+  gloss: null,
+  desc: "His verdict on anything underwhelming. A flat coffee, a bad date, a mediocre film. Devastating every time.",
+  audio: null,
+  collection: "Theo-isms",
+  likes: 21,
+  liked: true,
+  replies: 9,
+  saved: false
+}, {
+  id: "w4",
+  speaker: "Nonna",
+  tone: "sage",
+  rel: "my grandmother",
+  time: "3d",
+  word: "Mangia!",
+  gloss: "eat — you're far too thin",
+  desc: "Deployed within thirty seconds of you entering her house, regardless of when you last ate. There is no correct response.",
+  audio: {
+    dur: "0:02",
+    wave: WAVE
+  },
+  collection: "Family",
+  likes: 31,
+  liked: true,
+  replies: 8,
+  saved: true
+}, {
+  id: "w5",
+  speaker: "Sol",
+  tone: "blue",
+  rel: "Priya's son · 20 mo",
+  time: "4d",
+  word: "Tato",
+  gloss: "potato / tomato",
+  desc: "Refuses to distinguish between the two. Honestly, fair.",
+  audio: null,
+  collection: "Funny mix-ups",
+  likes: 6,
+  liked: false,
+  replies: 0,
+  saved: false
+}];
+window.VOCABU_COLLECTIONS = [{
+  name: "Mira's words",
+  count: 12,
+  tone: "rose"
+}, {
+  name: "Dad's wisdom",
+  count: 9,
+  tone: "blue"
+}, {
+  name: "Theo-isms",
+  count: 17,
+  tone: "amber"
+}, {
+  name: "Family",
+  count: 23,
+  tone: "sage"
+}];
+})(); } catch (e) { __ds_ns.__errors.push({ path: "ui_kits/app/data.jsx", error: String((e && e.message) || e) }); }
+
+// ui_kits/app/detail.jsx
 try { (() => {
 /* global React, Icon, Avatar, IconButton, TopBar, WordCard */
 // Vocabu UI kit — word detail (full entry + replies)
@@ -426,742 +1237,7 @@ function DetailScreen({
 Object.assign(window, {
   DetailScreen
 });
-})(); } catch (e) { __ds_ns.__errors.push({ path: "ui_kits/app/Detail.jsx", error: String((e && e.message) || e) }); }
-
-// ui_kits/app/WordCard.jsx
-try { (() => {
-/* global React, Avatar, Icon, IconButton */
-// Vocabu UI kit — the core feed unit: a dictionary entry for a little one's word
-
-/* ---------- Audio sample player (cosmetic) ---------- */
-function AudioSample({
-  audio
-}) {
-  const [playing, setPlaying] = React.useState(false);
-  const secs = (() => {
-    const [m, s] = audio.dur.split(":").map(Number);
-    return m * 60 + s;
-  })();
-  const toggle = e => {
-    e.stopPropagation();
-    if (playing) {
-      setPlaying(false);
-      return;
-    }
-    setPlaying(true);
-    clearTimeout(window.__vocabuAudioT);
-    window.__vocabuAudioT = setTimeout(() => setPlaying(false), secs * 1000);
-  };
-  return /*#__PURE__*/React.createElement("div", {
-    onClick: toggle,
-    style: {
-      display: "flex",
-      alignItems: "center",
-      gap: 12,
-      marginTop: 14,
-      cursor: "pointer"
-    }
-  }, /*#__PURE__*/React.createElement("button", {
-    "aria-label": playing ? "Pause" : "Play",
-    style: {
-      width: 32,
-      height: 32,
-      borderRadius: "50%",
-      flex: "0 0 auto",
-      border: "1.5px solid var(--blue-300)",
-      background: playing ? "var(--blue-50)" : "transparent",
-      color: "var(--blue-600)",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      cursor: "pointer"
-    }
-  }, /*#__PURE__*/React.createElement(Icon, {
-    name: playing ? "pause" : "play",
-    size: 13,
-    fill: "currentColor",
-    stroke: 0
-  })), /*#__PURE__*/React.createElement("div", {
-    style: {
-      position: "relative",
-      flex: 1,
-      height: 20,
-      overflow: "hidden"
-    }
-  }, /*#__PURE__*/React.createElement(Bars, {
-    wave: audio.wave,
-    color: "var(--blue-200)"
-  }), /*#__PURE__*/React.createElement("div", {
-    style: {
-      position: "absolute",
-      inset: 0,
-      overflow: "hidden",
-      width: playing ? "100%" : "0%",
-      transition: playing ? `width ${secs}s linear` : "width 200ms var(--ease-out)"
-    }
-  }, /*#__PURE__*/React.createElement(Bars, {
-    wave: audio.wave,
-    color: "var(--blue-500)"
-  }))), /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontFamily: "var(--font-sans)",
-      fontSize: 12,
-      fontWeight: 500,
-      color: "var(--ink-3)",
-      fontVariantNumeric: "tabular-nums",
-      flex: "0 0 auto"
-    }
-  }, audio.dur));
-}
-function Bars({
-  wave,
-  color
-}) {
-  return /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      alignItems: "center",
-      gap: 3,
-      height: "100%",
-      width: "100%"
-    }
-  }, wave.map((h, i) => /*#__PURE__*/React.createElement("span", {
-    key: i,
-    style: {
-      flex: 1,
-      height: `${20 + h * 80}%`,
-      background: color,
-      borderRadius: 2,
-      minWidth: 1.5
-    }
-  })));
-}
-
-/* ---------- Social action ---------- */
-function ActionPill({
-  icon,
-  count,
-  active,
-  fill,
-  onClick,
-  color
-}) {
-  return /*#__PURE__*/React.createElement("button", {
-    onClick: onClick,
-    style: {
-      display: "inline-flex",
-      alignItems: "center",
-      gap: 6,
-      border: 0,
-      background: "transparent",
-      cursor: "pointer",
-      fontFamily: "var(--font-sans)",
-      fontSize: 13,
-      fontWeight: 600,
-      color: active ? color || "var(--like)" : "var(--ink-2)",
-      padding: 0
-    }
-  }, /*#__PURE__*/React.createElement(Icon, {
-    name: icon,
-    size: 18,
-    fill: active && fill ? "currentColor" : "none"
-  }), count > 0 && /*#__PURE__*/React.createElement("span", null, count));
-}
-
-/* ---------- Word entry card ---------- */
-function WordCard({
-  m,
-  onOpen,
-  compact,
-  expanded: forceExpanded
-}) {
-  const [liked, setLiked] = React.useState(m.liked);
-  const [likes, setLikes] = React.useState(m.likes);
-  const [saved, setSaved] = React.useState(m.saved);
-  const [pop, setPop] = React.useState(false);
-  const [open, setOpen] = React.useState(!!forceExpanded);
-  const toggleLike = e => {
-    e.stopPropagation();
-    setLiked(v => {
-      const nv = !v;
-      setLikes(c => c + (nv ? 1 : -1));
-      if (nv) {
-        setPop(true);
-        setTimeout(() => setPop(false), 260);
-      }
-      return nv;
-    });
-  };
-  return /*#__PURE__*/React.createElement("article", {
-    onClick: () => onOpen && onOpen(m),
-    style: {
-      background: "var(--surface)",
-      border: "1px solid var(--hairline)",
-      borderRadius: "var(--r-card)",
-      padding: "14px 16px",
-      boxShadow: "var(--shadow-sm)",
-      cursor: onOpen ? "pointer" : "default"
-    }
-  }, /*#__PURE__*/React.createElement("header", {
-    style: {
-      display: "flex",
-      alignItems: "center",
-      gap: 10,
-      marginBottom: 10
-    }
-  }, /*#__PURE__*/React.createElement(Avatar, {
-    name: m.speaker,
-    tone: m.tone,
-    size: 38
-  }), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      flexDirection: "column",
-      lineHeight: 1.25,
-      minWidth: 0
-    }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontFamily: "var(--font-sans)",
-      fontSize: 14,
-      fontWeight: 600,
-      color: "var(--ink)"
-    }
-  }, m.speaker), /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontFamily: "var(--font-sans)",
-      fontSize: 12.5,
-      color: "var(--ink-2)"
-    }
-  }, m.rel, " \xB7 ", m.time)), /*#__PURE__*/React.createElement("div", {
-    style: {
-      marginLeft: "auto"
-    }
-  }, /*#__PURE__*/React.createElement(IconButton, {
-    name: "more-horizontal",
-    size: 32
-  }))), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      alignItems: "baseline",
-      gap: 14,
-      flexWrap: "wrap"
-    }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontFamily: "var(--font-hand)",
-      fontSize: m.word.length > 26 ? 28 : m.word.length > 13 ? 33 : 40,
-      fontWeight: 700,
-      letterSpacing: "0",
-      color: "var(--ink)",
-      lineHeight: 1.05
-    }
-  }, m.word), m.gloss && /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontFamily: "var(--font-sans)",
-      fontSize: 15,
-      fontWeight: 400,
-      color: "var(--ink-2)"
-    }
-  }, m.gloss)), m.audio && !compact && /*#__PURE__*/React.createElement(AudioSample, {
-    audio: m.audio
-  }), !compact && /*#__PURE__*/React.createElement("div", {
-    style: {
-      marginTop: 12
-    }
-  }, /*#__PURE__*/React.createElement("button", {
-    onClick: e => {
-      e.stopPropagation();
-      setOpen(v => !v);
-    },
-    style: {
-      display: "inline-flex",
-      alignItems: "center",
-      gap: 5,
-      border: 0,
-      background: "transparent",
-      cursor: "pointer",
-      padding: 0,
-      fontFamily: "var(--font-sans)",
-      fontSize: 12.5,
-      fontWeight: 600,
-      color: "var(--blue-600)"
-    }
-  }, /*#__PURE__*/React.createElement(Icon, {
-    name: "chevron-down",
-    size: 15,
-    style: {
-      transform: open ? "rotate(180deg)" : "none",
-      transition: "transform var(--dur-base) var(--ease-out)"
-    }
-  }), open ? "Hide meaning" : "Meaning & story"), open && /*#__PURE__*/React.createElement("p", {
-    style: {
-      fontFamily: "var(--font-sans)",
-      fontSize: 15,
-      lineHeight: 1.55,
-      color: "var(--ink)",
-      margin: "8px 0 0"
-    }
-  }, m.desc)), m.collection && /*#__PURE__*/React.createElement("div", {
-    style: {
-      marginTop: 12
-    }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      display: "inline-flex",
-      alignItems: "center",
-      gap: 5,
-      fontFamily: "var(--font-sans)",
-      fontSize: 12,
-      fontWeight: 600,
-      color: "var(--ink-2)",
-      background: "var(--surface-sunk)",
-      padding: "4px 9px",
-      borderRadius: "var(--r-sm)"
-    }
-  }, /*#__PURE__*/React.createElement(Icon, {
-    name: "bookmark",
-    size: 12
-  }), " ", m.collection)), /*#__PURE__*/React.createElement("footer", {
-    style: {
-      display: "flex",
-      alignItems: "center",
-      gap: 26,
-      marginTop: 14
-    }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      transform: pop ? "scale(1.25)" : "scale(1)",
-      transition: "transform var(--dur-base) var(--ease-out)",
-      display: "inline-flex"
-    }
-  }, /*#__PURE__*/React.createElement(ActionPill, {
-    icon: "heart",
-    count: likes,
-    active: liked,
-    fill: true,
-    onClick: toggleLike
-  })), /*#__PURE__*/React.createElement(ActionPill, {
-    icon: "message-circle",
-    count: m.replies,
-    onClick: e => {
-      e.stopPropagation();
-      onOpen && onOpen(m);
-    }
-  }), /*#__PURE__*/React.createElement("div", {
-    style: {
-      marginLeft: "auto"
-    }
-  }, /*#__PURE__*/React.createElement(ActionPill, {
-    icon: saved ? "bookmark-check" : "bookmark",
-    active: saved,
-    color: "var(--blue-600)",
-    onClick: e => {
-      e.stopPropagation();
-      setSaved(v => !v);
-    }
-  }))));
-}
-Object.assign(window, {
-  WordCard
-});
-})(); } catch (e) { __ds_ns.__errors.push({ path: "ui_kits/app/WordCard.jsx", error: String((e && e.message) || e) }); }
-
-// ui_kits/app/app.jsx
-try { (() => {
-/* global React, ReactDOM, FeedScreen, DiscoverScreen, SavedScreen, ProfileScreen, DetailScreen, Compose, BottomNav */
-// Vocabu UI kit — app shell
-
-function App() {
-  const [tab, setTab] = React.useState("feed");
-  const [detail, setDetail] = React.useState(null);
-  const [composeOpen, setComposeOpen] = React.useState(false);
-  const [entries, setEntries] = React.useState(window.VOCABU_ENTRIES);
-  const open = m => setDetail(m);
-  const post = ({
-    word,
-    speaker,
-    gloss,
-    story,
-    collection,
-    audio
-  }) => {
-    const m = {
-      id: "n" + Date.now(),
-      speaker: speaker || "You",
-      tone: "rose",
-      rel: "just now",
-      time: "now",
-      word,
-      gloss,
-      desc: story,
-      audio: audio ? {
-        dur: "0:03",
-        wave: [.3, .6, .5, .8, .6, .9, .7, 1, .6, .5, .7, .4, .8, .6, .3, .7, .5, .9, .5, .6]
-      } : null,
-      collection,
-      likes: 0,
-      liked: false,
-      replies: 0,
-      saved: false
-    };
-    setEntries(arr => [m, ...arr]);
-    setComposeOpen(false);
-    setTab("feed");
-  };
-  return /*#__PURE__*/React.createElement("div", {
-    style: {
-      position: "absolute",
-      inset: 0,
-      display: "flex",
-      flexDirection: "column",
-      background: "var(--paper)",
-      overflow: "hidden"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      flex: 1,
-      display: "flex",
-      flexDirection: "column",
-      overflow: "hidden"
-    }
-  }, tab === "feed" && /*#__PURE__*/React.createElement(FeedScreen, {
-    entries: entries,
-    onOpen: open
-  }), tab === "discover" && /*#__PURE__*/React.createElement(DiscoverScreen, null), tab === "saved" && /*#__PURE__*/React.createElement(SavedScreen, {
-    collections: window.VOCABU_COLLECTIONS,
-    entries: entries,
-    onOpen: open
-  }), tab === "profile" && /*#__PURE__*/React.createElement(ProfileScreen, {
-    entries: entries,
-    onOpen: open
-  })), /*#__PURE__*/React.createElement(BottomNav, {
-    active: tab,
-    onNav: setTab,
-    onCompose: () => setComposeOpen(true)
-  }), detail && /*#__PURE__*/React.createElement(DetailScreen, {
-    m: detail,
-    onBack: () => setDetail(null)
-  }), /*#__PURE__*/React.createElement(Compose, {
-    open: composeOpen,
-    onClose: () => setComposeOpen(false),
-    onPost: post
-  }));
-}
-ReactDOM.createRoot(document.getElementById("root")).render(/*#__PURE__*/React.createElement(App, null));
-})(); } catch (e) { __ds_ns.__errors.push({ path: "ui_kits/app/app.jsx", error: String((e && e.message) || e) }); }
-
-// ui_kits/app/chrome.jsx
-try { (() => {
-/* global React, Icon, IconButton */
-// Vocabu UI kit — app chrome (top bar + bottom tab nav)
-
-function TopBar({
-  title,
-  onBack,
-  action,
-  serif
-}) {
-  return /*#__PURE__*/React.createElement("header", {
-    style: {
-      position: "sticky",
-      top: 0,
-      zIndex: 20,
-      height: 52,
-      display: "flex",
-      alignItems: "center",
-      padding: "0 8px",
-      background: "var(--bar-bg)",
-      backdropFilter: "blur(12px)",
-      WebkitBackdropFilter: "blur(12px)",
-      borderBottom: "1px solid var(--hairline)"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      width: 44,
-      display: "flex",
-      justifyContent: "flex-start"
-    }
-  }, onBack && /*#__PURE__*/React.createElement(IconButton, {
-    name: "arrow-left",
-    onClick: onBack,
-    color: "var(--ink)"
-  })), /*#__PURE__*/React.createElement("h1", {
-    style: {
-      flex: 1,
-      textAlign: "center",
-      margin: 0,
-      fontFamily: "var(--font-sans)",
-      fontSize: 17,
-      fontWeight: 700,
-      color: "var(--ink)",
-      letterSpacing: "-0.01em"
-    }
-  }, title), /*#__PURE__*/React.createElement("div", {
-    style: {
-      width: 44,
-      display: "flex",
-      justifyContent: "flex-end"
-    }
-  }, action));
-}
-function FeedTopBar() {
-  return /*#__PURE__*/React.createElement("header", {
-    style: {
-      position: "sticky",
-      top: 0,
-      zIndex: 20,
-      height: 52,
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: 8,
-      position: "relative",
-      background: "var(--bar-bg)",
-      backdropFilter: "blur(12px)",
-      WebkitBackdropFilter: "blur(12px)",
-      borderBottom: "1px solid var(--hairline)"
-    }
-  }, /*#__PURE__*/React.createElement("img", {
-    src: "../../assets/logo-mark.svg",
-    alt: "",
-    width: "24",
-    height: "24",
-    style: {
-      display: "block"
-    }
-  }), /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontFamily: "var(--font-sans)",
-      fontSize: 21,
-      fontWeight: 600,
-      letterSpacing: "-0.025em",
-      color: "var(--ink)"
-    }
-  }, "Vocabu"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      position: "absolute",
-      right: 4,
-      top: "50%",
-      transform: "translateY(-50%)"
-    }
-  }, /*#__PURE__*/React.createElement(ThemeToggle, null)));
-}
-const TABS = [{
-  id: "feed",
-  icon: "home",
-  label: "Feed"
-}, {
-  id: "discover",
-  icon: "search",
-  label: "Discover"
-}, {
-  id: "compose",
-  icon: "feather",
-  label: "",
-  fab: true
-}, {
-  id: "saved",
-  icon: "bookmark",
-  label: "Saved"
-}, {
-  id: "profile",
-  icon: "user",
-  label: "You"
-}];
-function BottomNav({
-  active,
-  onNav,
-  onCompose
-}) {
-  return /*#__PURE__*/React.createElement("nav", {
-    style: {
-      position: "absolute",
-      left: 0,
-      right: 0,
-      bottom: 0,
-      zIndex: 30,
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-around",
-      padding: "6px 6px calc(6px + var(--safe-bottom))",
-      height: "var(--bottom-nav-h)",
-      background: "var(--bar-bg)",
-      backdropFilter: "blur(14px)",
-      WebkitBackdropFilter: "blur(14px)",
-      borderTop: "1px solid var(--hairline)"
-    }
-  }, TABS.map(t => t.fab ? /*#__PURE__*/React.createElement("button", {
-    key: t.id,
-    onClick: onCompose,
-    style: {
-      width: 52,
-      height: 52,
-      marginTop: -8,
-      borderRadius: "50%",
-      border: 0,
-      cursor: "pointer",
-      background: "var(--rose-500)",
-      color: "#fff",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      boxShadow: "var(--shadow-float)"
-    }
-  }, /*#__PURE__*/React.createElement(Icon, {
-    name: "feather",
-    size: 23
-  })) : /*#__PURE__*/React.createElement("button", {
-    key: t.id,
-    onClick: () => onNav(t.id),
-    style: {
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      gap: 3,
-      background: "transparent",
-      border: 0,
-      cursor: "pointer",
-      width: 56,
-      height: 46,
-      justifyContent: "center",
-      color: active === t.id ? "var(--rose-600)" : "var(--ink-3)",
-      fontFamily: "var(--font-sans)",
-      fontSize: 10,
-      fontWeight: 600
-    }
-  }, /*#__PURE__*/React.createElement(Icon, {
-    name: t.icon,
-    size: 23,
-    fill: active === t.id && t.id !== "search" ? "none" : "none"
-  }), t.label)));
-}
-Object.assign(window, {
-  TopBar,
-  FeedTopBar,
-  BottomNav
-});
-})(); } catch (e) { __ds_ns.__errors.push({ path: "ui_kits/app/chrome.jsx", error: String((e && e.message) || e) }); }
-
-// ui_kits/app/data.jsx
-try { (() => {
-/* global React */
-// Vocabu UI kit — sample data.
-// A personal dictionary of how the people you love talk: a kid's first words,
-// a friend's catchphrase, a grandparent's saying. Each entry = a word/phrase,
-// an optional short meaning (gloss), a story, and an optional audio sample.
-
-window.VOCABU_USER = {
-  name: "Sam",
-  handle: "you",
-  tone: "rose"
-};
-
-// A static waveform shape (bar heights 0–1) reused for audio samples
-const WAVE = [.3, .6, .45, .8, .55, .9, .7, 1, .65, .5, .75, .4, .85, .6, .3, .7, .5, .9, .45, .6, .35, .55, .4, .8, .5];
-window.VOCABU_ENTRIES = [{
-  id: "w1",
-  speaker: "Mira",
-  tone: "rose",
-  rel: "my daughter · 22 mo",
-  time: "2d",
-  word: "Appo",
-  gloss: "apple",
-  desc: "Points at the fruit bowl every morning and says it twice, fast — appo-appo. The 'l' disappears completely.",
-  audio: {
-    dur: "0:03",
-    wave: WAVE
-  },
-  collection: "Mira's words",
-  likes: 14,
-  liked: true,
-  replies: 3,
-  saved: false
-}, {
-  id: "w2",
-  speaker: "Dad",
-  tone: "blue",
-  rel: "my dad",
-  time: "5h",
-  word: "Measure twice, cut once.",
-  gloss: null,
-  desc: "He says it for everything now — taxes, breakups, picking paint. I've started hearing it in his voice before I do anything dumb.",
-  audio: {
-    dur: "0:04",
-    wave: WAVE
-  },
-  collection: "Dad's wisdom",
-  likes: 38,
-  liked: false,
-  replies: 6,
-  saved: true
-}, {
-  id: "w3",
-  speaker: "Theo",
-  tone: "amber",
-  rel: "best friend",
-  time: "1d",
-  word: "It's giving… Tuesday.",
-  gloss: null,
-  desc: "His verdict on anything underwhelming. A flat coffee, a bad date, a mediocre film. Devastating every time.",
-  audio: null,
-  collection: "Theo-isms",
-  likes: 21,
-  liked: true,
-  replies: 9,
-  saved: false
-}, {
-  id: "w4",
-  speaker: "Nonna",
-  tone: "sage",
-  rel: "my grandmother",
-  time: "3d",
-  word: "Mangia!",
-  gloss: "eat — you're far too thin",
-  desc: "Deployed within thirty seconds of you entering her house, regardless of when you last ate. There is no correct response.",
-  audio: {
-    dur: "0:02",
-    wave: WAVE
-  },
-  collection: "Family",
-  likes: 31,
-  liked: true,
-  replies: 8,
-  saved: true
-}, {
-  id: "w5",
-  speaker: "Sol",
-  tone: "blue",
-  rel: "Priya's son · 20 mo",
-  time: "4d",
-  word: "Tato",
-  gloss: "potato / tomato",
-  desc: "Refuses to distinguish between the two. Honestly, fair.",
-  audio: null,
-  collection: "Funny mix-ups",
-  likes: 6,
-  liked: false,
-  replies: 0,
-  saved: false
-}];
-window.VOCABU_COLLECTIONS = [{
-  name: "Mira's words",
-  count: 12,
-  tone: "rose"
-}, {
-  name: "Dad's wisdom",
-  count: 9,
-  tone: "blue"
-}, {
-  name: "Theo-isms",
-  count: 17,
-  tone: "amber"
-}, {
-  name: "Family",
-  count: 23,
-  tone: "sage"
-}];
-})(); } catch (e) { __ds_ns.__errors.push({ path: "ui_kits/app/data.jsx", error: String((e && e.message) || e) }); }
+})(); } catch (e) { __ds_ns.__errors.push({ path: "ui_kits/app/detail.jsx", error: String((e && e.message) || e) }); }
 
 // ui_kits/app/primitives.jsx
 try { (() => {
@@ -1974,5 +2050,346 @@ Object.assign(window, {
   ProfileScreen
 });
 })(); } catch (e) { __ds_ns.__errors.push({ path: "ui_kits/app/screens.jsx", error: String((e && e.message) || e) }); }
+
+// ui_kits/app/word-card.jsx
+try { (() => {
+/* global React, Avatar, Icon, IconButton */
+// Vocabu UI kit — the core feed unit: a dictionary entry for a little one's word
+
+/* ---------- Audio sample player (cosmetic) ---------- */
+function AudioSample({
+  audio
+}) {
+  const [playing, setPlaying] = React.useState(false);
+  const secs = (() => {
+    const [m, s] = audio.dur.split(":").map(Number);
+    return m * 60 + s;
+  })();
+  const toggle = e => {
+    e.stopPropagation();
+    if (playing) {
+      setPlaying(false);
+      return;
+    }
+    setPlaying(true);
+    clearTimeout(window.__vocabuAudioT);
+    window.__vocabuAudioT = setTimeout(() => setPlaying(false), secs * 1000);
+  };
+  return /*#__PURE__*/React.createElement("div", {
+    onClick: toggle,
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 12,
+      marginTop: 14,
+      cursor: "pointer"
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    "aria-label": playing ? "Pause" : "Play",
+    style: {
+      width: 32,
+      height: 32,
+      borderRadius: "50%",
+      flex: "0 0 auto",
+      border: "1.5px solid var(--blue-300)",
+      background: playing ? "var(--blue-50)" : "transparent",
+      color: "var(--blue-600)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      cursor: "pointer"
+    }
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: playing ? "pause" : "play",
+    size: 13,
+    fill: "currentColor",
+    stroke: 0
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "relative",
+      flex: 1,
+      height: 20,
+      overflow: "hidden"
+    }
+  }, /*#__PURE__*/React.createElement(Bars, {
+    wave: audio.wave,
+    color: "var(--blue-200)"
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "absolute",
+      inset: 0,
+      overflow: "hidden",
+      width: playing ? "100%" : "0%",
+      transition: playing ? `width ${secs}s linear` : "width 200ms var(--ease-out)"
+    }
+  }, /*#__PURE__*/React.createElement(Bars, {
+    wave: audio.wave,
+    color: "var(--blue-500)"
+  }))), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontFamily: "var(--font-sans)",
+      fontSize: 12,
+      fontWeight: 500,
+      color: "var(--ink-3)",
+      fontVariantNumeric: "tabular-nums",
+      flex: "0 0 auto"
+    }
+  }, audio.dur));
+}
+function Bars({
+  wave,
+  color
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 3,
+      height: "100%",
+      width: "100%"
+    }
+  }, wave.map((h, i) => /*#__PURE__*/React.createElement("span", {
+    key: i,
+    style: {
+      flex: 1,
+      height: `${20 + h * 80}%`,
+      background: color,
+      borderRadius: 2,
+      minWidth: 1.5
+    }
+  })));
+}
+
+/* ---------- Social action ---------- */
+function ActionPill({
+  icon,
+  count,
+  active,
+  fill,
+  onClick,
+  color
+}) {
+  return /*#__PURE__*/React.createElement("button", {
+    onClick: onClick,
+    style: {
+      display: "inline-flex",
+      alignItems: "center",
+      gap: 6,
+      border: 0,
+      background: "transparent",
+      cursor: "pointer",
+      fontFamily: "var(--font-sans)",
+      fontSize: 13,
+      fontWeight: 600,
+      color: active ? color || "var(--like)" : "var(--ink-2)",
+      padding: 0
+    }
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: icon,
+    size: 18,
+    fill: active && fill ? "currentColor" : "none"
+  }), count > 0 && /*#__PURE__*/React.createElement("span", null, count));
+}
+
+/* ---------- Word entry card ---------- */
+function WordCard({
+  m,
+  onOpen,
+  compact,
+  expanded: forceExpanded
+}) {
+  const [liked, setLiked] = React.useState(m.liked);
+  const [likes, setLikes] = React.useState(m.likes);
+  const [saved, setSaved] = React.useState(m.saved);
+  const [pop, setPop] = React.useState(false);
+  const [open, setOpen] = React.useState(!!forceExpanded);
+  const toggleLike = e => {
+    e.stopPropagation();
+    setLiked(v => {
+      const nv = !v;
+      setLikes(c => c + (nv ? 1 : -1));
+      if (nv) {
+        setPop(true);
+        setTimeout(() => setPop(false), 260);
+      }
+      return nv;
+    });
+  };
+  return /*#__PURE__*/React.createElement("article", {
+    onClick: () => onOpen && onOpen(m),
+    style: {
+      background: "var(--surface)",
+      border: "1px solid var(--hairline)",
+      borderRadius: "var(--r-card)",
+      padding: "14px 16px",
+      boxShadow: "var(--shadow-sm)",
+      cursor: onOpen ? "pointer" : "default"
+    }
+  }, /*#__PURE__*/React.createElement("header", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 10,
+      marginBottom: 10
+    }
+  }, /*#__PURE__*/React.createElement(Avatar, {
+    name: m.speaker,
+    tone: m.tone,
+    size: 38
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      flexDirection: "column",
+      lineHeight: 1.25,
+      minWidth: 0
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontFamily: "var(--font-sans)",
+      fontSize: 14,
+      fontWeight: 600,
+      color: "var(--ink)"
+    }
+  }, m.speaker), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontFamily: "var(--font-sans)",
+      fontSize: 12.5,
+      color: "var(--ink-2)"
+    }
+  }, m.rel, " \xB7 ", m.time)), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginLeft: "auto"
+    }
+  }, /*#__PURE__*/React.createElement(IconButton, {
+    name: "more-horizontal",
+    size: 32
+  }))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      alignItems: "baseline",
+      gap: 14,
+      flexWrap: "wrap"
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontFamily: "var(--font-hand)",
+      fontSize: m.word.length > 26 ? 28 : m.word.length > 13 ? 33 : 40,
+      fontWeight: 700,
+      letterSpacing: "0",
+      color: "var(--ink)",
+      lineHeight: 1.05
+    }
+  }, m.word), m.gloss && /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontFamily: "var(--font-sans)",
+      fontSize: 15,
+      fontWeight: 400,
+      color: "var(--ink-2)"
+    }
+  }, m.gloss)), m.audio && !compact && /*#__PURE__*/React.createElement(AudioSample, {
+    audio: m.audio
+  }), !compact && /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 12
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: e => {
+      e.stopPropagation();
+      setOpen(v => !v);
+    },
+    style: {
+      display: "inline-flex",
+      alignItems: "center",
+      gap: 5,
+      border: 0,
+      background: "transparent",
+      cursor: "pointer",
+      padding: 0,
+      fontFamily: "var(--font-sans)",
+      fontSize: 12.5,
+      fontWeight: 600,
+      color: "var(--blue-600)"
+    }
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "chevron-down",
+    size: 15,
+    style: {
+      transform: open ? "rotate(180deg)" : "none",
+      transition: "transform var(--dur-base) var(--ease-out)"
+    }
+  }), open ? "Hide meaning" : "Meaning & story"), open && /*#__PURE__*/React.createElement("p", {
+    style: {
+      fontFamily: "var(--font-sans)",
+      fontSize: 15,
+      lineHeight: 1.55,
+      color: "var(--ink)",
+      margin: "8px 0 0"
+    }
+  }, m.desc)), m.collection && /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 12
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      display: "inline-flex",
+      alignItems: "center",
+      gap: 5,
+      fontFamily: "var(--font-sans)",
+      fontSize: 12,
+      fontWeight: 600,
+      color: "var(--ink-2)",
+      background: "var(--surface-sunk)",
+      padding: "4px 9px",
+      borderRadius: "var(--r-sm)"
+    }
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "bookmark",
+    size: 12
+  }), " ", m.collection)), /*#__PURE__*/React.createElement("footer", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 26,
+      marginTop: 14
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      transform: pop ? "scale(1.25)" : "scale(1)",
+      transition: "transform var(--dur-base) var(--ease-out)",
+      display: "inline-flex"
+    }
+  }, /*#__PURE__*/React.createElement(ActionPill, {
+    icon: "heart",
+    count: likes,
+    active: liked,
+    fill: true,
+    onClick: toggleLike
+  })), /*#__PURE__*/React.createElement(ActionPill, {
+    icon: "message-circle",
+    count: m.replies,
+    onClick: e => {
+      e.stopPropagation();
+      onOpen && onOpen(m);
+    }
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginLeft: "auto"
+    }
+  }, /*#__PURE__*/React.createElement(ActionPill, {
+    icon: saved ? "bookmark-check" : "bookmark",
+    active: saved,
+    color: "var(--blue-600)",
+    onClick: e => {
+      e.stopPropagation();
+      setSaved(v => !v);
+    }
+  }))));
+}
+Object.assign(window, {
+  WordCard
+});
+})(); } catch (e) { __ds_ns.__errors.push({ path: "ui_kits/app/word-card.jsx", error: String((e && e.message) || e) }); }
+
+__ds_ns.WordCard = __ds_scope.WordCard;
 
 })();

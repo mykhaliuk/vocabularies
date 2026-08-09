@@ -122,7 +122,7 @@ function App() {
     "--secondary": ac.s, "--secondary-hover": ac.sh, "--like": ac.p, "--link": ac.link,
     "--word-weight": t.wordWeight,
     "--word-font": hand ? "var(--font-hand)" : "var(--font-sans)",
-    "--word-scale": hand ? "1.32" : "1",
+    "--word-scale": hand ? "1.39" : "1",
     "--word-tracking": hand ? "0em" : "-0.025em",
     "--word-leading": hand ? "1.2" : "1.16",
     "--word-pad-b": hand ? "0.14em" : "0px",

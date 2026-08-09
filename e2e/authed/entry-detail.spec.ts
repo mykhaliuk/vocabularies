@@ -271,8 +271,8 @@ test.describe('word detail (authed)', () => {
     // so deleting the :style binding from BOTH templates cannot agree its
     // way to green (utils/headword-size.ts).
     const ladder = [
-      { word: 'bapple', sizePx: '53px' }, // 6 chars → 40 × 1.32
-      { word: 'bapple sandwiches', sizePx: '44px' }, // 17 chars → 33 × 1.32
+      { word: 'bapple', sizePx: '56px' }, // 6 chars → top step
+      { word: 'bapple sandwiches', sizePx: '46px' }, // 17 chars → second step
     ];
 
     for (const rung of ladder) {

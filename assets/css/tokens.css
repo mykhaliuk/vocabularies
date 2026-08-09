@@ -7,8 +7,7 @@
      TYPOGRAPHY — FAMILY (single sans family)
      ======================================================== */
   --font-sans:
-    'Hanken Grotesk', ui-sans-serif, system-ui, -apple-system, 'Segoe UI',
-    sans-serif;
+    'Rubik', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
   /* Handwriting accent for word entries (the "--word-font" option in the DS).
      Value mirrors the design system; falls back to Segoe Script then a generic
      cursive wherever the Caveat stylesheet isn't loaded — only the screens that

@@ -4,13 +4,14 @@
 // 40 / 33 / 27 / 22 / 19px at <= 13, <= 20, <= 30, <= 44 and longer.
 //
 // Those steps are PRE-scale. Vocabu renders headwords in Caveat, whose
-// x-height is far smaller than Hanken's, so every step is multiplied by the
-// design's --word-scale (app.jsx) before it reaches the page.
+// x-height is far smaller than the sans it sits next to, so every step is
+// scaled up before it reaches the page. HAND_SCALE mirrors the prototype's
+// --word-scale (app.jsx) by hand; no check binds them.
 //
 // Shared because the feed card and the word detail screen must shrink in
 // lockstep: two copies of a ladder drift on the first tweak.
 
-const HAND_SCALE = 1.32;
+const HAND_SCALE = 1.39;
 
 const STEPS = [
   { maxLength: 13, sizePx: 40 },

@@ -58,7 +58,7 @@ The voice is **warm, plain, and intimate** — a close friend, not a product. Mo
 The whole system reads **clean, bright, and almost-monochrome**, with two vivid accents used sparingly. Interactive elements are present but quiet — accessible without shouting.
 
 - **Color vibe:** Clean near-white (`--paper #FCFCFB`) canvas; near-black (`--ink #1E1C1A`) text — *never* pure `#FFF`/`#000`. Two bright, vivid accents: **rose** (`#ED5379`, primary — actions, likes, emphasis, the emotional accent) and **light blue** (`#1F9EDB`, secondary — links, info, calm). Accents appear in small, confident doses against lots of clean neutral. Semantic colors stay slightly softer (sage, amber, terracotta) so they don't fight the two brand accents.
-- **Type:** **Hanken Grotesk** (warm humanist grotesque) does all the work — UI chrome, body, moment text, and display; hierarchy comes from weight and size. Display/headlines are heavy (700–800) with tight tracking (`-0.02em`); moment + body text is 400 with comfortable line-height (~1.5–1.55). No serif. **One deliberate exception:** the captured word/phrase on a card is set in **Caveat** (`--font-hand`, a handwriting face) so each entry reads like it was jotted down by hand — used *only* there, never for chrome or body.
+- **Type:** **Rubik** (friendly geometric sans, full Latin + Cyrillic coverage with italics) does all the work — UI chrome, body, moment text, and display; hierarchy comes from weight and size. Display/headlines are heavy (700–800) with tight tracking (`-0.02em`); moment + body text is 400 with comfortable line-height (~1.5–1.55). No serif. **One deliberate exception:** the captured word/phrase on a card is set in **Caveat** (`--font-hand`, a handwriting face) so each entry reads like it was jotted down by hand — used *only* there, never for chrome or body.
 - **Spacing:** 4pt base. Screen gutter is 16px. Compact but breathable — inputs and rows are kept tight (≈8–11px padding), the feed stays uncluttered.
 - **Backgrounds:** Flat color. **No gradients** as decoration (the only gradients are small accents — a story ring, collection tiles). No textures, no patterns, no full-bleed hero imagery in chrome. **Imagery comes only from user content** (photos attached to moments) — render those warm, with rounded corners; never apply heavy filters or B&W. Use neutral placeholder blocks (initials, soft color) where the user hasn't supplied an image.
 - **Corner radii:** Soft but not pill-shaped on buttons. **Buttons use `--r-btn 12px`** (rounded-rect). Cards `14–20px`, sheets `28px`. **Chips, the compose FAB, and avatars** stay fully round (`--r-pill` / circle). Inputs `10px`.
@@ -109,7 +109,7 @@ White-label buttons render on **`--primary-action` (`#CF3A60`, 4.74:1)** and **`
 | `ui_kits/app/` | High-fidelity, click-through recreation of the Vocabu PWA. See its own README. |
 
 ### Fonts
-Fonts load from **Google Fonts CDN** (`Hanken Grotesk` — the single family), imported at the top of `colors_and_type.css`. No font files are bundled. To ship offline/PWA, download the `.woff2` files into `fonts/` and replace the `@import` with `@font-face` rules. ⚠️ Hanken Grotesk is a *chosen* default, not from an existing brand — confirm or replace. A legacy `--font-serif` token still exists but now **aliases the sans stack** so older references resolve to one family.
+Fonts load from **Google Fonts CDN** (`Rubik` — the single family), imported at the top of `colors_and_type.css`. No font files are bundled. To ship offline/PWA, download the `.woff2` files into `fonts/` and replace the `@import` with `@font-face` rules. ⚠️ Hanken Grotesk is a *chosen* default, not from an existing brand — confirm or replace. A legacy `--font-serif` token still exists but now **aliases the sans stack** so older references resolve to one family.
 
 ---
 
@@ -120,3 +120,8 @@ Fonts load from **Google Fonts CDN** (`Hanken Grotesk` — the single family), i
 2. **Logo is original placeholder artwork.** The bookmark-and-heart mark and the wordmark were created from scratch. Replace with official brand assets.
 3. **Font & icons are chosen defaults**, not pulled from an existing brand. Swap if you have a brand typeface or a preferred icon set.
 4. **Exact accent hues** are a bright interpretation of "rose / light blue" — easy to nudge in `colors_and_type.css`.
+
+
+## Components
+
+- **WordCard** — the core feed unit: a dictionary-entry card (headword in Caveat, gloss, audio sample, unfoldable story, like/reply/save). `components/WordCard.jsx`.
