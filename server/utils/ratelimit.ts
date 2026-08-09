@@ -1,5 +1,6 @@
 import { Ratelimit } from '@upstash/ratelimit';
 import { Redis } from '@upstash/redis';
+import { reportRatelimitFailOpen } from '~/server/utils/ratelimit-alert';
 
 const WINDOW = '5 m';
 const MAX = 5;
@@ -139,6 +140,7 @@ export const checkMediaUploadRateLimit = async (userId: string) => {
     console.error('[ratelimit] media-upload check failed — failing open', {
       error,
     });
+    reportRatelimitFailOpen('media-upload', error);
     return true;
   }
 };

@@ -18,6 +18,7 @@ None — every route has a caller and every call resolves.
 | `POST /api/auth/logout` | `pages/me.vue` | _direct db (ADR-0010 legacy):_ `sessions` |
 | `POST /api/auth/magic-link` | `composables/useMagicLink.ts` | _direct db (ADR-0010 legacy):_ `magicLinkTokens`, `signinClaims` |
 | `POST /api/auth/poll` | `composables/useSigninPoll.ts` | _direct db (ADR-0010 legacy):_ `signinClaims` |
+| `GET /api/cron/ratelimit-probe` | _none — invoked by Vercel Cron (vercel.json), never by a client_ | _inline_ |
 | `GET /api/dev/error` | `pages/me.vue` | _inline_ |
 | `GET /api/entries` | `pages/feed.vue` | `entries.getFeedPage` |
 | `POST /api/entries` | `composables/useMediaUpload.ts` | `entries.createEntry` |
@@ -174,6 +175,7 @@ flowchart LR
     r_POST__api_auth_logout["POST /api/auth/logout"]
     r_POST__api_auth_magic_link["POST /api/auth/magic-link"]
     r_POST__api_auth_poll["POST /api/auth/poll"]
+    r_GET__api_cron_ratelimit_probe("GET /api/cron/ratelimit-probe")
     r_GET__api_dev_error["GET /api/dev/error"]
     r_GET__api_entries["GET /api/entries"]
     r_POST__api_entries["POST /api/entries"]

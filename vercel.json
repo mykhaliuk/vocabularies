@@ -1,4 +1,10 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "ignoreCommand": "node scripts/vercel-ignore.js"
+  "ignoreCommand": "node scripts/vercel-ignore.js",
+  "crons": [
+    {
+      "path": "/api/cron/ratelimit-probe",
+      "schedule": "0 6 * * *"
+    }
+  ]
 }
