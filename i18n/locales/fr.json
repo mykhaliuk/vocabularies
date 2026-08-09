@@ -250,5 +250,10 @@
     "checking": "Vérification…",
     "tryAgain": "Réessayer",
     "stillOffline": "Toujours aucun signal. On sera là à votre retour."
+  },
+  "update": {
+    "ready": "Un nouveau Vocabu est prêt.",
+    "reload": "Recharger",
+    "dismiss": "Ignorer"
   }
 }
