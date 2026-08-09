@@ -10,11 +10,11 @@ import type { SpeakerView } from '~/server/utils/speaker-view';
 // the panel lives inside the sheet, and Add selects the fresh chip.
 const props = defineProps<{
   speakers: SpeakerView[];
-  selected: string | null;
+  selected: string | undefined;
 }>();
 
 const emit = defineEmits<{
-  'update:selected': [string | null];
+  'update:selected': [string | undefined];
   created: [SpeakerView];
 }>();
 
@@ -56,7 +56,7 @@ const birthdayHint = computed(() => {
 });
 
 const toggle = (id: string) => {
-  emit('update:selected', props.selected === id ? null : id);
+  emit('update:selected', props.selected === id ? undefined : id);
 };
 
 const nameInput = ref<HTMLInputElement | null>(null);

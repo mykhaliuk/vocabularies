@@ -9,16 +9,16 @@ export type ComposePhase =
 export interface ComposeInput {
   word: string;
   gloss: string;
-  // Speaker id from the chip row (VKB-97); null attributes the word to the
+  // Speaker id from the chip row (VKB-97); absent attributes the word to the
   // user themselves.
-  sid: string | null;
+  sid: string | undefined;
   story: string;
   file: File | null;
 }
 
-// `null` composes a fresh word; an id attaches media to that existing entry.
+// Absent composes a fresh word; an id attaches media to that existing entry.
 export interface ComposeTarget {
-  entryId: string | null;
+  entryId: string | undefined;
 }
 
 interface UploadSlot {
@@ -31,7 +31,7 @@ interface UploadSlot {
 interface PendingUpload {
   entryId: string;
   upload: UploadSlot | null;
-  openedFor: string | null;
+  openedFor: string | undefined;
 }
 
 const messageFromError = (error: unknown, fallback: string): string => {
@@ -75,6 +75,8 @@ const putWithProgress = (
     xhr.send(file);
   });
 
+const omitIfBlank = (value: string) => value.trim() || undefined;
+
 const toMediaDeclaration = (file: File) => ({
   contentType: file.type,
   sizeBytes: file.size,
@@ -89,13 +91,17 @@ const createEntry = async (input: ComposeInput): Promise<PendingUpload> => {
     credentials: 'include',
     body: {
       word: input.word.trim(),
-      gloss: input.gloss.trim() || undefined,
-      sid: input.sid ?? undefined,
-      story: input.story.trim() || undefined,
+      gloss: omitIfBlank(input.gloss),
+      sid: input.sid,
+      story: omitIfBlank(input.story),
       media: input.file ? toMediaDeclaration(input.file) : undefined,
     },
   });
-  return { entryId: created.entry.id, upload: created.upload, openedFor: null };
+  return {
+    entryId: created.entry.id,
+    upload: created.upload,
+    openedFor: undefined,
+  };
 };
 
 const attachMedia = async (
@@ -157,13 +163,13 @@ export const useMediaUpload = () => {
     const attachTo = target.entryId;
     const { file } = input;
 
-    // A slot belongs to the target it was opened for — `null` (a fresh word)
-    // included; any other target is a new submission, not a retry.
+    // A slot belongs to the target it was opened for — a fresh word included;
+    // any other target is a new submission, not a retry.
     if (resumeFrom && resumeFrom.openedFor !== attachTo) resumeFrom = null;
 
     // Attaching nothing makes no request, so it must never occupy the resume
     // slot — a later submit carrying a file still has to reach the server.
-    if (attachTo !== null && file === null) {
+    if (attachTo !== undefined && file === null) {
       phase.value = 'done';
       return { entryId: attachTo };
     }
@@ -173,13 +179,13 @@ export const useMediaUpload = () => {
       phase.value = 'creating';
       try {
         resumeFrom =
-          attachTo !== null && file !== null
+          attachTo !== undefined && file !== null
             ? await attachMedia(attachTo, file)
             : await createEntry(input);
       } catch (error) {
         return fail(
           error,
-          attachTo === null
+          attachTo === undefined
             ? 'Could not save this word.'
             : 'Could not attach this media.',
         );

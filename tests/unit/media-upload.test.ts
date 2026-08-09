@@ -125,7 +125,7 @@ const audioFile = () =>
 const composeInput = (overrides: Partial<ComposeInput> = {}): ComposeInput => ({
   word: 'bapple',
   gloss: 'apple',
-  sid: null,
+  sid: undefined,
   story: 'said at breakfast',
   file: null,
   ...overrides,
@@ -147,7 +147,7 @@ describe('create path', () => {
     const file = audioFile();
 
     const result = await upload.submit(composeInput({ file }), {
-      entryId: null,
+      entryId: undefined,
     });
 
     expect(result).toEqual({ entryId: ENTRY_ID });
@@ -173,7 +173,7 @@ describe('create path', () => {
     watched = upload.phase;
 
     await upload.submit(composeInput({ file: audioFile() }), {
-      entryId: null,
+      entryId: undefined,
     });
 
     expect(phaseTrail).toEqual(['creating', 'uploading', 'finalizing']);
@@ -184,7 +184,7 @@ describe('create path', () => {
     const upload = useMediaUpload();
 
     await upload.submit(composeInput({ file: audioFile() }), {
-      entryId: null,
+      entryId: undefined,
     });
 
     expect(callTo('/api/entries')?.credentials).toBe('include');
@@ -195,7 +195,7 @@ describe('create path', () => {
     const upload = useMediaUpload();
 
     await upload.submit(composeInput({ file: audioFile() }), {
-      entryId: null,
+      entryId: undefined,
     });
 
     expect(upload.progress.value).toBe(50);
@@ -206,7 +206,7 @@ describe('create path', () => {
 
     await upload.submit(
       composeInput({ word: '  bapple  ', gloss: '   ', story: '  ' }),
-      { entryId: null },
+      { entryId: undefined },
     );
 
     expect(bodyOf('/api/entries')).toStrictEqual({
@@ -222,7 +222,7 @@ describe('create path', () => {
     const upload = useMediaUpload();
 
     await upload.submit(composeInput({ sid: OTHER_ENTRY_ID }), {
-      entryId: null,
+      entryId: undefined,
     });
 
     expect(bodyOf('/api/entries')).toStrictEqual({
@@ -239,7 +239,7 @@ describe('create path', () => {
     failing.add(UPLOAD_URL);
 
     const result = await upload.submit(composeInput({ file: audioFile() }), {
-      entryId: null,
+      entryId: undefined,
     });
 
     expect(result).toBeNull();
@@ -251,7 +251,7 @@ describe('create path', () => {
   test('creates the entry alone when no file is attached', async () => {
     const upload = useMediaUpload();
 
-    const result = await upload.submit(composeInput(), { entryId: null });
+    const result = await upload.submit(composeInput(), { entryId: undefined });
 
     expect(result).toEqual({ entryId: ENTRY_ID });
     expect(sequence()).toEqual(['POST /api/entries']);
@@ -262,7 +262,7 @@ describe('create path', () => {
     failing.add('/api/entries');
 
     const result = await upload.submit(composeInput({ file: audioFile() }), {
-      entryId: null,
+      entryId: undefined,
     });
 
     expect(result).toBeNull();
@@ -276,12 +276,12 @@ describe('create path', () => {
     const input = composeInput({ file: audioFile() });
     failing.add('/api/media/confirm');
 
-    expect(await upload.submit(input, { entryId: null })).toBeNull();
+    expect(await upload.submit(input, { entryId: undefined })).toBeNull();
     expect(upload.phase.value).toBe('error');
 
     failing.clear();
     requests.length = 0;
-    const retry = await upload.submit(input, { entryId: null });
+    const retry = await upload.submit(input, { entryId: undefined });
 
     expect(retry).toEqual({ entryId: ENTRY_ID });
     expect(sequence()).toEqual([
@@ -295,11 +295,11 @@ describe('create path', () => {
     const input = composeInput({ file: audioFile() });
     failing.add(UPLOAD_URL);
 
-    expect(await upload.submit(input, { entryId: null })).toBeNull();
+    expect(await upload.submit(input, { entryId: undefined })).toBeNull();
 
     failing.clear();
     requests.length = 0;
-    const retry = await upload.submit(input, { entryId: null });
+    const retry = await upload.submit(input, { entryId: undefined });
 
     expect(retry).toEqual({ entryId: ENTRY_ID });
     expect(sequence()).toEqual([
@@ -312,10 +312,10 @@ describe('create path', () => {
     const upload = useMediaUpload();
     const input = composeInput({ file: audioFile() });
 
-    await upload.submit(input, { entryId: null });
+    await upload.submit(input, { entryId: undefined });
     upload.reset();
     requests.length = 0;
-    await upload.submit(input, { entryId: null });
+    await upload.submit(input, { entryId: undefined });
 
     expect(sequence()).toEqual([
       'POST /api/entries',
@@ -394,7 +394,7 @@ describe('attach path', () => {
 
     failing.clear();
     requests.length = 0;
-    const result = await upload.submit(input, { entryId: null });
+    const result = await upload.submit(input, { entryId: undefined });
 
     expect(result).toEqual({ entryId: ENTRY_ID });
     expect(sequence()).toEqual([
