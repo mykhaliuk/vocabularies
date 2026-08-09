@@ -21,7 +21,7 @@ const videoLimitLabel = computed(() => {
 });
 
 const word = ref('');
-const sid = ref<string | null>(null);
+const sid = ref<string | undefined>();
 const gloss = ref('');
 const story = ref('');
 const file = ref<File | null>(null);
@@ -71,7 +71,7 @@ const liveStatus = computed(() => {
 
 const resetForm = () => {
   word.value = '';
-  sid.value = null;
+  sid.value = undefined;
   gloss.value = '';
   story.value = '';
   file.value = null;
@@ -117,13 +117,16 @@ onBeforeUnmount(() => {
 
 const onKeep = async () => {
   if (!canPost.value) return;
-  const result = await submit({
-    word: word.value,
-    gloss: gloss.value,
-    sid: sid.value,
-    story: story.value,
-    file: file.value,
-  });
+  const result = await submit(
+    {
+      word: word.value,
+      gloss: gloss.value,
+      sid: sid.value,
+      story: story.value,
+      file: file.value,
+    },
+    { entryId: undefined },
+  );
   if (!result) return; // phase === 'error', errorMessage shown inline
   notifyPosted();
   close();

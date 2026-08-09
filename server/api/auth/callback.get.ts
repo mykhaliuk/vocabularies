@@ -76,7 +76,7 @@ export default defineEventHandler(async (event) => {
     );
   }
 
-  let clickerUserId: string | null = null;
+  let clickerUserId: string | undefined;
   try {
     const session = await db.transaction(async (tx) => {
       const [existing] = await tx
@@ -129,7 +129,7 @@ export default defineEventHandler(async (event) => {
   // WHERE claimed_at IS NULL so clicking the latest of several resent links
   // shows a fresh, usable code. Fail-open: the browser sign-in already
   // succeeded, so on any failure fall through to /me — never block it.
-  let armedCode: string | null = null;
+  let armedCode: string | undefined;
   if (consumed.pollKeyHash && clickerUserId) {
     // Only the DB arm is fail-open (a failure here must not block the Safari
     // sign-in). Rendering the page is pure and lives OUTSIDE this try, so a

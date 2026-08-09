@@ -33,7 +33,7 @@ const parseBool = (raw: unknown, key: string) => {
 interface Storage {
   client: S3Client;
   mediaBucket: string;
-  originalsBucket: string | null;
+  originalsBucket: string | undefined;
 }
 
 let cached: Storage | null = null;
@@ -44,7 +44,7 @@ const create = (): Storage => {
   const accessKeyId = process.env.S3_ACCESS_KEY_ID;
   const secretAccessKey = process.env.S3_SECRET_ACCESS_KEY;
   const mediaBucket = process.env.S3_BUCKET_MEDIA;
-  const originalsBucket = process.env.S3_BUCKET_ORIGINALS || null;
+  const originalsBucket = process.env.S3_BUCKET_ORIGINALS || undefined;
   const forcePathStyle = parseBool(
     process.env.S3_FORCE_PATH_STYLE,
     'S3_FORCE_PATH_STYLE',
@@ -90,7 +90,8 @@ const resolve = (kind: BucketKind) => {
   return { client: storage.client, bucket: storage.originalsBucket };
 };
 
-export const hasOriginalsBucket = () => useStorage().originalsBucket !== null;
+export const hasOriginalsBucket = () =>
+  useStorage().originalsBucket !== undefined;
 
 export const headBucket = async (kind: BucketKind = 'media') => {
   const { client, bucket } = resolve(kind);

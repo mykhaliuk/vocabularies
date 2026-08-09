@@ -5,8 +5,8 @@
 // Chromium), yet the container still states its duration; a too-long file
 // must be refused before any byte leaves the device (VKB-67).
 //
-// Returns null for anything it cannot prove — the caller falls back to the
-// media-element probe and, past that, to the server's verdict.
+// Returns undefined for anything it cannot prove — the caller falls back to
+// the media-element probe and, past that, to the server's verdict.
 
 const readFourCC = (view: DataView, offset: number): string =>
   String.fromCharCode(
@@ -54,44 +54,44 @@ const parseBoxHeader = (
 // mvhd payload after version(1)+flags(3):
 //   v0: creation u32 · modification u32 · timescale u32 · duration u32
 //   v1: creation u64 · modification u64 · timescale u32 · duration u64
-export const parseMvhdDurationSec = (moov: DataView): number | null => {
+export const parseMvhdDurationSec = (moov: DataView): number | undefined => {
   let offset = 0;
   while (offset < moov.byteLength) {
     const box = parseBoxHeader(moov, offset, moov.byteLength);
-    if (!box) return null;
+    if (!box) return undefined;
     if (box.type === 'mvhd') {
       const body = offset + box.headerSize;
-      if (body + 4 > moov.byteLength) return null;
+      if (body + 4 > moov.byteLength) return undefined;
       const version = moov.getUint8(body);
       const fields = body + 4;
       if (version === 1) {
-        if (fields + 28 > moov.byteLength) return null;
+        if (fields + 28 > moov.byteLength) return undefined;
         const timescale = moov.getUint32(fields + 16);
         const raw = moov.getBigUint64(fields + 20);
         // All-ones is the 64-bit "unknown" sentinel (v0's 0xffffffff); and a
         // duration past Number's safe range is a corrupt file, not a long one.
-        if (raw === 0xffffffffffffffffn) return null;
+        if (raw === 0xffffffffffffffffn) return undefined;
         const duration = Number(raw);
-        if (!Number.isSafeInteger(duration)) return null;
-        return timescale > 0 ? duration / timescale : null;
+        if (!Number.isSafeInteger(duration)) return undefined;
+        return timescale > 0 ? duration / timescale : undefined;
       }
-      if (fields + 16 > moov.byteLength) return null;
+      if (fields + 16 > moov.byteLength) return undefined;
       const timescale = moov.getUint32(fields + 8);
       const duration = moov.getUint32(fields + 12);
       // 0xffffffff is the container saying "unknown".
-      if (duration === 0xffffffff) return null;
-      return timescale > 0 ? duration / timescale : null;
+      if (duration === 0xffffffff) return undefined;
+      return timescale > 0 ? duration / timescale : undefined;
     }
     offset += box.size;
   }
-  return null;
+  return undefined;
 };
 
 // Scans the file's top-level boxes for moov reading only headers (16 bytes
 // a hop — moov often sits AFTER a huge mdat), then loads moov alone.
 export const readMp4DurationSec = async (
   file: File,
-): Promise<number | null> => {
+): Promise<number | undefined> => {
   try {
     let offset = 0;
     while (offset + 8 <= file.size) {
@@ -100,9 +100,9 @@ export const readMp4DurationSec = async (
         .arrayBuffer();
       const head = new DataView(headBytes);
       const box = parseBoxHeader(head, 0, file.size - offset);
-      if (!box) return null;
+      if (!box) return undefined;
       if (box.type === 'moov') {
-        if (box.size > MAX_MOOV_BYTES) return null;
+        if (box.size > MAX_MOOV_BYTES) return undefined;
         const moovBytes = await file
           .slice(offset + box.headerSize, offset + box.size)
           .arrayBuffer();
@@ -110,9 +110,9 @@ export const readMp4DurationSec = async (
       }
       offset += box.size;
     }
-    return null;
+    return undefined;
   } catch (error) {
     console.error('[mp4-duration] container scan failed', error);
-    return null;
+    return undefined;
   }
 };

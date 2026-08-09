@@ -1,14 +1,3 @@
-// Drives the compose write path (ADR-0009, upload-first). Mirrors the proven
-// sequence in pages/dev/media-spike.vue, but through the entry-bound endpoint
-// so the entry appears in the feed as `processing` the moment it is created:
-//
-//   1. POST /api/entries { ...fields, media?: { contentType, sizeBytes } }
-//        -> { entry, media, upload: { uploadUrl, key, mediaId, maxBytes } }
-//   2. PUT the raw bytes to the presigned uploadUrl (XHR, for progress)
-//   3. POST /api/media/confirm { key }  -> enqueues transcoding
-//
-// It intentionally does NOT poll to `ready`: the feed owns that transition.
-
 export type ComposePhase =
   | 'idle'
   | 'creating'
@@ -20,11 +9,16 @@ export type ComposePhase =
 export interface ComposeInput {
   word: string;
   gloss: string;
-  // Speaker id from the chip row (VKB-97); null attributes the word to the
+  // Speaker id from the chip row (VKB-97); absent attributes the word to the
   // user themselves.
-  sid: string | null;
+  sid: string | undefined;
   story: string;
   file: File | null;
+}
+
+// Absent composes a fresh word; an id attaches media to that existing entry.
+export interface ComposeTarget {
+  entryId: string | undefined;
 }
 
 interface UploadSlot {
@@ -33,9 +27,11 @@ interface UploadSlot {
   mediaId: string;
   maxBytes: number;
 }
-interface CreateEntryResponse {
-  entry: { id: string };
+
+interface PendingUpload {
+  entryId: string;
   upload: UploadSlot | null;
+  openedFor: string | undefined;
 }
 
 const messageFromError = (error: unknown, fallback: string): string => {
@@ -79,32 +75,73 @@ const putWithProgress = (
     xhr.send(file);
   });
 
+const omitIfBlank = (value: string) => value.trim() || undefined;
+
+const toMediaDeclaration = (file: File) => ({
+  contentType: file.type,
+  sizeBytes: file.size,
+});
+
+const createEntry = async (input: ComposeInput): Promise<PendingUpload> => {
+  const created = await $fetch<{
+    entry: { id: string };
+    upload: UploadSlot | null;
+  }>('/api/entries', {
+    method: 'POST',
+    credentials: 'include',
+    body: {
+      word: input.word.trim(),
+      gloss: omitIfBlank(input.gloss),
+      sid: input.sid,
+      story: omitIfBlank(input.story),
+      media: input.file ? toMediaDeclaration(input.file) : undefined,
+    },
+  });
+  return {
+    entryId: created.entry.id,
+    upload: created.upload,
+    openedFor: undefined,
+  };
+};
+
+const attachMedia = async (
+  entryId: string,
+  file: File,
+): Promise<PendingUpload> => {
+  const attached = await $fetch<{ upload: UploadSlot }>(
+    `/api/entries/${encodeURIComponent(entryId)}/media`,
+    {
+      method: 'POST',
+      credentials: 'include',
+      body: toMediaDeclaration(file),
+    },
+  );
+  return { entryId, upload: attached.upload, openedFor: entryId };
+};
+
 export const useMediaUpload = () => {
   const phase = ref<ComposePhase>('idle');
   const progress = ref(0);
-  const errorMessage = ref<string | null>(null);
-  const errorCode = ref<string | null>(null);
+  const errorMessage = ref<string | undefined>();
+  const errorCode = ref<string | undefined>();
 
-  // Survives a failed attempt so a retry RESUMES (re-PUT / re-confirm against
-  // the same slot) instead of posting a second entry. POST /api/entries already
-  // inserted the entry + its processing media row, and the server only rolls
-  // those back when minting the slot fails — so re-running step 1 would leave
-  // the first entry stuck on 'processing' forever.
-  let pending: CreateEntryResponse | null = null;
+  // Both endpoints commit their row before answering, so a retry has to reuse
+  // the slot rather than mint a second one.
+  let resumeFrom: PendingUpload | null = null;
   let inFlight: XMLHttpRequest | null = null;
 
   const reset = () => {
     phase.value = 'idle';
     progress.value = 0;
-    errorMessage.value = null;
-    errorCode.value = null;
-    pending = null;
+    errorMessage.value = undefined;
+    errorCode.value = undefined;
+    resumeFrom = null;
     inFlight = null;
   };
 
   const fail = (error: unknown, fallback: string) => {
     const data = (error as { data?: { data?: { code?: string } } })?.data;
-    errorCode.value = data?.data?.code ?? null;
+    errorCode.value = data?.data?.code;
     errorMessage.value = messageFromError(error, fallback);
     phase.value = 'error';
     return null;
@@ -116,41 +153,49 @@ export const useMediaUpload = () => {
     inFlight = null;
   };
 
-  // Returns the created entry id on success, or null if it failed. On failure
-  // `phase` is 'error' and `errorMessage` carries a human-readable reason;
-  // calling submit() again resumes the same entry rather than duplicating it.
   const submit = async (
     input: ComposeInput,
+    target: ComposeTarget,
   ): Promise<{ entryId: string } | null> => {
-    errorMessage.value = null;
-    errorCode.value = null;
+    errorMessage.value = undefined;
+    errorCode.value = undefined;
 
-    if (!pending) {
+    const attachTo = target.entryId;
+    const { file } = input;
+
+    // A slot belongs to the target it was opened for — a fresh word included;
+    // any other target is a new submission, not a retry.
+    if (resumeFrom && resumeFrom.openedFor !== attachTo) resumeFrom = null;
+
+    // Attaching nothing makes no request, so it must never occupy the resume
+    // slot — a later submit carrying a file still has to reach the server.
+    if (attachTo !== undefined && file === null) {
+      phase.value = 'done';
+      return { entryId: attachTo };
+    }
+
+    if (!resumeFrom) {
       progress.value = 0;
       phase.value = 'creating';
       try {
-        pending = await $fetch<CreateEntryResponse>('/api/entries', {
-          method: 'POST',
-          credentials: 'include',
-          body: {
-            word: input.word.trim(),
-            gloss: input.gloss.trim() || undefined,
-            sid: input.sid ?? undefined,
-            story: input.story.trim() || undefined,
-            media: input.file
-              ? { contentType: input.file.type, sizeBytes: input.file.size }
-              : undefined,
-          },
-        });
+        resumeFrom =
+          attachTo !== undefined && file !== null
+            ? await attachMedia(attachTo, file)
+            : await createEntry(input);
       } catch (error) {
-        return fail(error, 'Could not save this word.');
+        return fail(
+          error,
+          attachTo === undefined
+            ? 'Could not save this word.'
+            : 'Could not attach this media.',
+        );
       }
     }
 
-    const slot = pending.upload;
-    if (!input.file || !slot) {
+    const { entryId, upload: slot } = resumeFrom;
+    if (!file || !slot) {
       phase.value = 'done';
-      return { entryId: pending.entry.id };
+      return { entryId };
     }
 
     phase.value = 'uploading';
@@ -158,7 +203,7 @@ export const useMediaUpload = () => {
     try {
       await putWithProgress(
         slot,
-        input.file,
+        file,
         (pct) => {
           progress.value = pct;
         },
@@ -188,7 +233,7 @@ export const useMediaUpload = () => {
     }
 
     phase.value = 'done';
-    return { entryId: pending.entry.id };
+    return { entryId };
   };
 
   return { phase, progress, errorMessage, errorCode, submit, reset, cancel };

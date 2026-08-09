@@ -108,7 +108,7 @@ const mintKey = (): string => {
 
 export const useSigninPoll = () => {
   // Live state — activeKey is the source of truth for the running poll.
-  let activeKey: string | null = null;
+  let activeKey: string | undefined;
   let activeEmail = '';
   let deadline = 0;
   let timer: ReturnType<typeof setTimeout> | null = null;
@@ -143,7 +143,7 @@ export const useSigninPoll = () => {
 
   function clear(): void {
     stopPolling();
-    activeKey = null;
+    activeKey = undefined;
     activeEmail = '';
     deadline = 0;
     removeStored();

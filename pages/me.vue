@@ -42,7 +42,7 @@ if (error.value) {
   }
 }
 
-const avatarUrl = ref<string | null>(null);
+const avatarUrl = ref<string | undefined>();
 const avatarLoadFailure = ref<unknown>(null);
 const uploading = ref(false);
 
@@ -68,7 +68,7 @@ const uploadError = computed(() => {
 
 async function loadAvatarUrl() {
   if (!me.value?.hasAvatar) {
-    avatarUrl.value = null;
+    avatarUrl.value = undefined;
     avatarLoadFailure.value = null;
     return;
   }
