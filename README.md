@@ -96,13 +96,16 @@ CI runs the same gates, split across three jobs. `checks` runs `ds:check`, `prot
 
 ## Project layout
 
-```
-docs/specs/        Design specs (tech stack, DX, JS+.d.ts convention)
-db/schema/         Drizzle schema (tables + indexes)
-db/migrations/     Generated SQL migrations
-server/api/        Nitro API routes
-server/utils/      Server-side factories (db, storage, redis, email, auth, ratelimit)
-pages/             Nuxt pages
-scripts/           with-env.js wrapper, db-dump-dev.js
-docker-compose.yml Local Postgres + MinIO + bucket-init
-```
+**Client.** `pages/` are the file-based routes, `layouts/` the shells they opt into, `middleware/` the `auth` route guard they name in `definePageMeta`. `components/` groups the Vue components per surface — `app/`, `compose/`, `entry/`, `feed/`, `landing/` — beside the `V*` primitives. `composables/` and `utils/` are both auto-imported: `use*` composables in the first, plain functions in the second. `assets/css/` carries the design tokens and global styles; components reach them through `var()` instead of raw hex literals, which `ds:check` enforces (annotate a deliberate exception with `ds-allow-hex`). `public/` is served verbatim at the root. `service-worker/` is the `injectManifest` PWA worker plus the self-contained offline page it serves. `i18n/locales/` holds the `en`/`fr`/`uk` messages, kept in parity by `i18n:check`.
+
+**Server**, in the three layers of ADR-0010. `server/api/` and `server/plugins/` are transport: validation, auth, rate limits, HTTP mapping, calling the domain rather than the db. `server/domain/` owns every db access as a named domain operation. `server/utils/` is infra — the db, storage, redis and email resources plus platform helpers. `layering:check` enforces the boundary; a shrink-only allowlist grandfathers the pre-ADR-0010 routes.
+
+**Shared.** `shared/` is what both sides import: locales, media types, cache names and the other rosters declared once instead of hand-synced.
+
+**Data.** `db/schema/` is the Drizzle schema, `db/migrations/` the generated SQL and its journal. `docker-compose.yml` brings up the local Postgres and MinIO.
+
+**Scripts.** `scripts/` is every repo script, ESM run with plain node: the `with-env.js` stage wrapper, the gates CI runs (`ds-check.js`, `proto-check.js`, `i18n-check.js`, `layering-check.js`, `capability-graph.js`) and maintenance one-offs.
+
+**Tests**, split by the infra they need. `tests/unit/` runs under `bun test` with none (fixtures in `tests/assets/`). `e2e/*.spec.ts` is the DB-free Playwright smoke suite, `e2e/authed/` the authenticated one against a migrated Postgres, `e2e/local/` the MinIO + transcoding runner that never runs in CI.
+
+**Docs.** `docs/adr/` is the decision log, `docs/GLOSSARY.md` the vocabulary, `docs/PR-CHECKLIST.md` the pre-PR routine; `docs/capability-graph.md` is generated, never hand-edited. `docs/design/` holds the design-system export, the prototype and design proposals. `docs/specs/` are dated specs kept as historical records — one of them is retired, so read the status banner before trusting a line.
