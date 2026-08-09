@@ -135,7 +135,7 @@ const isDirty = computed(
     gloss.value.trim().length > 0 ||
     story.value.trim().length > 0 ||
     sid.value !== undefined ||
-    file.value !== null,
+    !!file.value,
 );
 
 const discardNow = () => {
