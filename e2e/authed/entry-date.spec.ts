@@ -195,13 +195,22 @@ test.describe('correcting the day a word was said', () => {
       const field = await openTheEditor(authedPage);
 
       const sent: string[] = [];
+      const overtaking: string[] = [];
       const first = Promise.withResolvers<void>();
+      let isFirstReleased = false;
+
       await authedPage.route(`**/api/entries/${entryId}`, async (route) => {
         if (route.request().method() !== 'PATCH') {
           await route.fallback();
           return;
         }
         const body = route.request().postDataJSON() as { saidAt: string };
+        // A write reaching the route while the first is still held IS the
+        // regression, so it is recorded as it happens rather than slept on:
+        // the assertion below cannot pass by being quick, and it cannot fail
+        // on a slow runner either, because a serialised client never gets
+        // here twice.
+        if (sent.length > 0 && !isFirstReleased) overtaking.push(body.saidAt);
         sent.push(body.saidAt);
         if (sent.length === 1) await first.promise;
         await route.continue();
@@ -213,21 +222,21 @@ test.describe('correcting the day a word was said', () => {
       // The correction was a mistake, undone before the first write landed.
       // The entry still carries the old day at this moment, so a screen
       // comparing the pick against THAT sends nothing and lets the first
-      // write win. The revert waits its turn instead — two writes in flight
-      // at once could reach the row in either order.
+      // write win. The revert waits its turn instead.
       await field.fill(SAID_AT);
-      await authedPage.waitForTimeout(300);
-      expect(sent).toEqual([CORRECTED]);
-
+      isFirstReleased = true;
       first.resolve();
       await expect.poll(() => sent).toEqual([CORRECTED, SAID_AT]);
+      expect(overtaking).toEqual([]);
 
       await authedPage.locator('.detail__date-done').click();
       await expect(authedPage.locator('.detail__said')).toHaveText(
         `said ${SAID_AT_LABEL} edit`,
       );
-      // The screen and the row have to agree — a reordered pair would leave
-      // the reader looking at the date they chose over the one that stuck.
+      // The row has the last word. A client that let both writes fly would
+      // have the first one answered last — this test holds it open to make
+      // sure of that — and the row would end up on the date the reader
+      // undid, whatever the screen says.
       await authedPage.reload();
       await expect(authedPage.locator('.detail__said')).toHaveText(
         `said ${SAID_AT_LABEL} edit`,
@@ -307,9 +316,11 @@ test.describe('correcting the day a word was said', () => {
       // refused date into a change that quietly never happened.
       write.resolve();
       await expect(authedPage.locator('.detail__date-error')).toBeVisible();
-      await expect(authedPage.locator('.detail__date-field')).toHaveValue(
-        CORRECTED,
-      );
+      await expect(field).toHaveValue(CORRECTED);
+      // Reopening replaces the element that held the focus, so the editor
+      // has to take it — otherwise a keyboard reader is left on the body
+      // with an error they cannot reach.
+      await expect(field).toBeFocused();
     });
   });
 });

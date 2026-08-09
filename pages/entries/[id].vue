@@ -278,8 +278,16 @@ const sendSaidAt = async (saidAt: string) => {
     hasDateError.value = true;
     // The reader may have tapped done while this was in flight, and the
     // error line only exists inside the open editor. Reopening is the only
-    // way a refused date is reported rather than quietly not happening.
+    // way a refused date is reported rather than quietly not happening —
+    // and it takes the focus with it, because the trigger that held it is
+    // the element being replaced. Only when reopening: an editor already on
+    // screen has the focus somewhere the reader put it.
+    const isReopening = !isEditingDate.value;
     isEditingDate.value = true;
+    if (isReopening) {
+      await nextTick();
+      dateInput.value?.focus();
+    }
     return false;
   }
 };
