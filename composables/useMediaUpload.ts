@@ -31,6 +31,9 @@ interface UploadSlot {
 interface PendingUpload {
   entryId: string;
   upload: UploadSlot | null;
+  // The caller target this belongs to, not the entry it reached: a fresh word
+  // stays `undefined` across a swap, because the entry is still this
+  // session's own.
   openedFor: string | undefined;
 }
 
@@ -82,7 +85,7 @@ const toMediaDeclaration = (file: File) => ({
   sizeBytes: file.size,
 });
 
-const createEntry = async (input: ComposeInput): Promise<PendingUpload> => {
+const createEntry = async (input: ComposeInput) => {
   const created = await $fetch<{
     entry: { id: string };
     upload: UploadSlot | null;
@@ -97,17 +100,10 @@ const createEntry = async (input: ComposeInput): Promise<PendingUpload> => {
       media: input.file ? toMediaDeclaration(input.file) : undefined,
     },
   });
-  return {
-    entryId: created.entry.id,
-    upload: created.upload,
-    openedFor: undefined,
-  };
+  return { entryId: created.entry.id, upload: created.upload };
 };
 
-const attachMedia = async (
-  entryId: string,
-  file: File,
-): Promise<PendingUpload> => {
+const attachMedia = async (entryId: string, file: File) => {
   const attached = await $fetch<{ upload: UploadSlot }>(
     `/api/entries/${encodeURIComponent(entryId)}/media`,
     {
@@ -116,7 +112,7 @@ const attachMedia = async (
       body: toMediaDeclaration(file),
     },
   );
-  return { entryId, upload: attached.upload, openedFor: entryId };
+  return { entryId, upload: attached.upload };
 };
 
 export const useMediaUpload = () => {
@@ -147,6 +143,17 @@ export const useMediaUpload = () => {
     return null;
   };
 
+  // Two gestures, two verbs. reset() forgets the entry entirely; swap() keeps
+  // the word already created and drops only its slot, so the next Keep
+  // attaches the new file instead of creating a second entry.
+  const swap = () => {
+    phase.value = 'idle';
+    progress.value = 0;
+    errorMessage.value = undefined;
+    errorCode.value = undefined;
+    if (resumeFrom !== null) resumeFrom = { ...resumeFrom, upload: null };
+  };
+
   // Aborts an in-flight upload so the sheet is never an inescapable modal.
   const cancel = () => {
     inFlight?.abort();
@@ -174,25 +181,31 @@ export const useMediaUpload = () => {
       return { entryId: attachTo };
     }
 
-    if (!resumeFrom) {
+    // An entry already created keeps its id: only the slot is minted again,
+    // through the attach route.
+    let pending = resumeFrom;
+    if (pending === null || (pending.upload === null && file !== null)) {
+      const into = pending?.entryId ?? attachTo;
       progress.value = 0;
       phase.value = 'creating';
       try {
-        resumeFrom =
-          attachTo !== undefined && file !== null
-            ? await attachMedia(attachTo, file)
+        const opened =
+          into !== undefined && file !== null
+            ? await attachMedia(into, file)
             : await createEntry(input);
+        pending = { ...opened, openedFor: attachTo };
+        resumeFrom = pending;
       } catch (error) {
         return fail(
           error,
-          attachTo === undefined
+          into === undefined
             ? 'Could not save this word.'
             : 'Could not attach this media.',
         );
       }
     }
 
-    const { entryId, upload: slot } = resumeFrom;
+    const { entryId, upload: slot } = pending;
     if (!file || !slot) {
       phase.value = 'done';
       return { entryId };
@@ -236,5 +249,14 @@ export const useMediaUpload = () => {
     return { entryId };
   };
 
-  return { phase, progress, errorMessage, errorCode, submit, reset, cancel };
+  return {
+    phase,
+    progress,
+    errorMessage,
+    errorCode,
+    submit,
+    reset,
+    swap,
+    cancel,
+  };
 };

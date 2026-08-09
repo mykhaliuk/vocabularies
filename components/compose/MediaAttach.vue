@@ -35,7 +35,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   'update:file': [File | null];
   retry: [];
-  reset: [];
+  swap: [];
   'see-premium': [];
 }>();
 
@@ -178,12 +178,10 @@ const onDrop = (event: DragEvent) => {
 
 const openPicker = () => inputRef.value?.click();
 
-// Drops the failed attempt entirely — clears the file AND the upload state, so
-// the next pick starts a fresh sequence instead of resuming the old slot.
 const chooseAnother = () => {
   localError.value = undefined;
   emit('update:file', null);
-  emit('reset');
+  emit('swap');
   void nextTick(openPicker);
 };
 

@@ -308,6 +308,65 @@ describe('create path', () => {
     ]);
   });
 
+  test('swap() attaches the next file to the word already created', async () => {
+    const upload = useMediaUpload();
+    failing.add(UPLOAD_URL);
+
+    expect(
+      await upload.submit(composeInput({ file: audioFile() }), {
+        entryId: undefined,
+      }),
+    ).toBeNull();
+
+    failing.clear();
+    requests.length = 0;
+    upload.swap();
+    const result = await upload.submit(composeInput({ file: audioFile() }), {
+      entryId: undefined,
+    });
+
+    expect(result).toEqual({ entryId: ENTRY_ID });
+    expect(sequence()).toEqual([
+      `POST /api/entries/${ENTRY_ID}/media`,
+      `PUT ${UPLOAD_URL}`,
+      'POST /api/media/confirm',
+    ]);
+  });
+
+  test('swap() then keeping without a file adds no second word', async () => {
+    const upload = useMediaUpload();
+    failing.add(UPLOAD_URL);
+
+    await upload.submit(composeInput({ file: audioFile() }), {
+      entryId: undefined,
+    });
+
+    failing.clear();
+    requests.length = 0;
+    upload.swap();
+    const result = await upload.submit(composeInput(), { entryId: undefined });
+
+    expect(result).toEqual({ entryId: ENTRY_ID });
+    expect(sequence()).toEqual([]);
+    expect(upload.phase.value).toBe('done');
+  });
+
+  test('swap() clears the failure the panel is showing', async () => {
+    const upload = useMediaUpload();
+    failing.add(UPLOAD_URL);
+
+    await upload.submit(composeInput({ file: audioFile() }), {
+      entryId: undefined,
+    });
+    expect(upload.phase.value).toBe('error');
+
+    upload.swap();
+
+    expect(upload.phase.value).toBe('idle');
+    expect(upload.errorMessage.value).toBeUndefined();
+    expect(upload.progress.value).toBe(0);
+  });
+
   test('reset() lets the next submit create a second entry', async () => {
     const upload = useMediaUpload();
     const input = composeInput({ file: audioFile() });

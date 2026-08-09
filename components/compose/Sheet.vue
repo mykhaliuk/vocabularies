@@ -6,8 +6,16 @@ import type { SpeakerView } from '~/server/utils/speaker-view';
 // adapted to upload-first (VKB-67). Rises over the blurred app behind it.
 const { t } = useI18n();
 const { isOpen, close, notifyPosted } = useCompose();
-const { phase, progress, errorMessage, errorCode, submit, reset, cancel } =
-  useMediaUpload();
+const {
+  phase,
+  progress,
+  errorMessage,
+  errorCode,
+  submit,
+  reset,
+  swap,
+  cancel,
+} = useMediaUpload();
 // Shapes the picker only — the server stays the gate (ADR-0012).
 const { entitlements } = useEntitlements();
 
@@ -226,7 +234,7 @@ const onKeep = async () => {
           :error-message="errorMessage"
           @update:file="file = $event"
           @retry="onKeep"
-          @reset="reset"
+          @swap="swap"
           @see-premium="premiumOpen = true"
         />
 
