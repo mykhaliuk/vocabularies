@@ -33,6 +33,9 @@ const OTHER_SLOT = {
 
 const requests: RecordedCall[] = [];
 const failing = new Set<string>();
+// A PUT answered with a non-2xx status and an S3/R2 error body, as opposed to
+// `failing`, which drops the connection before any answer arrives.
+const refusals = new Map<string, { status: number; body: string }>();
 const phaseTrail: string[] = [];
 let watched: { value: string } | null = null;
 let contentTypeSent = '';
@@ -70,8 +73,13 @@ const fakeFetch = async (url: string, options: Record<string, unknown>) => {
   return {};
 };
 
+const refusalBody = (code: string) =>
+  `<?xml version="1.0" encoding="UTF-8"?><Error><Code>${code}</Code>` +
+  `<Message>whatever R2 says</Message></Error>`;
+
 class FakeXhr {
   status = 0;
+  responseText = '';
   upload = {
     addEventListener: (name: string, handler: (event: unknown) => void) => {
       if (name === 'progress') this.onProgress = handler;
@@ -100,10 +108,12 @@ class FakeXhr {
     this.call.body = body;
     samplePhase();
     requests.push(this.call);
-    this.status = uploadStatus;
+    const refusal = refusals.get(this.call.url);
+    this.status = refusal ? refusal.status : uploadStatus;
+    this.responseText = refusal ? refusal.body : '';
     const failed = failing.has(this.call.url);
     queueMicrotask(() => {
-      if (!failed) {
+      if (!failed && !refusal) {
         this.onProgress?.({ lengthComputable: true, loaded: 5, total: 10 });
       }
       this.listeners.get(failed ? 'error' : 'load')?.();
@@ -135,6 +145,7 @@ beforeEach(() => {
   requests.length = 0;
   phaseTrail.length = 0;
   failing.clear();
+  refusals.clear();
   watched = null;
   uploadStatus = 200;
   contentTypeSent = '';
@@ -381,6 +392,91 @@ describe('create path', () => {
       `PUT ${UPLOAD_URL}`,
       'POST /api/media/confirm',
     ]);
+  });
+});
+
+describe('a refused PUT', () => {
+  const keep = (upload: ReturnType<typeof useMediaUpload>) =>
+    upload.submit(composeInput({ file: audioFile() }), { entryId: undefined });
+
+  test('keeps the code R2 named instead of only the status', async () => {
+    const upload = useMediaUpload();
+    refusals.set(UPLOAD_URL, {
+      status: 403,
+      body: refusalBody('SignatureDoesNotMatch'),
+    });
+
+    expect(await keep(upload)).toBeNull();
+    expect(upload.phase.value).toBe('error');
+    expect(upload.errorCode.value).toBe('SignatureDoesNotMatch');
+  });
+
+  test('re-mints the slot when the signature is the thing refused', async () => {
+    const upload = useMediaUpload();
+    refusals.set(UPLOAD_URL, {
+      status: 403,
+      body: refusalBody('AccessDenied'),
+    });
+
+    expect(await keep(upload)).toBeNull();
+    expect(upload.errorCode.value).toBe('AccessDenied');
+
+    refusals.clear();
+    requests.length = 0;
+    const retry = await keep(upload);
+
+    expect(retry).toEqual({ entryId: ENTRY_ID });
+    expect(sequence()).toEqual([
+      `POST /api/entries/${ENTRY_ID}/media`,
+      `PUT ${UPLOAD_URL}`,
+      'POST /api/media/confirm',
+    ]);
+  });
+
+  test('resumes the same slot when the bytes were the problem', async () => {
+    const upload = useMediaUpload();
+    refusals.set(UPLOAD_URL, {
+      status: 400,
+      body: refusalBody('EntityTooLarge'),
+    });
+
+    expect(await keep(upload)).toBeNull();
+    expect(upload.errorCode.value).toBe('EntityTooLarge');
+
+    refusals.clear();
+    requests.length = 0;
+    await keep(upload);
+
+    expect(sequence()).toEqual([
+      `PUT ${UPLOAD_URL}`,
+      'POST /api/media/confirm',
+    ]);
+  });
+
+  test('reads an unnamed refusal as transient, not as a dead slot', async () => {
+    const upload = useMediaUpload();
+    refusals.set(UPLOAD_URL, { status: 503, body: '' });
+
+    expect(await keep(upload)).toBeNull();
+    expect(upload.errorCode.value).toBeUndefined();
+
+    refusals.clear();
+    requests.length = 0;
+    await keep(upload);
+
+    expect(sequence()).toEqual([
+      `PUT ${UPLOAD_URL}`,
+      'POST /api/media/confirm',
+    ]);
+  });
+
+  test('a dropped connection carries no code at all', async () => {
+    const upload = useMediaUpload();
+    failing.add(UPLOAD_URL);
+
+    expect(await keep(upload)).toBeNull();
+    expect(upload.errorCode.value).toBeUndefined();
+    expect(upload.errorMessage.value).toBe('The upload did not finish.');
   });
 });
 

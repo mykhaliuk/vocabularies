@@ -51,6 +51,39 @@ class UploadAbort extends Error {
   }
 }
 
+class UploadError extends Error {
+  code: string | undefined;
+
+  constructor(status: number, code: string | undefined) {
+    super(`upload failed (${status})`);
+    this.name = 'UploadError';
+    this.code = code;
+  }
+}
+
+const S3_ERROR_CODE_RE = /<Code>([^<]+)<\/Code>/;
+
+// S3 and R2 refuse a PUT with an XML body naming the cause. A cross-origin
+// refusal only exposes it when the error response carries the CORS headers,
+// so an absent code means "unknown", never "fine".
+const parseUploadErrorCode = (body: string): string | undefined =>
+  S3_ERROR_CODE_RE.exec(body)?.[1];
+
+// Refusals of the signature itself: these condemn the slot, not the bytes, so
+// resuming against it can only fail identically. EntityTooLarge is absent on
+// purpose — a fresh slot pins the same length and would be refused again.
+const DEAD_SLOT_CODES: ReadonlySet<string> = new Set([
+  'AccessDenied',
+  'ExpiredToken',
+  'RequestTimeTooSkewed',
+  'SignatureDoesNotMatch',
+]);
+
+const isDeadSlot = (error: unknown): boolean =>
+  error instanceof UploadError &&
+  error.code !== undefined &&
+  DEAD_SLOT_CODES.has(error.code);
+
 const putWithProgress = (
   slot: UploadSlot,
   file: File,
@@ -68,7 +101,11 @@ const putWithProgress = (
     });
     xhr.addEventListener('load', () => {
       if (xhr.status >= 200 && xhr.status < 300) resolve();
-      else reject(new Error(`upload failed (${xhr.status})`));
+      else {
+        reject(
+          new UploadError(xhr.status, parseUploadErrorCode(xhr.responseText)),
+        );
+      }
     });
     xhr.addEventListener('error', () =>
       reject(new Error('upload network error')),
@@ -137,7 +174,8 @@ export const useMediaUpload = () => {
 
   const fail = (error: unknown, fallback: string) => {
     const data = (error as { data?: { data?: { code?: string } } })?.data;
-    errorCode.value = data?.data?.code;
+    errorCode.value =
+      error instanceof UploadError ? error.code : data?.data?.code;
     errorMessage.value = messageFromError(error, fallback);
     phase.value = 'error';
     return null;
@@ -228,6 +266,9 @@ export const useMediaUpload = () => {
       if (error instanceof UploadAbort) {
         phase.value = 'idle';
         return null;
+      }
+      if (isDeadSlot(error)) {
+        resumeFrom = { entryId, upload: null, openedFor: attachTo };
       }
       return fail(error, 'The upload did not finish.');
     } finally {
