@@ -1,3 +1,4 @@
+import { reportRatelimitFailOpen } from '~/server/utils/ratelimit-alert';
 import { useEmailRatelimit, useIpRatelimit } from '~/server/utils/ratelimit';
 
 export interface MagicLinkRatelimitVerdict {
@@ -27,11 +28,14 @@ export const checkMagicLinkRateLimits = async (
     emailSettled.status === 'rejected' ||
     ipSettled.status === 'rejected'
   ) {
+    const emailError =
+      emailSettled?.status === 'rejected' ? emailSettled.reason : null;
+    const ipError = ipSettled?.status === 'rejected' ? ipSettled.reason : null;
     console.error('[magic-link] ratelimit upstream failure (failing open)', {
-      emailError:
-        emailSettled?.status === 'rejected' ? emailSettled.reason : null,
-      ipError: ipSettled?.status === 'rejected' ? ipSettled.reason : null,
+      emailError,
+      ipError,
     });
+    reportRatelimitFailOpen('magic-link', emailError ?? ipError);
     return { allowed: true, reset: 0 };
   }
 
