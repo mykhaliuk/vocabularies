@@ -1,5 +1,36 @@
 # Vocabu — Tech Stack Design
 
+> **Historical record.** This document is the original 2026-03-25 decision and
+> is kept verbatim. The shipped implementation has since diverged in most of
+> its sections — the drift is document-wide, so it carries one banner here
+> rather than one per section. Read it as what was decided then, not as a
+> description of Vocabu today.
+>
+> **The product model changed outright.** Vocabu is a personal dictionary, not
+> a social app: there is no sharing, no follows, no visibility tiers and no
+> explore feed. The feed is the owner's own entries, `/discover` is a
+> placeholder behind the auth guard, and follows plus friends-only visibility
+> are listed out of scope for v0 in `ROADMAP.md`. A moment is audio **or**
+> video (video up to 20s, audio up to 3min), not a 60s audio clip, and the text
+> attached to a word is a **gloss**, not a caption — see `docs/GLOSSARY.md`.
+>
+> **Five supporting choices were never adopted.** UnoCSS — styling is plain CSS
+> over the design-system tokens in `assets/css/`. Pinia — state lives in
+> composables. Vitest — `test:unit` is `bun test tests/unit`. Vercel Analytics
+> — not installed. IndexedDB, with its background sync and last-write-wins
+> conflict resolution — no app code uses it (`idb` appears only as a Workbox
+> transitive dependency), and offline is service-worker caching alone, with no
+> cache-first audio strategy.
+>
+> **The media and CI sections are superseded.** `shared/media-types.ts` is the
+> format roster; the size and duration caps are entitlements
+> (`maxUploadBytes`, `maxVideoDurationSec`, `maxAudioDurationSec` — ADR-0012),
+> and video upload is itself a per-plan capability; the upload pipeline is
+> ADR-0009; CI runs the three jobs described in `README.md`. For current
+> tooling and scripts the README is the source of truth, `docs/adr/` holds the
+> decisions that replaced these, and `docs/capability-graph.md` maps what the
+> product can actually do today.
+
 ## Product Summary
 
 Vocabu is a social app for capturing and sharing short audio moments — a baby's first words, a friend's funny phrase. Users record or upload short audio clips (up to 60s), attach captions, and share them with configurable visibility: private, friends-only, or public.
