@@ -28,8 +28,8 @@ const props = defineProps<{
   phase: ComposePhase;
   progress: number;
   entitlements: Entitlements | null;
-  errorCode: string | null;
-  errorMessage: string | null;
+  errorCode: string | undefined;
+  errorMessage: string | undefined;
 }>();
 
 const emit = defineEmits<{
@@ -55,7 +55,7 @@ const limits = computed(() => props.entitlements);
 
 const inputRef = ref<HTMLInputElement | null>(null);
 const dragging = ref(false);
-const localError = ref<string | null>(null);
+const localError = ref<string | undefined>();
 
 const selectedIsVideo = computed(() =>
   props.file ? isVideoFile(props.file) : false,
@@ -131,7 +131,7 @@ const withinDuration = async (
 
 const accept = async (file: File | undefined) => {
   if (!file) return;
-  localError.value = null;
+  localError.value = undefined;
 
   // Strict roster gate: the server requires a contentType from the same
   // roster, so anything outside it (including an empty type from an odd
@@ -181,14 +181,14 @@ const openPicker = () => inputRef.value?.click();
 // Drops the failed attempt entirely — clears the file AND the upload state, so
 // the next pick starts a fresh sequence instead of resuming the old slot.
 const chooseAnother = () => {
-  localError.value = null;
+  localError.value = undefined;
   emit('update:file', null);
   emit('reset');
   void nextTick(openPicker);
 };
 
 const clearFile = () => {
-  localError.value = null;
+  localError.value = undefined;
   emit('update:file', null);
 };
 

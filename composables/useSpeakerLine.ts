@@ -16,10 +16,10 @@ export const useSpeakerLine = () => {
   const formatAgeLabel = (
     speaker: EntrySpeakerView | null,
     saidAt: string,
-  ): string | null => {
-    if (!speaker) return null;
+  ): string | undefined => {
+    if (!speaker) return undefined;
     const age = speakerAgeAt(speaker.birthday, saidAt);
-    if (!age) return null;
+    if (!age) return undefined;
     if (age.kind === 'newborn') return t('app.feed.age.newborn');
     if (age.kind === 'months') return t('app.feed.age.months', { n: age.n });
     return t('app.feed.age.years', { n: age.n });
@@ -28,20 +28,20 @@ export const useSpeakerLine = () => {
   const formatSpeakerLead = (speaker: EntrySpeakerView | null): string =>
     speaker?.name ?? t('app.feed.you');
 
-  // Null when there is nothing to append — an unattributed word, or a
+  // Absent when there is nothing to append — an unattributed word, or a
   // speaker with neither relation nor birthday. Attribution never blocks a
   // word, so it never pads one out either.
   const formatSpeakerTail = (
     speaker: EntrySpeakerView | null,
     saidAt: string,
-  ): string | null => {
-    if (!speaker) return null;
+  ): string | undefined => {
+    if (!speaker) return undefined;
     // Relation before age — the spec's own metaline, "Theo · my son · 3"
     // (word-detail-spec.html §Thin entries).
     const parts = [speaker.rel, formatAgeLabel(speaker, saidAt)].filter(
       Boolean,
     );
-    return parts.length > 0 ? ' · ' + parts.join(' · ') : null;
+    return parts.length > 0 ? ' · ' + parts.join(' · ') : undefined;
   };
 
   return { formatAgeLabel, formatSpeakerLead, formatSpeakerTail };

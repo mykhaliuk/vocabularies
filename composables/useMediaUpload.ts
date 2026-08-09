@@ -122,8 +122,8 @@ const attachMedia = async (
 export const useMediaUpload = () => {
   const phase = ref<ComposePhase>('idle');
   const progress = ref(0);
-  const errorMessage = ref<string | null>(null);
-  const errorCode = ref<string | null>(null);
+  const errorMessage = ref<string | undefined>();
+  const errorCode = ref<string | undefined>();
 
   // Both endpoints commit their row before answering, so a retry has to reuse
   // the slot rather than mint a second one.
@@ -133,15 +133,15 @@ export const useMediaUpload = () => {
   const reset = () => {
     phase.value = 'idle';
     progress.value = 0;
-    errorMessage.value = null;
-    errorCode.value = null;
+    errorMessage.value = undefined;
+    errorCode.value = undefined;
     resumeFrom = null;
     inFlight = null;
   };
 
   const fail = (error: unknown, fallback: string) => {
     const data = (error as { data?: { data?: { code?: string } } })?.data;
-    errorCode.value = data?.data?.code ?? null;
+    errorCode.value = data?.data?.code;
     errorMessage.value = messageFromError(error, fallback);
     phase.value = 'error';
     return null;
@@ -157,8 +157,8 @@ export const useMediaUpload = () => {
     input: ComposeInput,
     target: ComposeTarget,
   ): Promise<{ entryId: string } | null> => {
-    errorMessage.value = null;
-    errorCode.value = null;
+    errorMessage.value = undefined;
+    errorCode.value = undefined;
 
     const attachTo = target.entryId;
     const { file } = input;

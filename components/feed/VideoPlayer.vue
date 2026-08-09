@@ -40,7 +40,7 @@ const styleVars = computed(() => videoStyleVars(props.variant));
 const expanded = ref(false);
 const playing = ref(false);
 const failed = ref(false);
-const sourceUrl = ref<string | null>(null);
+const sourceUrl = ref<string | undefined>();
 const playedFraction = ref(0);
 const elementDurationSec = ref<number | null>(null);
 
@@ -72,13 +72,15 @@ const durationLabel = computed(() => {
   return `${minutes}:${String(secs).padStart(2, '0')}`;
 });
 
-const resolveUrl = async (forceRefresh: boolean): Promise<string | null> => {
+const resolveUrl = async (
+  forceRefresh: boolean,
+): Promise<string | undefined> => {
   try {
     const playback = await resolvePlayback(props.entryId, forceRefresh);
-    return playback?.videoUrl ?? null;
+    return playback?.videoUrl ?? undefined;
   } catch (error) {
     console.error('[FeedVideoPlayer] failed to resolve playback', error);
-    return null;
+    return undefined;
   }
 };
 
@@ -215,7 +217,7 @@ onUnmounted(() => {
     >
       <video
         ref="videoRef"
-        :src="sourceUrl ?? undefined"
+        :src="sourceUrl"
         class="video__el"
         playsinline
         preload="metadata"

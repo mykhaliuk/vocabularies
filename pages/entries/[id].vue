@@ -194,7 +194,7 @@ const saidLine = computed(() => {
   if (!entry.value) return '';
   const age = formatAgeLabel(entry.value.speaker, entry.value.saidAt);
   const date = saidAtLabel.value;
-  return age === null
+  return age === undefined
     ? t('app.entry.saidOn', { date })
     : t('app.entry.saidOnAged', { date, age });
 });

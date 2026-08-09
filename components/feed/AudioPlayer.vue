@@ -96,13 +96,15 @@ const onEnded = () => {
   playedFraction.value = 0;
 };
 
-const resolveUrl = async (forceRefresh: boolean): Promise<string | null> => {
+const resolveUrl = async (
+  forceRefresh: boolean,
+): Promise<string | undefined> => {
   try {
     const playback = await resolvePlayback(props.entryId, forceRefresh);
-    return playback?.audioUrl ?? null;
+    return playback?.audioUrl ?? undefined;
   } catch (error) {
     console.error('[FeedAudioPlayer] failed to resolve playback', error);
-    return null;
+    return undefined;
   }
 };
 
