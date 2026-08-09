@@ -106,6 +106,25 @@ test.describe('dismissing the compose sheet (authed)', () => {
     await expect(authedPage.locator('.compose--open')).toBeVisible();
   });
 
+  test('a chosen speaker is content too, so it asks', async ({
+    authedPage,
+  }) => {
+    const made = await authedPage.request.post('/api/speakers', {
+      data: { name: 'Mira', rel: 'my daughter' },
+    });
+    expect(made.ok()).toBe(true);
+    await authedPage.reload();
+
+    const sheet = await openCompose(authedPage);
+    await authedPage.locator('.chips__chip', { hasText: 'Mira' }).click();
+    await expect(authedPage.locator('.chips__chip--active')).toBeVisible();
+
+    await authedPage.getByRole('button', { name: /^cancel$/i }).click();
+
+    await expect(confirmSheet(authedPage)).toBeVisible();
+    await expect(sheet).toBeVisible();
+  });
+
   test('the question takes the keyboard away from the sheet behind it', async ({
     authedPage,
   }) => {
@@ -161,10 +180,56 @@ test.describe('cancelling while the word is being created', () => {
 
     expect(createdId).not.toBe('');
     await expect
-      .poll(async () => {
-        const res = await authedPage.request.get(`/api/entries/${createdId}`);
-        return res.status();
-      })
+      .poll(
+        async () => {
+          const res = await authedPage.request.get(`/api/entries/${createdId}`);
+          return res.status();
+        },
+        { timeout: 15000 },
+      )
+      .toBe(404);
+  });
+
+  test('a word that lands mid-question does not answer it', async ({
+    authedPage,
+  }) => {
+    let createdId = '';
+    await authedPage.route('**/api/entries', async (route) => {
+      if (route.request().method() !== 'POST') {
+        await route.continue();
+        return;
+      }
+      const response = await route.fetch();
+      const body = await response.text();
+      createdId = (JSON.parse(body) as { entry: { id: string } }).entry.id;
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      await route.fulfill({ response, body });
+    });
+
+    await openCompose(authedPage);
+    await write(authedPage, 'landed-under-the-question');
+    await authedPage.getByRole('button', { name: /^keep$/i }).click();
+    await authedPage.getByRole('button', { name: /^cancel$/i }).click();
+    await expect(confirmSheet(authedPage)).toBeVisible();
+
+    // The keep completes here. It must not close the question, navigate, or
+    // decide on the user's behalf.
+    await authedPage.waitForTimeout(4000);
+    await expect(confirmSheet(authedPage)).toBeVisible();
+    await expect(authedPage).toHaveURL(/\/feed$/);
+
+    await authedPage.getByRole('button', { name: /^discard$/i }).click();
+    await expect(authedPage.locator('.compose--open')).toBeHidden();
+
+    expect(createdId).not.toBe('');
+    await expect
+      .poll(
+        async () => {
+          const res = await authedPage.request.get(`/api/entries/${createdId}`);
+          return res.status();
+        },
+        { timeout: 15000 },
+      )
       .toBe(404);
   });
 });

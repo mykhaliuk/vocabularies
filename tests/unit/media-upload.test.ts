@@ -42,20 +42,28 @@ let contentTypeSent = '';
 let uploadStatus = 200;
 
 // Parks a request mid-flight so a phase can be cancelled while it is the
-// current one. The first call to that url takes the gate; later ones run free.
-const gates = new Map<string, Promise<void>>();
-const releases = new Map<string, () => void>();
+// current one. Gates queue per url — each call takes the next one — so two
+// overlapping runs can be parked and released independently.
+const gates = new Map<string, Promise<void>[]>();
+const releases = new Map<string, (() => void)[]>();
 const heldUploads = new Set<string>();
 
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 const holdRequest = (url: string) => {
-  gates.set(url, new Promise<void>((resolve) => releases.set(url, resolve)));
+  const queued = gates.get(url) ?? [];
+  const waiting = releases.get(url) ?? [];
+  queued.push(
+    new Promise<void>((resolve) => {
+      waiting.push(resolve);
+    }),
+  );
+  gates.set(url, queued);
+  releases.set(url, waiting);
 };
 
 const releaseRequest = async (url: string) => {
-  releases.get(url)?.();
-  releases.delete(url);
+  releases.get(url)?.shift()?.();
   await tick();
 };
 
@@ -79,11 +87,8 @@ const fakeFetch = async (url: string, options: Record<string, unknown>) => {
     body: options.body,
     credentials: options.credentials,
   });
-  const gate = gates.get(url);
-  if (gate !== undefined) {
-    gates.delete(url);
-    await gate;
-  }
+  const gate = gates.get(url)?.shift();
+  if (gate !== undefined) await gate;
   if (failing.has(url)) throw new Error(`refused ${url}`);
   if (url === '/api/entries') {
     const body = options.body as { media?: unknown };
@@ -571,6 +576,87 @@ describe('cancelling is a discard', () => {
     expect(await keeping(upload)).toEqual({ entryId: ENTRY_ID });
     requests.length = 0;
 
+    upload.cancel();
+
+    expect(sequence()).toEqual([]);
+  });
+
+  test('cancelling twice deletes both words and revives neither', async () => {
+    const upload = useMediaUpload();
+    holdRequest('/api/entries');
+    holdRequest('/api/entries');
+
+    const first = keeping(upload);
+    await tick();
+    upload.cancel();
+
+    upload.reset();
+    const second = keeping(upload);
+    await tick();
+    upload.cancel();
+
+    await releaseRequest('/api/entries');
+    await releaseRequest('/api/entries');
+
+    expect(await first).toBeNull();
+    expect(await second).toBeNull();
+    expect(sequence()).toEqual([
+      'POST /api/entries',
+      'POST /api/entries',
+      `DELETE ${deleteUrl}`,
+      `DELETE ${deleteUrl}`,
+    ]);
+    expect(upload.phase.value).toBe('idle');
+  });
+
+  test('cancelling aborts every upload still running', async () => {
+    const upload = useMediaUpload();
+    heldUploads.add(UPLOAD_URL);
+
+    const first = keeping(upload);
+    await tick();
+    const second = keeping(upload);
+    await tick();
+
+    upload.cancel();
+
+    expect(await first).toBeNull();
+    expect(await second).toBeNull();
+    expect(upload.phase.value).toBe('idle');
+  });
+
+  test('a discard asked before the word landed still takes it', async () => {
+    const upload = useMediaUpload();
+    holdRequest('/api/media/confirm');
+
+    const run = keeping(upload);
+    await tick();
+    expect(upload.phase.value).toBe('finalizing');
+
+    upload.askCancel();
+    await releaseRequest('/api/media/confirm');
+    expect(await run).toEqual({ entryId: ENTRY_ID });
+    expect(upload.phase.value).toBe('done');
+
+    requests.length = 0;
+    upload.cancel();
+
+    expect(sequence()).toEqual([`DELETE ${deleteUrl}`]);
+    expect(upload.phase.value).toBe('idle');
+  });
+
+  test('un-asking leaves the word that landed meanwhile alone', async () => {
+    const upload = useMediaUpload();
+    holdRequest('/api/media/confirm');
+
+    const run = keeping(upload);
+    await tick();
+    upload.askCancel();
+    await releaseRequest('/api/media/confirm');
+    expect(await run).toEqual({ entryId: ENTRY_ID });
+
+    requests.length = 0;
+    upload.unaskCancel();
     upload.cancel();
 
     expect(sequence()).toEqual([]);

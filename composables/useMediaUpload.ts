@@ -106,6 +106,10 @@ const discardEntry = async (entryId: string) => {
   }
 };
 
+// XHR, not fetch, for one reason: upload progress. `fetch` reports none —
+// `Response.body` is the download — and the replacement that would, a
+// `ReadableStream` body with `duplex: 'half'`, is Chromium-only, so it is out
+// for an installed iOS Safari PWA. Abort and the error body work either way.
 const putWithProgress = (
   slot: UploadSlot,
   file: File,
@@ -183,13 +187,27 @@ export const useMediaUpload = () => {
   // Both endpoints commit their row before answering, so a retry has to reuse
   // the slot rather than mint a second one.
   let resumeFrom: PendingUpload | null = null;
-  let inFlight: XMLHttpRequest | null = null;
 
-  // Cancelling closes the sheet at once and cleans up behind the user, so a
-  // second submit can start while the first is still unwinding. Both are
-  // named by run, otherwise the late one clears the live one's state.
+  // Dismissing closes the sheet at once and cleans up behind the user, so a
+  // second submit can begin while the first is still unwinding. Every submit
+  // is a numbered run, and only a run that still owns the shared state above
+  // and the refs below may write them.
   let runId = 0;
-  let cancelledRun = 0;
+
+  // Monotonic: a cancel cancels every run up to the current one. That is not
+  // over-reach — a later run can only exist because the user dismissed the
+  // one before it, so anything below the threshold is already abandoned. It
+  // also means a run that reads as live IS the newest one.
+  let cancelledThrough = 0;
+
+  // The run the sheet has asked the user about. It can finish while the
+  // question is still on screen, and their answer has to decide even then.
+  let questionedRun = 0;
+
+  // Keyed by run: one run must never abort or forget another's upload.
+  const uploads = new Map<number, XMLHttpRequest>();
+
+  const isCancelled = (run: number) => run <= cancelledThrough;
 
   const reset = () => {
     phase.value = 'idle';
@@ -197,7 +215,7 @@ export const useMediaUpload = () => {
     errorMessage.value = undefined;
     errorCode.value = undefined;
     resumeFrom = null;
-    inFlight = null;
+    questionedRun = 0;
   };
 
   const fail = (error: unknown, fallback: string) => {
@@ -220,6 +238,8 @@ export const useMediaUpload = () => {
     if (resumeFrom !== null) resumeFrom = { ...resumeFrom, upload: null };
   };
 
+  // Answers a different question from isCancelled: not "is this run over?"
+  // but "does it still own the UI?". A stale run must clear nothing.
   const abandonRun = (run: number) => {
     if (run === runId) reset();
     return null;
@@ -230,19 +250,33 @@ export const useMediaUpload = () => {
     return abandonRun(run);
   };
 
+  // The sheet has put the discard question to the user, about whichever run
+  // is current, and holds that run's completion until they answer.
+  const askCancel = () => {
+    questionedRun = runId;
+  };
+
+  const unaskCancel = () => {
+    questionedRun = 0;
+  };
+
   // Cancel is a discard: when it settles, nothing this session created is
   // left. A run still in flight cleans up at its next checkpoint — aborting
   // the client would not roll the server back — so all this has to do is
   // mark it, and finish the job itself when no run is left to reach one.
   const cancel = () => {
-    cancelledRun = runId;
-    if (inFlight !== null) {
-      inFlight.abort();
-      return;
-    }
+    cancelledThrough = runId;
+    // Every run at or below the threshold is cancelled, so every upload still
+    // running belongs to one of them.
+    for (const xhr of uploads.values()) xhr.abort();
+    // The current run is the one holding the phase; if it is still settling it
+    // reaches a checkpoint of its own and cleans up there.
     if (SETTLING_PHASES.has(phase.value)) return;
-    // A word already kept is not this session's to throw away.
-    const pending = phase.value === 'done' ? null : resumeFrom;
+    // A word already kept is not this session's to throw away — unless the
+    // user was asked about that very run before it landed, in which case the
+    // request predates the keep and outranks it.
+    const asked = questionedRun === runId;
+    const pending = phase.value === 'done' && !asked ? null : resumeFrom;
     if (pending === null) {
       abandonRun(runId);
       return;
@@ -289,7 +323,7 @@ export const useMediaUpload = () => {
             : await createEntry(input);
         // Before the shared state, so a cancelled run cannot hand its slot
         // to the run that replaced it.
-        if (cancelledRun === run) {
+        if (isCancelled(run)) {
           return discardRun(run, opened.entryId, isOwnEntry);
         }
         pending = { ...opened, openedFor: attachTo };
@@ -297,7 +331,7 @@ export const useMediaUpload = () => {
       } catch (error) {
         // A re-mint that fails still leaves the entry an earlier run created,
         // and a cancel has to take that with it.
-        if (cancelledRun === run) {
+        if (isCancelled(run)) {
           return pending === null
             ? abandonRun(run)
             : discardRun(run, pending.entryId, isOwnEntry);
@@ -324,14 +358,14 @@ export const useMediaUpload = () => {
         slot,
         file,
         (pct) => {
-          progress.value = pct;
+          if (!isCancelled(run)) progress.value = pct;
         },
         (xhr) => {
-          inFlight = xhr;
+          uploads.set(run, xhr);
         },
       );
     } catch (error) {
-      if (cancelledRun !== run) {
+      if (!isCancelled(run)) {
         if (error instanceof UploadAbort) {
           phase.value = 'idle';
           return null;
@@ -342,10 +376,10 @@ export const useMediaUpload = () => {
         return fail(error, 'The upload did not finish.');
       }
     } finally {
-      inFlight = null;
+      uploads.delete(run);
     }
 
-    if (cancelledRun === run) return discardRun(run, entryId, isOwnEntry);
+    if (isCancelled(run)) return discardRun(run, entryId, isOwnEntry);
 
     phase.value = 'finalizing';
     try {
@@ -355,12 +389,12 @@ export const useMediaUpload = () => {
         body: { key: slot.key },
       });
     } catch (error) {
-      if (cancelledRun !== run) {
+      if (!isCancelled(run)) {
         return fail(error, 'We could not start processing.');
       }
     }
 
-    if (cancelledRun === run) return discardRun(run, entryId, isOwnEntry);
+    if (isCancelled(run)) return discardRun(run, entryId, isOwnEntry);
 
     phase.value = 'done';
     return { entryId };
@@ -375,5 +409,7 @@ export const useMediaUpload = () => {
     reset,
     swap,
     cancel,
+    askCancel,
+    unaskCancel,
   };
 };

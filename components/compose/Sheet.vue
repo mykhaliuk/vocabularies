@@ -15,12 +15,31 @@ const {
   reset,
   swap,
   cancel,
+  askCancel,
+  unaskCancel,
 } = useMediaUpload();
 // Shapes the picker only — the server stays the gate (ADR-0012).
 const { entitlements } = useEntitlements();
 
 const premiumOpen = ref(false);
 const confirmOpen = ref(false);
+
+// A submit that finishes while "Discard this word?" is on screen must not
+// answer it: onKeep parks here, and whatever the user taps decides.
+let answerQuestion: ((keep: boolean) => void) | null = null;
+
+const questionAnswered = () =>
+  new Promise<boolean>((resolve) => {
+    answerQuestion = resolve;
+  });
+
+const settleQuestion = (keep: boolean) => {
+  if (keep) unaskCancel();
+  confirmOpen.value = false;
+  const notify = answerQuestion;
+  answerQuestion = null;
+  notify?.(keep);
+};
 
 const videoLimitLabel = computed(() => {
   const seconds = entitlements.value?.maxVideoDurationSec;
@@ -99,7 +118,7 @@ watch(isOpen, (open) => {
     // The premium sheet teleports to <body>, so the closed sheet's `inert`
     // never reaches it — left open it would float over a closed compose.
     premiumOpen.value = false;
-    confirmOpen.value = false;
+    settleQuestion(true);
     return;
   }
   resetForm();
@@ -115,17 +134,19 @@ const isDirty = computed(
     word.value.trim().length > 0 ||
     gloss.value.trim().length > 0 ||
     story.value.trim().length > 0 ||
+    sid.value !== undefined ||
     file.value !== null,
 );
 
 const discardNow = () => {
-  confirmOpen.value = false;
+  settleQuestion(false);
   cancel();
   close();
 };
 
 const onCancel = () => {
   if (isDirty.value) {
+    askCancel();
     confirmOpen.value = true;
     return;
   }
@@ -133,8 +154,10 @@ const onCancel = () => {
 };
 
 const keepEditing = () => {
-  confirmOpen.value = false;
-  void nextTick(() => wordInput.value?.focus());
+  settleQuestion(true);
+  void nextTick(() => {
+    if (isOpen.value) wordInput.value?.focus();
+  });
 };
 
 const onKeydown = (event: KeyboardEvent) => {
@@ -168,6 +191,9 @@ const onKeep = async () => {
     { entryId: undefined },
   );
   if (!result) return; // phase === 'error', errorMessage shown inline
+  // Asked mid-flight: their answer outranks the completion that landed under
+  // it, because the request came first.
+  if (confirmOpen.value && !(await questionAnswered())) return;
   notifyPosted();
   close();
   resetForm();
