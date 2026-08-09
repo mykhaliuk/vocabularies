@@ -62,8 +62,10 @@ Informational, not a finding — a surface may be static by design or a
 placeholder awaiting its ticket.
 
 - `app.vue`
+- `components/UpdatePrompt.vue`
 - `components/VAvatar.vue`
 - `components/VButton.vue`
+- `components/VToast.vue`
 - `components/app/BottomNav.vue`
 - `components/app/TabPlaceholder.vue`
 - `components/app/TopBar.vue`

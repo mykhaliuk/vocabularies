@@ -184,7 +184,8 @@ export default defineNuxtConfig({
     sourceMapsUploadOptions: { enabled: !!process.env.SENTRY_AUTH_TOKEN },
   },
   pwa: {
-    registerType: 'autoUpdate',
+    // Coupled to the waiting worker in service-worker/sw.js (ADR-0015).
+    registerType: 'prompt',
     // crossorigin="use-credentials" on the manifest link: manifest fetches
     // default to credentials:omit, so on protected previews (Vercel SSO)
     // they 302 to sso-api and die on CORS in an endless retry loop. With

@@ -250,5 +250,10 @@
     "checking": "Checking…",
     "tryAgain": "Try again",
     "stillOffline": "Still no signal. We'll be here when you're back."
+  },
+  "update": {
+    "ready": "A newer Vocabu is ready.",
+    "reload": "Reload",
+    "dismiss": "Dismiss"
   }
 }

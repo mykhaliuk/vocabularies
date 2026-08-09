@@ -23,8 +23,11 @@ import {
 } from 'workbox-strategies';
 import { PWA_API_CACHE, PWA_AVATARS_CACHE } from '../shared/pwa-caches';
 
-// registerType: autoUpdate — take over immediately rather than waiting.
-self.skipWaiting();
+// No unconditional skipWaiting: a new worker waits for the user (ADR-0015).
+// 'SKIP_WAITING' is the message workbox-window's messageSkipWaiting() posts.
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();
+});
 clientsClaim();
 
 // Navigations to `/` go to the network first so the server-side entry-locale

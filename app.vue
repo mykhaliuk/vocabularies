@@ -12,4 +12,5 @@ useHead(useLocaleHead({ dir: true, lang: true, seo: false }));
   <NuxtLayout>
     <NuxtPage />
   </NuxtLayout>
+  <UpdatePrompt />
 </template>

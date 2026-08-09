@@ -57,3 +57,6 @@ Format: `NNNN-short-slug.md`, template in [0000-template.md](0000-template.md).
 - [ADR-0014](0014-authed-e2e-via-real-magic-link.md) — authed e2e mints its
   session through the real magic-link flow, read from a mirrored server log,
   in a second Playwright config; never a forged cookie or a test-only endpoint
+- [ADR-0015](0015-pwa-update-prompt.md) — PWA updates are offered, not
+  applied: the worker waits for a `SKIP_WAITING` message and a dismissible
+  prompt does the asking, instead of `autoUpdate` reloading mid-session
