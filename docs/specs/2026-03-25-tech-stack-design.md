@@ -3,29 +3,36 @@
 > **Historical record.** This document is the original 2026-03-25 decision, and
 > its body is kept verbatim with one exception: the preview-deploy bullet under
 > CI/CD was rewritten in place on 2026-07-12 (`e3cb00d`) and describes current
-> behaviour, so it is the one line here not to read as historical. The rest has
-> diverged in most of its sections — the drift is document-wide, so it carries
-> one banner here rather than one per section. Read it as what was decided
-> then, not as a description of Vocabu today.
+> behaviour, so it is the one line here not to read as historical. The rest
+> differs from what shipped across most of its sections — the gap is
+> document-wide, so it carries one banner here rather than one per section.
+> Read it as what was decided then, not as a description of Vocabu today.
 >
-> **The product model changed outright.** Vocabu is a personal dictionary, not
-> a social app: there is no sharing, no follows, no visibility tiers and no
-> explore feed. The feed is the owner's own entries, `/discover` is a
-> placeholder behind the auth guard, and follows plus friends-only visibility
-> are listed out of scope for v0 in `ROADMAP.md`. A moment is audio **or**
-> video (video up to 20s, audio up to 3min), not a 60s audio clip, and the text
-> attached to a word is a **gloss**, not a caption — see `docs/GLOSSARY.md`.
+> **Much of it is not built yet — which is not the same as withdrawn.**
+> Sharing, follows, friends-only visibility and the explore feed do not exist:
+> the feed shows the owner's own entries and `/discover` is a placeholder
+> behind the auth guard. In-browser recording does not exist either; uploads
+> are the only way in. No app code uses IndexedDB (`idb` appears only as a
+> Workbox transitive dependency), so the client-side store and its
+> last-write-wins conflict resolution are unbuilt too, and offline today is
+> service-worker caching alone with no cache-first audio strategy.
+> `ROADMAP.md` lists in-browser recording, follows, friends-only visibility
+> and IndexedDB sync as out of scope **for v0**, and ADR-0012 plans the
+> authorization change for when sharing/following ships. Read these parts of
+> the spec as ahead of the code, not as decisions that were reversed.
 >
-> **Five supporting choices were never adopted.** UnoCSS — styling is plain CSS
-> over the design-system tokens in `assets/css/`. Pinia — state lives in
+> **Two product details are genuinely superseded.** A moment is audio **or**
+> video, capped at 20s for video and 3min for audio, not a 60s audio clip; and
+> the text attached to a word is a **gloss**, not a caption. Both per
+> `docs/GLOSSARY.md`.
+>
+> **Four supporting libraries were never adopted.** UnoCSS — styling is plain
+> CSS over the design-system tokens in `assets/css/`. Pinia — state lives in
 > composables. Vitest — `test:unit` is `bun test tests/unit`. Vercel Analytics
-> — not installed. IndexedDB, with its background sync and last-write-wins
-> conflict resolution — no app code uses it (`idb` appears only as a Workbox
-> transitive dependency), and offline is service-worker caching alone, with no
-> cache-first audio strategy.
+> — not installed.
 >
-> **The media sections and the CI job list are superseded.** `shared/media-types.ts` is the
-> format roster; the size and duration caps are entitlements
+> **The media sections and the CI job list are superseded.**
+> `shared/media-types.ts` is the format roster; the caps are entitlements
 > (`maxUploadBytes`, `maxVideoDurationSec`, `maxAudioDurationSec` — ADR-0012),
 > and video upload is itself a per-plan capability; the upload pipeline is
 > ADR-0009; CI runs the three jobs described in `README.md`. For current
