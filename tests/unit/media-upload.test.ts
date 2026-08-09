@@ -41,6 +41,24 @@ let watched: { value: string } | null = null;
 let contentTypeSent = '';
 let uploadStatus = 200;
 
+// Parks a request mid-flight so a phase can be cancelled while it is the
+// current one. The first call to that url takes the gate; later ones run free.
+const gates = new Map<string, Promise<void>>();
+const releases = new Map<string, () => void>();
+const heldUploads = new Set<string>();
+
+const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+const holdRequest = (url: string) => {
+  gates.set(url, new Promise<void>((resolve) => releases.set(url, resolve)));
+};
+
+const releaseRequest = async (url: string) => {
+  releases.get(url)?.();
+  releases.delete(url);
+  await tick();
+};
+
 const sequence = () => requests.map((call) => `${call.method} ${call.url}`);
 const callTo = (url: string) => requests.find((call) => call.url === url);
 const bodyOf = (url: string) => callTo(url)?.body;
@@ -61,6 +79,11 @@ const fakeFetch = async (url: string, options: Record<string, unknown>) => {
     body: options.body,
     credentials: options.credentials,
   });
+  const gate = gates.get(url);
+  if (gate !== undefined) {
+    gates.delete(url);
+    await gate;
+  }
   if (failing.has(url)) throw new Error(`refused ${url}`);
   if (url === '/api/entries') {
     const body = options.body as { media?: unknown };
@@ -111,6 +134,7 @@ class FakeXhr {
     const refusal = refusals.get(this.call.url);
     this.status = refusal ? refusal.status : uploadStatus;
     this.responseText = refusal ? refusal.body : '';
+    if (heldUploads.has(this.call.url)) return;
     const failed = failing.has(this.call.url);
     queueMicrotask(() => {
       if (!failed && !refusal) {
@@ -146,6 +170,9 @@ beforeEach(() => {
   phaseTrail.length = 0;
   failing.clear();
   refusals.clear();
+  gates.clear();
+  releases.clear();
+  heldUploads.clear();
   watched = null;
   uploadStatus = 200;
   contentTypeSent = '';
@@ -392,6 +419,181 @@ describe('create path', () => {
       `PUT ${UPLOAD_URL}`,
       'POST /api/media/confirm',
     ]);
+  });
+});
+
+describe('cancelling is a discard', () => {
+  const deleteUrl = `/api/entries/${ENTRY_ID}`;
+
+  const keeping = (upload: ReturnType<typeof useMediaUpload>) =>
+    upload.submit(composeInput({ file: audioFile() }), { entryId: undefined });
+
+  test('creating: awaits the id rather than aborting, then deletes it', async () => {
+    const upload = useMediaUpload();
+    holdRequest('/api/entries');
+
+    const run = keeping(upload);
+    await tick();
+    expect(upload.phase.value).toBe('creating');
+
+    upload.cancel();
+    await releaseRequest('/api/entries');
+
+    expect(await run).toBeNull();
+    expect(sequence()).toEqual(['POST /api/entries', `DELETE ${deleteUrl}`]);
+    expect(upload.phase.value).toBe('idle');
+  });
+
+  test('uploading: aborts the bytes, then deletes', async () => {
+    const upload = useMediaUpload();
+    heldUploads.add(UPLOAD_URL);
+
+    const run = keeping(upload);
+    await tick();
+    expect(upload.phase.value).toBe('uploading');
+
+    upload.cancel();
+
+    expect(await run).toBeNull();
+    expect(sequence()).toEqual([
+      'POST /api/entries',
+      `PUT ${UPLOAD_URL}`,
+      `DELETE ${deleteUrl}`,
+    ]);
+    expect(upload.phase.value).toBe('idle');
+  });
+
+  test('finalizing: lets the confirm land, then deletes', async () => {
+    const upload = useMediaUpload();
+    holdRequest('/api/media/confirm');
+
+    const run = keeping(upload);
+    await tick();
+    expect(upload.phase.value).toBe('finalizing');
+
+    upload.cancel();
+    await releaseRequest('/api/media/confirm');
+
+    expect(await run).toBeNull();
+    expect(sequence()).toEqual([
+      'POST /api/entries',
+      `PUT ${UPLOAD_URL}`,
+      'POST /api/media/confirm',
+      `DELETE ${deleteUrl}`,
+    ]);
+    expect(upload.phase.value).toBe('idle');
+  });
+
+  test('error: the word created on the way out goes too', async () => {
+    const upload = useMediaUpload();
+    failing.add('/api/media/confirm');
+
+    await keeping(upload);
+    expect(upload.phase.value).toBe('error');
+    requests.length = 0;
+
+    upload.cancel();
+
+    expect(sequence()).toEqual([`DELETE ${deleteUrl}`]);
+    expect(upload.phase.value).toBe('idle');
+    expect(upload.errorMessage.value).toBeUndefined();
+  });
+
+  test('idle: with nothing created there is nothing to delete', async () => {
+    const upload = useMediaUpload();
+
+    upload.cancel();
+
+    expect(sequence()).toEqual([]);
+    expect(upload.phase.value).toBe('idle');
+  });
+
+  test('an entry the caller brought is never deleted, mid-upload', async () => {
+    const upload = useMediaUpload();
+    heldUploads.add(UPLOAD_URL);
+
+    const run = upload.submit(composeInput({ file: audioFile() }), {
+      entryId: ENTRY_ID,
+    });
+    await tick();
+    upload.cancel();
+
+    expect(await run).toBeNull();
+    expect(sequence()).toEqual([
+      `POST /api/entries/${ENTRY_ID}/media`,
+      `PUT ${UPLOAD_URL}`,
+    ]);
+  });
+
+  test('an entry the caller brought is never deleted, after a failure', async () => {
+    const upload = useMediaUpload();
+    failing.add('/api/media/confirm');
+
+    await upload.submit(composeInput({ file: audioFile() }), {
+      entryId: ENTRY_ID,
+    });
+    requests.length = 0;
+
+    upload.cancel();
+
+    expect(sequence()).toEqual([]);
+  });
+
+  test('a re-mint that fails while cancelled still takes the word', async () => {
+    const upload = useMediaUpload();
+    refusals.set(UPLOAD_URL, {
+      status: 403,
+      body: refusalBody('AccessDenied'),
+    });
+
+    await keeping(upload);
+    expect(upload.phase.value).toBe('error');
+
+    const attachUrl = `/api/entries/${ENTRY_ID}/media`;
+    refusals.clear();
+    failing.add(attachUrl);
+    holdRequest(attachUrl);
+    requests.length = 0;
+
+    const run = keeping(upload);
+    await tick();
+    upload.cancel();
+    await releaseRequest(attachUrl);
+
+    expect(await run).toBeNull();
+    expect(sequence()).toEqual([`POST ${attachUrl}`, `DELETE ${deleteUrl}`]);
+    expect(upload.phase.value).toBe('idle');
+  });
+
+  test('a word already kept is not this session to throw away', async () => {
+    const upload = useMediaUpload();
+
+    expect(await keeping(upload)).toEqual({ entryId: ENTRY_ID });
+    requests.length = 0;
+
+    upload.cancel();
+
+    expect(sequence()).toEqual([]);
+  });
+
+  test('a cancelled run leaves the word that replaced it alone', async () => {
+    const upload = useMediaUpload();
+    holdRequest('/api/entries');
+
+    const abandoned = keeping(upload);
+    await tick();
+    upload.cancel();
+
+    // The sheet closed and reopened: a second word runs to completion while
+    // the cancelled one is still parked on its create.
+    upload.reset();
+    const kept = keeping(upload);
+    await tick();
+    await releaseRequest('/api/entries');
+
+    expect(await abandoned).toBeNull();
+    expect(await kept).toEqual({ entryId: ENTRY_ID });
+    expect(upload.phase.value).toBe('done');
   });
 });
 

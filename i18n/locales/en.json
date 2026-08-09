@@ -198,6 +198,12 @@
         "soonTitle": "coming soon.",
         "soonBody": "the video feature will be available under this plan.",
         "close": "close"
+      },
+      "discard": {
+        "question": "Discard this word?",
+        "body": "Nothing you put here will be kept.",
+        "confirm": "Discard",
+        "keep": "Keep editing"
       }
     },
     "discover": {

@@ -20,6 +20,7 @@ const {
 const { entitlements } = useEntitlements();
 
 const premiumOpen = ref(false);
+const confirmOpen = ref(false);
 
 const videoLimitLabel = computed(() => {
   const seconds = entitlements.value?.maxVideoDurationSec;
@@ -98,6 +99,7 @@ watch(isOpen, (open) => {
     // The premium sheet teleports to <body>, so the closed sheet's `inert`
     // never reaches it — left open it would float over a closed compose.
     premiumOpen.value = false;
+    confirmOpen.value = false;
     return;
   }
   resetForm();
@@ -105,16 +107,46 @@ watch(isOpen, (open) => {
   focusTimer = setTimeout(() => wordInput.value?.focus(), 280);
 });
 
-// Cancelling mid-upload aborts the request rather than trapping the user in a
-// modal with no way out; the entry itself is already saved and will show up
-// without its media until they retry.
-const onCancel = () => {
-  if (isBusy.value) cancel();
+// Dismissing is a discard (VKB-154): the sheet goes at once and the composable
+// deletes behind it, so a half-written word never survives as a text-only
+// entry nobody asked for. The confirm is the guard against a mis-tap.
+const isDirty = computed(
+  () =>
+    word.value.trim().length > 0 ||
+    gloss.value.trim().length > 0 ||
+    story.value.trim().length > 0 ||
+    file.value !== null,
+);
+
+const discardNow = () => {
+  confirmOpen.value = false;
+  cancel();
   close();
 };
 
+const onCancel = () => {
+  if (isDirty.value) {
+    confirmOpen.value = true;
+    return;
+  }
+  discardNow();
+};
+
+const keepEditing = () => {
+  confirmOpen.value = false;
+  void nextTick(() => wordInput.value?.focus());
+};
+
 const onKeydown = (event: KeyboardEvent) => {
-  if (event.key === 'Escape' && isOpen.value) onCancel();
+  if (event.key !== 'Escape' || !isOpen.value) return;
+  if (confirmOpen.value) {
+    keepEditing();
+    return;
+  }
+  // The premium sheet answers Escape itself; without this the compose sheet
+  // would ask to discard a word the user never tried to dismiss.
+  if (premiumOpen.value) return;
+  onCancel();
 };
 
 onMounted(() => window.addEventListener('keydown', onKeydown));
@@ -160,6 +192,7 @@ const onKeep = async () => {
       role="dialog"
       aria-modal="true"
       :aria-label="t('app.compose.title')"
+      :inert="confirmOpen"
     >
       <div class="compose__handle" aria-hidden="true" />
 
@@ -265,6 +298,12 @@ const onKeep = async () => {
         {{ liveStatus }}
       </span>
     </section>
+
+    <ComposeDiscardSheet
+      :open="confirmOpen"
+      @confirm="discardNow"
+      @cancel="keepEditing"
+    />
 
     <ComposePremiumSheet
       :open="premiumOpen"

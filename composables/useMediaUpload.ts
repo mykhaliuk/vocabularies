@@ -84,6 +84,28 @@ const isDeadSlot = (error: unknown): boolean =>
   error.code !== undefined &&
   DEAD_SLOT_CODES.has(error.code);
 
+const SETTLING_PHASES: ReadonlySet<ComposePhase> = new Set([
+  'creating',
+  'uploading',
+  'finalizing',
+]);
+
+// Deleting the entry detaches its in-flight media row rather than orphaning
+// it: `entry_id` cascades and `pending_entry_id` is set null, so the row that
+// arrives later finds nothing to claim (ADR-0009). Nobody waits for this —
+// the sheet is already gone, and a failure leaves the same orphan today's
+// cancel does.
+const discardEntry = async (entryId: string) => {
+  try {
+    await $fetch(`/api/entries/${encodeURIComponent(entryId)}`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+  } catch (error) {
+    console.error('[useMediaUpload] discarding a cancelled word failed', error);
+  }
+};
+
 const putWithProgress = (
   slot: UploadSlot,
   file: File,
@@ -163,6 +185,12 @@ export const useMediaUpload = () => {
   let resumeFrom: PendingUpload | null = null;
   let inFlight: XMLHttpRequest | null = null;
 
+  // Cancelling closes the sheet at once and cleans up behind the user, so a
+  // second submit can start while the first is still unwinding. Both are
+  // named by run, otherwise the late one clears the live one's state.
+  let runId = 0;
+  let cancelledRun = 0;
+
   const reset = () => {
     phase.value = 'idle';
     progress.value = 0;
@@ -192,21 +220,49 @@ export const useMediaUpload = () => {
     if (resumeFrom !== null) resumeFrom = { ...resumeFrom, upload: null };
   };
 
-  // Aborts an in-flight upload so the sheet is never an inescapable modal.
+  const abandonRun = (run: number) => {
+    if (run === runId) reset();
+    return null;
+  };
+
+  const discardRun = (run: number, entryId: string, isOwnEntry: boolean) => {
+    if (isOwnEntry) void discardEntry(entryId);
+    return abandonRun(run);
+  };
+
+  // Cancel is a discard: when it settles, nothing this session created is
+  // left. A run still in flight cleans up at its next checkpoint — aborting
+  // the client would not roll the server back — so all this has to do is
+  // mark it, and finish the job itself when no run is left to reach one.
   const cancel = () => {
-    inFlight?.abort();
-    inFlight = null;
+    cancelledRun = runId;
+    if (inFlight !== null) {
+      inFlight.abort();
+      return;
+    }
+    if (SETTLING_PHASES.has(phase.value)) return;
+    // A word already kept is not this session's to throw away.
+    const pending = phase.value === 'done' ? null : resumeFrom;
+    if (pending === null) {
+      abandonRun(runId);
+      return;
+    }
+    discardRun(runId, pending.entryId, pending.openedFor === undefined);
   };
 
   const submit = async (
     input: ComposeInput,
     target: ComposeTarget,
   ): Promise<{ entryId: string } | null> => {
+    const run = ++runId;
     errorMessage.value = undefined;
     errorCode.value = undefined;
 
     const attachTo = target.entryId;
     const { file } = input;
+    // Only an entry this session created is ours to throw away; one the
+    // caller brought belongs to them.
+    const isOwnEntry = attachTo === undefined;
 
     // A slot belongs to the target it was opened for — a fresh word included;
     // any other target is a new submission, not a retry.
@@ -231,9 +287,21 @@ export const useMediaUpload = () => {
           into !== undefined && file !== null
             ? await attachMedia(into, file)
             : await createEntry(input);
+        // Before the shared state, so a cancelled run cannot hand its slot
+        // to the run that replaced it.
+        if (cancelledRun === run) {
+          return discardRun(run, opened.entryId, isOwnEntry);
+        }
         pending = { ...opened, openedFor: attachTo };
         resumeFrom = pending;
       } catch (error) {
+        // A re-mint that fails still leaves the entry an earlier run created,
+        // and a cancel has to take that with it.
+        if (cancelledRun === run) {
+          return pending === null
+            ? abandonRun(run)
+            : discardRun(run, pending.entryId, isOwnEntry);
+        }
         return fail(
           error,
           into === undefined
@@ -263,17 +331,21 @@ export const useMediaUpload = () => {
         },
       );
     } catch (error) {
-      if (error instanceof UploadAbort) {
-        phase.value = 'idle';
-        return null;
+      if (cancelledRun !== run) {
+        if (error instanceof UploadAbort) {
+          phase.value = 'idle';
+          return null;
+        }
+        if (isDeadSlot(error)) {
+          resumeFrom = { entryId, upload: null, openedFor: attachTo };
+        }
+        return fail(error, 'The upload did not finish.');
       }
-      if (isDeadSlot(error)) {
-        resumeFrom = { entryId, upload: null, openedFor: attachTo };
-      }
-      return fail(error, 'The upload did not finish.');
     } finally {
       inFlight = null;
     }
+
+    if (cancelledRun === run) return discardRun(run, entryId, isOwnEntry);
 
     phase.value = 'finalizing';
     try {
@@ -283,8 +355,12 @@ export const useMediaUpload = () => {
         body: { key: slot.key },
       });
     } catch (error) {
-      return fail(error, 'We could not start processing.');
+      if (cancelledRun !== run) {
+        return fail(error, 'We could not start processing.');
+      }
     }
+
+    if (cancelledRun === run) return discardRun(run, entryId, isOwnEntry);
 
     phase.value = 'done';
     return { entryId };

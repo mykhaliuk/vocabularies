@@ -198,6 +198,12 @@
         "soonTitle": "bientôt.",
         "soonBody": "la fonctionnalité vidéo sera disponible avec ce forfait.",
         "close": "fermer"
+      },
+      "discard": {
+        "question": "Abandonner ce mot ?",
+        "body": "Rien de ce que vous avez mis ici ne sera gardé.",
+        "confirm": "Abandonner",
+        "keep": "Continuer à écrire"
       }
     },
     "discover": {
