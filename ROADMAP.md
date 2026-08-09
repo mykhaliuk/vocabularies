@@ -2,8 +2,6 @@
 
 Smoke-test scaffold (v0). Each milestone is independently verifiable and tagged in git as `m<N>`.
 
-Detailed plan: `~/.claude/plans/1-could-be-bun-floofy-moon.md` (not committed).
-
 | #   | Milestone                       | Status     | Tag   | Verification                                                                                          |
 | --- | ------------------------------- | ---------- | ----- | ----------------------------------------------------------------------------------------------------- |
 | M1  | Skeleton + tooling              | ✅ done    | `m1`  | `bun run start:local` → `/` shows "hi there"                                                          |
