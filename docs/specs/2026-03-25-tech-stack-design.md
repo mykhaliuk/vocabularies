@@ -1,5 +1,45 @@
 # Vocabu — Tech Stack Design
 
+> **Historical record.** This document is the original 2026-03-25 decision, and
+> its body is kept verbatim with one exception: the preview-deploy bullet under
+> CI/CD was rewritten in place on 2026-07-12 (`e3cb00d`) and describes current
+> behaviour, so it is the one line here not to read as historical. The rest
+> differs from what shipped across most of its sections — the gap is
+> document-wide, so it carries one banner here rather than one per section.
+> Read it as what was decided then, not as a description of Vocabu today.
+>
+> **Much of it is not built yet — which is not the same as withdrawn.**
+> Sharing, follows, friends-only visibility and the explore feed do not exist:
+> the feed shows the owner's own entries and `/discover` is a placeholder
+> behind the auth guard. In-browser recording does not exist either; uploads
+> are the only way in. No app code uses IndexedDB (`idb` appears only as a
+> Workbox transitive dependency), so the client-side store and its
+> last-write-wins conflict resolution are unbuilt too, and offline today is
+> service-worker caching alone with no cache-first audio strategy.
+> `ROADMAP.md` lists in-browser recording, follows, friends-only visibility
+> and IndexedDB sync as out of scope **for v0**, and ADR-0012 plans the
+> authorization change for when sharing/following ships. Read these parts of
+> the spec as ahead of the code, not as decisions that were reversed.
+>
+> **Two product details are genuinely superseded.** A moment is audio **or**
+> video, capped at 20s for video and 3min for audio, not a 60s audio clip; and
+> the text attached to a word is a **gloss**, not a caption. Both per
+> `docs/GLOSSARY.md`.
+>
+> **Four supporting libraries were never adopted.** UnoCSS — styling is plain
+> CSS over the design-system tokens in `assets/css/`. Pinia — state lives in
+> composables. Vitest — `test:unit` is `bun test tests/unit`. Vercel Analytics
+> — not installed.
+>
+> **The media sections and the CI job list are superseded.**
+> `shared/media-types.ts` is the format roster; the caps are entitlements
+> (`maxUploadBytes`, `maxVideoDurationSec`, `maxAudioDurationSec` — ADR-0012),
+> and video upload is itself a per-plan capability; the upload pipeline is
+> ADR-0009; CI runs the three jobs described in `README.md`. For current
+> tooling and scripts the README is the source of truth, `docs/adr/` holds the
+> decisions that replaced these, and `docs/capability-graph.md` maps what the
+> product can actually do today.
+
 ## Product Summary
 
 Vocabu is a social app for capturing and sharing short audio moments — a baby's first words, a friend's funny phrase. Users record or upload short audio clips (up to 60s), attach captions, and share them with configurable visibility: private, friends-only, or public.
