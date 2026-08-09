@@ -1,8 +1,8 @@
 # Vocabu
 
-Social app for capturing and sharing short audio moments. PWA, offline-capable.
+Mobile-first, offline-capable PWA for keeping a personal dictionary of the memorable ways the people you love talk. An entry is built around a word: the gloss that explains it, the speaker it belongs to, and the moment — audio or video — of them saying it.
 
-> **Status:** scaffold. Smoke-test app exercising the full stack across local/dev/preprod. No product features yet — see `docs/specs/` and `~/.claude/plans/1-could-be-bun-floofy-moon.md` for the build plan.
+Plan and milestones live in `ROADMAP.md`; the decisions behind the architecture in `docs/adr/`.
 
 ## Stack
 
