@@ -231,7 +231,7 @@ test.describe('word detail (authed)', () => {
         `Mira · my daughter · ${AGE_LABEL}`,
       );
       await expect(authedPage.locator('.detail__said')).toHaveText(
-        `said ${SAID_AT_LABEL} · ${AGE_LABEL}`,
+        `said ${SAID_AT_LABEL} · ${AGE_LABEL} edit`,
       );
       await expect(authedPage.locator('.detail__chip')).toHaveText(
         "Mira's words",
@@ -259,7 +259,7 @@ test.describe('word detail (authed)', () => {
       // date reads day-month-year in English too, not the US order a bare `en`
       // tag would pick.
       await expect(authedPage.locator('.detail__said')).toHaveText(
-        `said ${SAID_AT_LABEL}`,
+        `said ${SAID_AT_LABEL} edit`,
       );
     });
   });

@@ -127,6 +127,14 @@
         "confirm": "Delete word",
         "cancel": "Cancel",
         "failed": "we couldn't delete this word just now."
+      },
+      "dateEdit": {
+        "open": "edit",
+        "field": "the day it was said",
+        "aged": "they were {age}. this is what the word will always say.",
+        "undated": "the day they said it, not the day you filed it.",
+        "done": "done",
+        "failed": "we couldn't change the date just now."
       }
     },
     "compose": {

@@ -1,4 +1,3 @@
-// graph-pending: VKB-110 — compose edit mode is the first caller
 import { z } from 'zod';
 import { updateOwnEntry } from '~/server/domain/entries';
 import { requireUser } from '~/server/utils/auth';

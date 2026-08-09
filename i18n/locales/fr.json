@@ -127,6 +127,14 @@
         "confirm": "Supprimer le mot",
         "cancel": "Annuler",
         "failed": "impossible de supprimer ce mot pour l'instant."
+      },
+      "dateEdit": {
+        "open": "modifier",
+        "field": "le jour où ça a été dit",
+        "aged": "iels avaient {age}. c'est ce que ce mot dira toujours.",
+        "undated": "le jour où iels l'ont dit, pas le jour où vous l'avez noté.",
+        "done": "terminé",
+        "failed": "impossible de changer la date pour l'instant."
       }
     },
     "compose": {

@@ -199,6 +199,120 @@ const saidLine = computed(() => {
     : t('app.entry.saidOnAged', { date, age });
 });
 
+// Correcting the date (speaker-spec §Correcting the date): the write lands
+// as you pick, so the editor holds no draft the reader could lose — the
+// candidate only feeds the consequence sentence's age preview.
+const isEditingDate = ref(false);
+const candidateSaidAt = ref('');
+const hasDateError = ref(false);
+const maxSaidAt = ref('');
+const dateTrigger = ref<HTMLButtonElement | null>(null);
+const dateInput = ref<HTMLInputElement | null>(null);
+
+const candidateAge = computed(() =>
+  entry.value
+    ? formatAgeLabel(entry.value.speaker, candidateSaidAt.value)
+    : undefined,
+);
+
+const toIsoDay = (date: Date) => {
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${date.getFullYear()}-${month}-${day}`;
+};
+
+// The date the screen is trying to land, which is not the entry's own
+// saidAt until the answer comes back — a pick is compared against this, so
+// picking a date and picking it straight back still sends the second one.
+// Empty means nothing is wanted beyond what the word already carries.
+let requestedSaidAt = '';
+let isSaving = false;
+
+// Opens on the date being landed, not the one the word still carries:
+// reopening while a write is in the air must neither offer the old day back
+// nor overwrite what the loop below is chasing. The ceiling is read here
+// rather than computed once — this only runs on the client, so it is the
+// reader's own today, and a tab left open overnight picks up the new day.
+const openDateEditor = async () => {
+  candidateSaidAt.value = requestedSaidAt || entry.value?.saidAt || '';
+  requestedSaidAt = candidateSaidAt.value;
+  maxSaidAt.value = toIsoDay(new Date());
+  hasDateError.value = false;
+  isEditingDate.value = true;
+  await nextTick();
+  dateInput.value?.focus();
+};
+
+const closeDateEditor = async () => {
+  isEditingDate.value = false;
+  hasDateError.value = false;
+  await nextTick();
+  dateTrigger.value?.focus();
+};
+
+const sendSaidAt = async (saidAt: string) => {
+  hasDateError.value = false;
+  try {
+    const updated = await $fetch<EntryDetailResponse>(
+      `/api/entries/${encodeURIComponent(entryId)}`,
+      { method: 'PATCH', credentials: 'include', body: { saidAt } },
+    );
+    if (!data.value) return true;
+    // useAsyncData hands back a shallowRef, so the payload is replaced
+    // rather than mutated — assigning `.entry` renders nothing. Media and
+    // playback are carried over by identity: a date cannot touch them, and
+    // swapping them would churn the player's props for nothing.
+    data.value = { ...data.value, entry: updated.entry };
+    return true;
+  } catch (error) {
+    const status = (error as { statusCode?: number }).statusCode;
+    if (status === UNAUTHORIZED) {
+      try {
+        await navigateTo('/login');
+        return false;
+      } catch (redirectError) {
+        console.error('[entry] sign-in redirect failed', redirectError);
+      }
+    }
+    console.error('[entry] date change failed', error);
+    hasDateError.value = true;
+    // The reader may have tapped done while this was in flight, and the
+    // error line only exists inside the open editor. Reopening is the only
+    // way a refused date is reported rather than quietly not happening.
+    isEditingDate.value = true;
+    return false;
+  }
+};
+
+// One write at a time. Two racing can reach the row in the opposite order
+// to the picks, leaving the word on a date the reader already corrected and
+// the screen showing the other one. A pick made mid-write waits its turn
+// and supersedes any other pick still waiting, so holding an arrow key down
+// in the picker costs two writes rather than one per step.
+const saveSaidAt = async () => {
+  if (isSaving) return;
+  isSaving = true;
+  let sent = '';
+  while (sent !== requestedSaidAt) {
+    sent = requestedSaidAt;
+    const isSaved = await sendSaidAt(sent);
+    if (!isSaved && sent === requestedSaidAt) {
+      requestedSaidAt = '';
+      break;
+    }
+  }
+  isSaving = false;
+};
+
+// An emptied field is a half-typed date, not an instruction to unset one:
+// every entry has a saidAt, and the column is not nullable.
+const pickDate = async () => {
+  const picked = candidateSaidAt.value;
+  if (!picked || picked === requestedSaidAt) return;
+  requestedSaidAt = picked;
+  await saveSaidAt();
+};
+
 // Open on mount, per visit (spec §Behaviour): you came here for the story,
 // and the fold is a reader's tool for a long one, not a gate.
 const isStoryOpen = ref(true);
@@ -375,11 +489,58 @@ useHead(() => ({
         </span>
       </div>
 
-      <p class="detail__said">
-        <span class="detail__said-body">
+      <div class="detail__said">
+        <button
+          v-if="!isEditingDate"
+          ref="dateTrigger"
+          type="button"
+          class="detail__said-body"
+          @click="openDateEditor"
+        >
           <Calendar :size="13" aria-hidden="true" />{{ saidLine }}
-        </span>
-      </p>
+          <span class="detail__said-edit">{{
+            t('app.entry.dateEdit.open')
+          }}</span>
+        </button>
+
+        <div v-else class="detail__date">
+          <input
+            ref="dateInput"
+            v-model="candidateSaidAt"
+            type="date"
+            class="detail__date-field"
+            :max="maxSaidAt"
+            :aria-label="t('app.entry.dateEdit.field')"
+            @change="pickDate"
+          />
+
+          <i18n-t
+            v-if="candidateAge"
+            keypath="app.entry.dateEdit.aged"
+            tag="p"
+            class="detail__date-note"
+          >
+            <template #age>
+              <b class="detail__date-age">{{ candidateAge }}</b>
+            </template>
+          </i18n-t>
+          <p v-else class="detail__date-note">
+            {{ t('app.entry.dateEdit.undated') }}
+          </p>
+
+          <p v-if="hasDateError" class="detail__date-error" role="alert">
+            {{ t('app.entry.dateEdit.failed') }}
+          </p>
+
+          <button
+            type="button"
+            class="detail__date-done"
+            @click="closeDateEditor"
+          >
+            {{ t('app.entry.dateEdit.done') }}
+          </button>
+        </div>
+      </div>
     </article>
 
     <div v-else-if="stateCopy" class="detail__state">
@@ -567,9 +728,72 @@ useHead(() => ({
   gap: 7px;
   min-height: 40px;
   padding: var(--space-2) 6px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
   font-family: var(--font-sans);
   font-size: 13px;
   color: var(--ink-3);
+}
+
+.detail__said-edit {
+  font-weight: var(--w-semibold);
+  color: var(--link);
+}
+
+.detail__date {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.detail__date-field {
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1.5px solid var(--primary);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  color: var(--ink);
+  color-scheme: light dark;
+}
+
+/* Narrow on purpose (spec §Correcting the date): the sentence sits under
+   the field as a caption, not as a full-width paragraph. */
+.detail__date-note {
+  margin: 0;
+  max-width: 260px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--ink-3);
+  text-align: center;
+}
+
+.detail__date-age {
+  font-weight: var(--w-semibold);
+  color: var(--ink-2);
+}
+
+.detail__date-error {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--danger);
+}
+
+.detail__date-done {
+  min-height: 40px;
+  padding: var(--space-2) 12px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: var(--w-semibold);
+  color: var(--link);
 }
 
 /* Centred load failure, mirroring the feed's own state. */

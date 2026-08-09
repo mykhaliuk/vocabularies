@@ -24,7 +24,7 @@ None — every route has a caller and every call resolves.
 | `POST /api/entries` | `composables/useMediaUpload.ts` | `entries.createEntry` |
 | `DELETE /api/entries/:id` | `composables/useMediaUpload.ts`<br>`pages/entries/[id].vue` | `entries.deleteOwnEntry` |
 | `GET /api/entries/:id` | `composables/useEntryPlayback.ts`<br>`pages/entries/[id].vue` | `entries.getOwnEntry` |
-| `PATCH /api/entries/:id` | _none yet — VKB-110_ | `entries.updateOwnEntry` |
+| `PATCH /api/entries/:id` | `pages/entries/[id].vue` | `entries.updateOwnEntry` |
 | `DELETE /api/entries/:id/media` | _none yet — VKB-110_ | `entries.removeEntryMedia` |
 | `POST /api/entries/:id/media` | `composables/useMediaUpload.ts` | `entries.attachEntryMedia` |
 | `GET /api/health` | `pages/offline.vue` | _inline_ |
@@ -53,7 +53,6 @@ finding, so the note cannot outlive the gap.
 
 | Route | Tracked by | Note |
 | --- | --- | --- |
-| `PATCH /api/entries/:id` | VKB-110 | compose edit mode is the first caller |
 | `DELETE /api/entries/:id/media` | VKB-110 | compose edit mode is the only client that will call this |
 | `PATCH /api/me` | VKB-94 | /me reads displayName but offers no way to edit it. |
 
@@ -181,7 +180,7 @@ flowchart LR
     r_POST__api_entries["POST /api/entries"]
     r_DELETE__api_entries__id["DELETE /api/entries/:id"]
     r_GET__api_entries__id["GET /api/entries/:id"]
-    r_PATCH__api_entries__id("PATCH /api/entries/:id")
+    r_PATCH__api_entries__id["PATCH /api/entries/:id"]
     r_DELETE__api_entries__id_media("DELETE /api/entries/:id/media")
     r_POST__api_entries__id_media["POST /api/entries/:id/media"]
     r_GET__api_health["GET /api/health"]
@@ -252,6 +251,7 @@ flowchart LR
   c_composables_useEntryPlayback_ts --> r_GET__api_entries__id
   c_pages_entries__id__vue --> r_GET__api_entries__id
   r_GET__api_entries__id --> o_entries_getOwnEntry
+  c_pages_entries__id__vue --> r_PATCH__api_entries__id
   r_PATCH__api_entries__id --> o_entries_updateOwnEntry
   r_DELETE__api_entries__id_media --> o_entries_removeEntryMedia
   c_composables_useMediaUpload_ts --> r_POST__api_entries__id_media
