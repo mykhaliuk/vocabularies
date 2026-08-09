@@ -124,7 +124,7 @@ const withinDuration = async (
 ): Promise<boolean> => {
   if (isMp4Family(file)) {
     const containerSec = await readMp4DurationSec(file);
-    if (containerSec !== null) return containerSec <= limitSec + 1;
+    if (containerSec !== undefined) return containerSec <= limitSec + 1;
   }
   return probeElementDuration(file, limitSec);
 };

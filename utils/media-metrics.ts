@@ -17,10 +17,10 @@ export type AudioMetrics = {
   glyphPx: number;
 };
 
-// A null max-width is "no cap" — the feed row's shipped behaviour, and the
+// An absent max-width is "no cap" — the feed row's shipped behaviour, and the
 // reason the two variants cannot share one number here.
 export type VideoMetrics = {
-  maxWidthPx: number | null;
+  maxWidthPx: number | undefined;
   buttonPx: number;
   portraitFramePx: number;
   landscapeFramePx: number;
@@ -50,7 +50,7 @@ export const AUDIO_METRICS: Readonly<Record<MediaVariant, AudioMetrics>> =
 export const VIDEO_METRICS: Readonly<Record<MediaVariant, VideoMetrics>> =
   Object.freeze({
     inline: Object.freeze({
-      maxWidthPx: null,
+      maxWidthPx: undefined,
       buttonPx: 36,
       portraitFramePx: 300,
       landscapeFramePx: 176,
@@ -82,7 +82,7 @@ export const videoStyleVars = (variant: MediaVariant) => {
   const metrics = VIDEO_METRICS[variant];
   const maxWidth = metrics.maxWidthPx;
   return {
-    '--video-max-w': maxWidth === null ? 'none' : px(maxWidth),
+    '--video-max-w': maxWidth === undefined ? 'none' : px(maxWidth),
     '--video-btn': px(metrics.buttonPx),
     '--video-frame-portrait': px(metrics.portraitFramePx),
     '--video-frame-land': px(metrics.landscapeFramePx),

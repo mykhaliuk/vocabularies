@@ -35,7 +35,7 @@ describe('VIDEO_METRICS', () => {
   test('inline keeps the feed row exactly as it ships', () => {
     expect(VIDEO_METRICS.inline).toEqual({
       // No cap in the feed — the row is as wide as the card gives it.
-      maxWidthPx: null,
+      maxWidthPx: undefined,
       buttonPx: 36,
       portraitFramePx: 300,
       landscapeFramePx: 176,

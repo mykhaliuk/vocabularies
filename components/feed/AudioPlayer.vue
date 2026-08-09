@@ -60,7 +60,7 @@ let retrying = false;
 
 const playing = ref(false);
 const playedFraction = ref(0);
-const elementDurationSec = ref<number | null>(null);
+const elementDurationSec = ref<number | undefined>();
 const failed = ref(false);
 
 const clipInset = computed(
@@ -69,7 +69,7 @@ const clipInset = computed(
 
 const durationLabel = computed(() => {
   const seconds = props.durationSec ?? elementDurationSec.value;
-  if (seconds === null || !Number.isFinite(seconds) || seconds < 0) {
+  if (seconds === undefined || !Number.isFinite(seconds) || seconds < 0) {
     return '0:00';
   }
   const total = Math.floor(seconds);

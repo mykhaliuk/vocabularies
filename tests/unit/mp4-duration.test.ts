@@ -74,7 +74,7 @@ describe('parseMvhdDurationSec', () => {
 
   test('an unknown duration (0xffffffff) proves nothing', () => {
     const moov = mvhdV0(1000, 0xffffffff);
-    expect(parseMvhdDurationSec(view(moov))).toBeNull();
+    expect(parseMvhdDurationSec(view(moov))).toBeUndefined();
   });
 
   test('the 64-bit unknown sentinel proves nothing either', () => {
@@ -88,16 +88,18 @@ describe('parseMvhdDurationSec', () => {
       ...u32(600),
       ...Array.from({ length: 8 }, () => 0xff),
     ];
-    expect(parseMvhdDurationSec(view(box('mvhd', body)))).toBeNull();
+    expect(parseMvhdDurationSec(view(box('mvhd', body)))).toBeUndefined();
   });
 
   test('a zero timescale proves nothing', () => {
     const moov = mvhdV0(0, 1000);
-    expect(parseMvhdDurationSec(view(moov))).toBeNull();
+    expect(parseMvhdDurationSec(view(moov))).toBeUndefined();
   });
 
   test('garbage bytes prove nothing', () => {
-    expect(parseMvhdDurationSec(view([1, 2, 3, 4, 5, 6, 7, 8, 9]))).toBeNull();
+    expect(
+      parseMvhdDurationSec(view([1, 2, 3, 4, 5, 6, 7, 8, 9])),
+    ).toBeUndefined();
   });
 });
 
@@ -117,7 +119,7 @@ describe('readMp4DurationSec', () => {
 
   test('a file with no moov proves nothing', async () => {
     const file = new File([Uint8Array.from(box('mdat', [1, 2, 3]))], 'x.m4a');
-    expect(await readMp4DurationSec(file)).toBeNull();
+    expect(await readMp4DurationSec(file)).toBeUndefined();
   });
 
   // The real thing: the ALAC voice file the browser cannot decode but the
@@ -126,7 +128,7 @@ describe('readMp4DurationSec', () => {
   test('reads the ALAC fixture the media element cannot', async () => {
     const file = new File([readFileSync(FIXTURE)], 'too-big.m4a');
     const duration = await readMp4DurationSec(file);
-    expect(duration).not.toBeNull();
+    expect(duration).not.toBeUndefined();
     expect(duration as number).toBeCloseTo(514.56, 1);
   });
 });
