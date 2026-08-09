@@ -232,6 +232,15 @@ human's own commits keep their normal identity.
   the GitHub noreply address is the only allowed form.
 - Push / gh: run with `GH_TOKEN=$(security find-generic-password -s vocabu-agent-pat -w)`
   so pushes and `gh pr create` act as the bot.
+- **Fetch too — agents have no SSH.** `git@github.com` resolves to the owner's
+  1Password agent, which requires a Touch ID approval no headless process can
+  give; the failure is `Permission denied (publickey)`, and the silent version
+  is a stale `origin/*` that makes a pushed branch look unpushed. Read over
+  HTTPS with the same Keychain token:
+  `GH_TOKEN=$(security find-generic-password -s vocabu-agent-pat -w) git -c credential.helper='!gh auth git-credential' -c url.https://github.com/.insteadOf=git@github.com: fetch --all --prune`
+  The flags live only inside that call, so the clone keeps its SSH remote for
+  the owner. Never rewrite the remote and never hand an agent the owner's SSH
+  key — the bot PAT is its own identity, which is the point.
 - PRs opened by the bot request review from `mykhaliuk` — real review
   requests work because author ≠ reviewer.
 - In GitHub Actions (`@claude` mention flow, `.github/workflows/claude.yml`)
