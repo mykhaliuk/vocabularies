@@ -63,21 +63,24 @@ export default defineNuxtConfig({
     // silence; `bun run fonts:check` is the only thing that catches it.
     defaults: { subsets: ['latin', 'cyrillic'] },
     families: [
-      // Only the weights/styles actually used — italics are body-weight only
-      // (em / gloss), Caveat carries the quote marks (500) + words (600).
-      // Caveat has no italic, and `styles` must stay explicit: omitting it
-      // inherits the module default ['normal', 'italic'].
+      // ONE entry per family, and it has to be: the module picks an override
+      // with `families.find(f => f.name === fontFamily)`, so a second entry
+      // for the same name is silently dead. A `weights` x `styles` pair for
+      // Rubik's italic sat here until VKB-157 and never loaded a face.
+      //
+      // That makes the entry a cross product — italic spans 400-800 even
+      // though only the gloss and `em` use it — and it costs nothing: Rubik
+      // is variable, so the provider collapses the weights to a `400..800`
+      // range and serves one file per subset per style either way.
+      //
+      // Caveat: `styles` must stay explicit. Omitting it inherits the module
+      // default ['normal', 'italic'] and asks for an italic Caveat that has
+      // never existed.
       {
         name: 'Rubik',
         provider: 'google',
         weights: [400, 500, 600, 700, 800],
-        styles: ['normal'],
-      },
-      {
-        name: 'Rubik',
-        provider: 'google',
-        weights: [400, 500],
-        styles: ['italic'],
+        styles: ['normal', 'italic'],
       },
       {
         name: 'Caveat',
