@@ -51,6 +51,12 @@ jobs:
       - name: Unit tests
         run: bun run test:unit
 
+      # Last on purpose: the only gate that queries a third party (the Google
+      # Fonts catalogue), so an upstream outage cannot stop the deterministic
+      # checks above from reporting.
+      - name: Font coverage
+        run: bun run fonts:check
+
   e2e:
     runs-on: ubuntu-latest
     timeout-minutes: 15
