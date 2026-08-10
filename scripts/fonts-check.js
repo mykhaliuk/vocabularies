@@ -1,4 +1,7 @@
 #!/usr/bin/env node
+// @ts-nocheck — JS CLI script run by node; it only enters vue-tsc's checked
+// graph via the tests/unit/fonts-check.test.ts import, and runtime behavior
+// there is pinned by that spec, not by static types.
 /* fonts-check — the webfont request in nuxt.config.js must be one the
    provider can actually answer (VKB-157).
 
@@ -9,6 +12,7 @@
 
 import { readFileSync } from 'node:fs';
 import { resolve, join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 const ROOT = resolve(import.meta.dirname, '..');
 const CONFIG = join(ROOT, 'nuxt.config.js');
@@ -162,6 +166,44 @@ const readString = (block, key) => {
   return match === null ? null : match[1];
 };
 
+// `null` when the key is declared but is not a literal. The trailing
+// lookahead is load-bearing: without it `trueInProduction` matches its own
+// prefix and reads as `true`, the one misreading that turns a check OFF.
+export const readBoolean = (block, key) => {
+  const literal = new RegExp(
+    `(^|[\\s{,])${key}\\s*:\\s*(true|false)\\s*(?=[,}])`,
+  ).exec(block);
+  if (literal !== null) return literal[2] === 'true';
+  return declares(block, key) ? null : false;
+};
+
+// An entry is live iff it is global, or it is the first with its name.
+// CSS-driven resolution picks one override with
+// `families.find(f => f.name === …)`; global entries are instead emitted by
+// their own pass over the whole list (@nuxt/fonts module.mjs,
+// `nuxt-fonts-global.css`), and a global override makes the CSS-driven path
+// bail out entirely. So a global entry is always live AND still occupies the
+// name for everyone after it. `global` therefore only decides anything at a
+// repeated name, which is the only place an unreadable one is worth failing.
+export const findDeadDuplicate = (families) => {
+  const seen = new Set();
+  for (const family of families) {
+    if (family.name === null) continue;
+    if (seen.has(family.name) && family.isGlobal !== true) {
+      return { name: family.name, isUnreadable: family.isGlobal === null };
+    }
+    seen.add(family.name);
+  }
+  return null;
+};
+
+export const describeDeadDuplicate = (dead) =>
+  dead.isUnreadable
+    ? `\`global\` on the repeated \`${dead.name}\` entry is not a literal ` +
+      'true/false, so this check cannot tell whether it is dead config'
+    : `\`fonts.families\` lists \`${dead.name}\` more than once; only the ` +
+      'first entry is ever consulted, so the rest are dead config';
+
 const parseConfig = () => {
   const source = stripComments(readFileSync(CONFIG, 'utf8'));
 
@@ -196,7 +238,7 @@ const parseConfig = () => {
     families.push({
       name: readString(entry, 'name'),
       provider: readString(entry, 'provider'),
-      isGlobal: /(^|[\s{,])global\s*:\s*true/.test(entry),
+      isGlobal: readBoolean(entry, 'global'),
       weights: readNumbers(entry, 'weights') ?? defaults.weights,
       styles: readStrings(entry, 'styles') ?? defaults.styles,
       subsets: readStrings(entry, 'subsets') ?? defaults.subsets,
@@ -218,27 +260,8 @@ const parseConfig = () => {
   if (families.length === 0)
     fail('`fonts.families` is empty in nuxt.config.js');
 
-  // CSS-driven resolution picks an override with
-  // `families.find(f => f.name === …)`, so a repeated name is config that
-  // cannot run. VKB-157 shipped two `Rubik` entries and the italic one never
-  // loaded a face; verifying that dead entry against the provider is exactly
-  // how it stayed invisible.
-  //
-  // `global: true` is the exception, and a real one: those entries are
-  // emitted by their own loop over the whole list (@nuxt/fonts module.mjs,
-  // `nuxt-fonts-global.css`), so they are consumed no matter what precedes
-  // them.
-  const seen = new Set();
-  for (const family of families) {
-    if (family.name === null || family.isGlobal) continue;
-    if (seen.has(family.name)) {
-      fail(
-        `\`fonts.families\` lists \`${family.name}\` more than once; only ` +
-          'the first entry is ever consulted, so the rest are dead config',
-      );
-    }
-    seen.add(family.name);
-  }
+  const dead = findDeadDuplicate(families);
+  if (dead !== null) fail(describeDeadDuplicate(dead));
 
   return families;
 };
@@ -284,7 +307,7 @@ const offersWeight = (meta, weight, isItalic) => {
   return styled;
 };
 
-const checkFamily = (family, catalog, failures) => {
+export const checkFamily = (family, catalog, failures) => {
   if (family.name === null) {
     failures.push('UNNAMED  a `families` entry has no `name`');
     return;
@@ -357,4 +380,10 @@ const main = async () => {
   console.log('fonts-check: every configured face is one the provider ships ✓');
 };
 
-await main();
+/* Importing the module for its pure helpers (unit tests) must not reach the
+   network — only running it directly, `node scripts/fonts-check.js`, does. */
+const isEntryPoint =
+  process.argv[1] !== undefined &&
+  import.meta.url === pathToFileURL(process.argv[1]).href;
+
+if (isEntryPoint) await main();
