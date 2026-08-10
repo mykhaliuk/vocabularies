@@ -489,6 +489,14 @@ const onKeep = async () => {
   color: var(--ink);
   transition: border-color var(--dur-fast);
 }
+/* An input cuts an overlong placeholder with no ellipsis and no signal.
+   `em`, not a rem token: it resolves against the field's own px size, so the
+   hint cannot outgrow the headword when the root font-size is raised. */
+.compose__word::placeholder {
+  font-size: 0.77em;
+  font-weight: var(--w-regular);
+}
+
 .compose__word:focus,
 .compose__word--filled {
   border-bottom-color: var(--primary);
