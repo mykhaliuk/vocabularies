@@ -56,27 +56,38 @@ export default defineNuxtConfig({
     // Self-host the Google fonts at build: no render-blocking cross-origin
     // request, woff2 served same-origin + preloaded, fallback metrics injected
     // to keep CLS at zero. Replaces the old <link> to fonts.googleapis.com.
-    // latin + cyrillic: covers the en/fr copy (incl. em-dashes + curly quotes,
-    // which live in the latin range) and the uk locale's Cyrillic glyphs, so
-    // Hanken Grotesk/Caveat render for all three locales instead of falling
-    // back to a system font.
+    // latin + cyrillic: `latin` carries the en/fr accents and typographic
+    // punctuation, `cyrillic` every Ukrainian letter — needed in all three
+    // locales, because unicode-range picks a face per character, not per
+    // locale. A subset the family does not ship is served as nothing, in
+    // silence; `bun run fonts:check` is the only thing that catches it.
     defaults: { subsets: ['latin', 'cyrillic'] },
     families: [
-      // Only the weights/styles actually used — italics are body-weight only
-      // (em / gloss), Caveat carries the quote marks (500) + words (600).
+      // ONE entry per family, and it has to be: the module picks an override
+      // with `families.find(f => f.name === fontFamily)`, so a second entry
+      // for the same name is silently dead. A `weights` x `styles` pair for
+      // Rubik's italic sat here until VKB-157 and never loaded a face.
+      //
+      // That makes the entry a cross product — italic spans 400-800 even
+      // though only the gloss and `em` use it — and it costs nothing: Rubik
+      // is variable, so the provider collapses the weights to a `400..800`
+      // range and serves one file per subset per style either way.
+      //
+      // Caveat: `styles` must stay explicit. Omitting it inherits the module
+      // default ['normal', 'italic'] and asks for an italic Caveat that has
+      // never existed.
       {
-        name: 'Hanken Grotesk',
+        name: 'Rubik',
         provider: 'google',
         weights: [400, 500, 600, 700, 800],
-        styles: ['normal'],
+        styles: ['normal', 'italic'],
       },
       {
-        name: 'Hanken Grotesk',
+        name: 'Caveat',
         provider: 'google',
-        weights: [400, 500],
-        styles: ['italic'],
+        weights: [500, 600],
+        styles: ['normal'],
       },
-      { name: 'Caveat', provider: 'google', weights: [500, 600] },
     ],
   },
   css: [

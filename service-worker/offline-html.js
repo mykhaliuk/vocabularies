@@ -13,7 +13,7 @@ export const OFFLINE_HTML = `<!doctype html>
 :root{--bg:#fbfeff;--sunk:#f1f4f6;--text:#1b1d1e;--muted:#61676c;--faint:#969ba1;--border:#dadee1}
 @media(prefers-color-scheme:dark){:root{--bg:#0e1417;--sunk:#0a1012;--text:#eaf1f2;--muted:#9aa7ab;--faint:#6a757a;--border:#313d41}}
 *{box-sizing:border-box}html,body{margin:0;height:100%}
-body{min-height:100dvh;display:flex;align-items:center;justify-content:center;text-align:center;padding:0 36px;background:var(--bg);color:var(--text);font-family:'Hanken Grotesk',ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;-webkit-font-smoothing:antialiased}
+body{min-height:100dvh;display:flex;align-items:center;justify-content:center;text-align:center;padding:0 36px;background:var(--bg);color:var(--text);font-family:'Rubik',ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;-webkit-font-smoothing:antialiased}
 .wrap{max-width:320px}
 .icon{width:88px;height:88px;border-radius:50%;margin:0 auto 24px;background:var(--sunk);color:var(--faint);display:flex;align-items:center;justify-content:center}
 h1{margin:0;font-size:25px;font-weight:700;letter-spacing:-0.01em}

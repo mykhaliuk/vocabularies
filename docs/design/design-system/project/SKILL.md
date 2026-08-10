@@ -11,7 +11,7 @@ If the user invokes this skill without any other guidance, ask them what they wa
 ## Quick reference
 - **Brand:** Vocabu (from *vocabulary*) — a mobile-first PWA for keeping a personal dictionary of **the memorable ways the people you love talk**: a kid's first words, a friend's catchphrase, a grandparent's saying. Each entry = a word/phrase + who said it + optional meaning + a story + optional audio. Social feed, Twitter-like but warm. Tagline: *"Never lose your sweet moments."*
 - **Foundations:** `colors_and_type.css` — import first. Clean near-white `--paper #FCFCFB` canvas, near-black `--ink #1E1C1A` text, two bright accents: rose `--rose-500 #ED5379` (primary) and light blue `--blue-500 #1F9EDB` (secondary).
-- **Type:** ONE family, **Hanken Grotesk**. Delicate — display/headings at weight 500, body/moments at 400. No serif.
+- **Type:** ONE family, **Rubik**. Delicate — display/headings at weight 500, body/moments at 400. No serif.
 - **Radii:** buttons `--r-btn 12px` (rounded-rect, never pill); chips/FAB/avatars are round; cards 14–20px.
 - **Icons:** Lucide (light outline). Only the heart fills (rose) when loved.
 - **Layout:** mobile-first, thumb-zone — primary nav + compose live at the bottom; rare actions top-left.

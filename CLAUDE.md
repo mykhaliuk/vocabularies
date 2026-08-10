@@ -67,8 +67,9 @@ checks. The coupling is the check, not a convention.
 
 - **Tokens only.** Reference design-system tokens via `var()`; never hard-code
   hex or one-off colors in components.
-- **Type:** one family — **Hanken Grotesk** (headings weight 500, body 400). The
-  only sanctioned extra is **Caveat** (`--font-hand`) for rendered headwords.
+- **Type:** one family — **Rubik** (headings weight 500, body 400), chosen for
+  full Latin + Cyrillic coverage with italics. The only sanctioned extra is
+  **Caveat** (`--font-hand`) for rendered headwords.
 - **Color:** `--paper #FBFEFF` canvas, `--ink #1B1D1E` text, rose `--rose-500
 #ED5379` (primary), blue `--blue-500 #1F9EDB` (secondary). White-label buttons
   sit on `--primary-action` / `--secondary-action` (AA-safe), not on the raw

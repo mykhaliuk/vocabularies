@@ -16,6 +16,7 @@
         "patterns": [
           {
             "group": [
+              "components/**",
               "ui_kits/app/**"
             ],
             "message": "Import design-system components from 'index.js', not component internals."
@@ -34,8 +35,16 @@
         "message": "Raw px value — use a design-system spacing token via var()."
       },
       {
-        "selector": "Literal[value=/font-family\\s*:\\s*(?!['\\\"]?(?:Hanken Grotesk|Caveat))/i]",
-        "message": "Font not provided by the design system. Available: Hanken Grotesk, Caveat."
+        "selector": "Literal[value=/font-family\\s*:\\s*(?!['\\\"]?(?:Rubik|Caveat))/i]",
+        "message": "Font not provided by the design system. Available: Rubik, Caveat."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='WordEntry'] > JSXAttribute > JSXIdentifier[name!=/^(?:speaker|rel|time|tone|word|gloss|desc|audio|collection|likes|liked|saved|replies|key|ref|className|style|children)$/]",
+        "message": "<WordEntry> doesn't accept that prop. Declared props: speaker, rel, time, tone, word, gloss, desc, audio, collection, likes, liked, saved, replies."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='WordEntry'] > JSXAttribute[name.name='tone'] > Literal[value!=/^(?:rose|blue)$/]",
+        "message": "<WordEntry> tone must be one of 'rose' | 'blue'."
       }
     ]
   },
@@ -50,7 +59,11 @@
     }
   ],
   "x-omelette": {
-    "components": {},
+    "components": {
+      "WordEntry": {
+        "replaces": []
+      }
+    },
     "tokens": [
       "--bar-bg",
       "--bg",
@@ -283,7 +296,7 @@
     },
     "fontFamilies": [
       "Caveat",
-      "Hanken Grotesk"
+      "Rubik"
     ]
   }
 }

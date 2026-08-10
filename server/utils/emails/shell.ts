@@ -29,9 +29,9 @@ export const EMAIL_BRAND = {
 
 // --font-sans. Webfonts are unreliable in mail (Outlook and many Gmail configs
 // drop them), so the email relies on the system fallbacks in this stack rather
-// than Hanken Grotesk actually loading.
+// than Rubik actually loading.
 export const FONT_STACK =
-  "'Hanken Grotesk', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif";
+  "'Rubik', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif";
 
 const catalogs = { en, fr, uk };
 

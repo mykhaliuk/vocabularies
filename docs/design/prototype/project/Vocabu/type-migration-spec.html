@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Type migration — Hanken Grotesk → Rubik</title>
+<link rel="stylesheet" href="../_ds/vocabu-design-system-fc456a27-02a5-4423-9181-3fc0311e1354/colors_and_type.css" />
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600&display=swap');
+*{box-sizing:border-box}html,body{margin:0}
+body{background:var(--paper);color:var(--ink);font-family:var(--font-sans);-webkit-font-smoothing:antialiased}
+.wrap{max-width:1040px;margin:0 auto;padding:56px 28px 96px}
+.eyebrow{display:flex;align-items:center;gap:9px;font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3)}
+.eyebrow i{width:7px;height:7px;border-radius:50%;background:var(--primary);display:inline-block}
+h1{font-size:38px;font-weight:800;letter-spacing:-.03em;line-height:1.1;margin:14px 0 0}
+.lede{font-size:17px;line-height:1.55;color:var(--ink-2);max-width:660px;margin:14px 0 0;text-wrap:pretty}
+.meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
+.tag{font-size:12.5px;font-weight:600;padding:6px 11px;border-radius:var(--r-pill);background:var(--surface-sunk);color:var(--ink-2)}
+.tag.rose{background:var(--primary-soft);color:var(--on-primary-soft)}
+h2{font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:0 0 20px}
+section{margin-top:64px;border-top:1px solid var(--hairline);padding-top:26px}
+p{font-size:15.5px;line-height:1.6;color:var(--ink-2);margin:0 0 14px;max-width:680px;text-wrap:pretty}
+p b,li b,td b{color:var(--ink);font-weight:600}
+ul{margin:0 0 14px;padding-left:20px;max-width:680px}
+li{font-size:15.5px;line-height:1.6;color:var(--ink-2);margin-bottom:7px}
+.answers{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-top:8px}
+.ans{background:var(--surface);border:1px solid var(--hairline);border-radius:var(--r-lg);box-shadow:var(--shadow-sm);padding:20px}
+.ans .q{font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-3);margin-bottom:8px}
+.ans .a{font-size:16.5px;font-weight:700;letter-spacing:-.01em;color:var(--ink);line-height:1.35;margin-bottom:8px}
+.ans p{font-size:14.5px;margin:0}
+.cap{font-size:13px;font-weight:600;color:var(--ink-2);margin:34px 0 9px}
+.cap span{color:var(--ink-3);font-weight:400}
+table{border-collapse:collapse;width:100%;margin-top:6px}
+th{text-align:left;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);padding:0 12px 10px 0;border-bottom:1px solid var(--hairline)}
+td{font-size:14px;line-height:1.5;color:var(--ink-2);padding:12px 12px 12px 0;border-bottom:1px solid var(--hairline);vertical-align:top;font-variant-numeric:tabular-nums}
+td:first-child{color:var(--ink);font-weight:600;white-space:nowrap}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;background:var(--surface-sunk);color:var(--ink);padding:2px 5px;border-radius:var(--r-xs)}
+a{color:var(--link)}a:hover{color:var(--secondary-hover)}
+.callout{background:var(--primary-soft);border:1px solid var(--primary-soft-border);border-radius:var(--r-md);padding:18px 20px;max-width:680px;margin:0 0 20px}
+.callout p{margin:0;color:var(--on-primary-soft)}.callout p b{color:var(--on-primary-soft)}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
+.frame{background:var(--surface);border:1px solid var(--hairline);border-radius:var(--r-lg);box-shadow:var(--shadow-sm);padding:22px 20px}
+.frame .lbl{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin-bottom:14px}
+.spec-line{font-size:22px;line-height:1.4;color:var(--ink);margin:0 0 6px}
+.spec-sub{font-size:14px;color:var(--ink-3);margin:0 0 16px}
+.hank{font-family:'Hanken Grotesk',ui-sans-serif,system-ui,sans-serif}
+.word-mock{text-align:center;padding:8px 0 2px}
+.word-mock .metaline{font-size:14px}.word-mock .metaline b{font-weight:600}.word-mock .metaline span{color:var(--ink-3)}
+.word-mock .w{font-family:var(--font-hand);font-weight:500;line-height:1.2;color:var(--ink);padding-bottom:.14em}
+.bad{color:var(--danger);font-weight:600}
+.ok{color:var(--success,#3E7C4F);font-weight:600}
+@media(max-width:720px){.pair{grid-template-columns:1fr}h1{font-size:30px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow"><i></i>Design receipt · type migration</div>
+  <h1>Hanken Grotesk → Rubik</h1>
+  <p class="lede">One token changed: <code>--font-sans</code>. The reason is coverage — Hanken has no everyday Cyrillic (U+0400–045F), so any Ukrainian word inside any locale fell back to a system face mid-line. For a dictionary of how people actually talk, that's the content. Rubik covers <code>cyrillic</code> + <code>cyrillic-ext</code> with an italic at every weight. Caveat stays; it always had Cyrillic.</p>
+  <div class="meta"><span class="tag rose">--font-sans only</span><span class="tag rose">word-scale 1.32 → 1.39</span><span class="tag">wordmark follows the sans</span><span class="tag">9 Aug 2026</span></div>
+
+  <section>
+    <h2>Why — seen, not argued</h2>
+    <p class="cap">The same line, both families <span>— this page loads Hanken for the comparison only.</span></p>
+    <div class="pair">
+      <div class="frame">
+        <div class="lbl">Hanken Grotesk — before</div>
+        <p class="spec-line hank">bapple · <span style="font-weight:600">воркує</span> · apple, but rounder</p>
+        <p class="spec-sub">The Cyrillic word renders in whatever the OS supplies — different face, different weight rhythm, mid-line.</p>
+      </div>
+      <div class="frame">
+        <div class="lbl">Rubik — after</div>
+        <p class="spec-line">bapple · <span style="font-weight:600">воркує</span> · <i>apple, but rounder</i></p>
+        <p class="spec-sub">One face across scripts, and a true italic for the gloss (Hanken's italic never loaded weights above 500 anyway).</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>The three calls the brief asked for</h2>
+    <div class="answers">
+      <div class="ans">
+        <div class="q">Q1 · does the type scale port straight</div>
+        <div class="a">Yes — unchanged</div>
+        <p>Measured at 100px: cap heights are near-identical (70.0 vs 69.7), x-height is +5.5%, advance +1.7%. Small text reads a touch larger without growing lines or layouts — for 12–14px meta, chips and nav labels that's a legibility gain, not a defect. No step changes.</p>
+      </div>
+      <div class="ans">
+        <div class="q">Q2 · the headword ratio</div>
+        <div class="a">--word-scale 1.32 → 1.39</div>
+        <p>The ratio exists to match Caveat's x-height to the sans around it. Re-derived from measurement: 1.32 × (52.0 / 49.3) = 1.392, pinned at <b>1.39</b>. The headword keeps exactly the perceived dominance it had; base shrink steps (40/33/27/22/19) untouched.</p>
+      </div>
+      <div class="ans">
+        <div class="q">Q3 · the wordmark</div>
+        <div class="a">Follows --font-sans, deliberately</div>
+        <p>The logo is placeholder artwork by the DS's own admission; outlining a placeholder freezes the wrong thing. The SVG's <code>font-family</code> is set to Rubik explicitly. Convert to paths once, when the brand artwork is final.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Measured, not recalled</h2>
+    <p>Canvas <code>TextMetrics</code> at 100px, loaded webfonts:</p>
+    <table>
+      <tr><th>Family</th><th>x-height</th><th>Cap height</th><th>Advance (sample string)</th></tr>
+      <tr><td>Hanken Grotesk</td><td>49.3</td><td>69.7</td><td>838.9</td></tr>
+      <tr><td>Rubik</td><td>52.0 <span class="ok">+5.5%</span></td><td>70.0 <span class="ok">+0.4%</span></td><td>853.0 <span class="ok">+1.7%</span></td></tr>
+      <tr><td>Caveat (unchanged)</td><td>36.0</td><td>70.8</td><td>590.8</td></tr>
+    </table>
+    <p style="margin-top:16px">The headword mock at the new ratio, next to Rubik meta — the pairing this was tuned for:</p>
+    <div class="pair">
+      <div class="frame word-mock">
+        <div class="metaline"><b>Mira</b><span> · my daughter · 19 mo</span></div>
+        <div class="w" style="font-size:calc(40px * 1.39)">“bapple”</div>
+      </div>
+      <div class="frame word-mock">
+        <div class="metaline"><b>Бабуся</b><span> · моя бабуся</span></div>
+        <div class="w" style="font-size:calc(33px * 1.39)">“не буркоти”</div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Weights bound</h2>
+    <p>The Google Fonts import now requests exactly what the product uses — all seven styles the brief listed:</p>
+    <table>
+      <tr><th>Style</th><th>Used for</th><th>Before</th><th>Now</th></tr>
+      <tr><td>400</td><td>body, moment text</td><td>bound</td><td>bound</td></tr>
+      <tr><td>500</td><td>meta, labels</td><td>bound</td><td>bound</td></tr>
+      <tr><td>600</td><td>buttons, names, h3</td><td>bound</td><td>bound</td></tr>
+      <tr><td>700</td><td>titles, overlines</td><td>bound</td><td>bound</td></tr>
+      <tr><td>800</td><td><code>--w-extra</code> — display</td><td><span class="bad">missing</span> — browser synthesised it from 700</td><td>bound</td></tr>
+      <tr><td>400 italic</td><td>gloss</td><td>bound</td><td>bound</td></tr>
+      <tr><td>500 italic</td><td>emphasis in meta</td><td>bound</td><td>bound</td></tr>
+    </table>
+    <p style="margin-top:16px">Dropped from the import: 300 and 300 italic — nothing in the product uses them. Net: the same seven styles the brief asked to confirm, plus a real 800 for the first time.</p>
+  </section>
+
+  <section>
+    <h2>Hand-back</h2>
+    <div class="callout"><p><b>Both design-system copies are on the same version.</b> The bound system and the prototype's embedded copy were edited in the same pass — the adherence checker's font contract now names Rubik + Caveat in both.</p></div>
+    <table>
+      <tr><th>Item</th><th>State</th></tr>
+      <tr><td>colors_and_type.css</td><td>Rubik import (7 styles), <code>--font-sans: 'Rubik', …</code>, header comment updated. × 2 copies.</td></tr>
+      <tr><td>_ds_manifest.json</td><td><code>--font-sans</code> token value re-exported. × 2 copies.</td></tr>
+      <tr><td>_adherence.oxlintrc.json</td><td>Font allow-list: Rubik, Caveat. × 2 copies.</td></tr>
+      <tr><td>README.md</td><td>Type bullet + fonts section updated, migration note with the coverage rationale. × 2 copies.</td></tr>
+      <tr><td>Prototype</td><td><code>--word-scale</code> 1.32 → 1.39 in <code>app.jsx</code>, both the live prototype and the export. Everything else flows from the token.</td></tr>
+      <tr><td>logo-wordmark.svg</td><td>Updated copy at <code>assets/logo-wordmark.svg</code> beside this spec — <code>font-family: 'Rubik', …</code> set explicitly. Drop it into the DS repo; geometry, weight 600 and −1.1px tracking untouched (Rubik runs +1.7% wider at the same size, visually negligible here).</td></tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>Watchlist</h2>
+    <ul>
+      <li><b>Rubik has a different personality</b> — geometric with softly rounded corners vs Hanken's humanist warmth. At UI sizes the difference is quiet; at display sizes (landing hero, 800 weight) it's visible. Worth one pass over the landing page before calling the brand settled.</li>
+      <li><b>Offline/PWA fonts</b> — the CSS still loads from the Google Fonts CDN. The self-hosting note in the DS README applies unchanged; the woff2 set to fetch is now Rubik's seven styles + Caveat.</li>
+      <li><b>Spec mocks</b> — the four spec pages inherit Rubik through the token automatically; hard-coded rendered headword sizes were re-checked (one adjusted in entry-actions-spec).</li>
+    </ul>
+  </section>
+</div>
+</body>
+</html>

@@ -90,6 +90,10 @@ requires it for agent-authored work.
 - [ ] `bun run lint && bun run fmt:check && bun run ds:check` (+
       `proto:check` when design files changed, `i18n:check` when locale
       files changed).
+- [ ] `bun run fonts:check` when the `fonts` block of `nuxt.config.js`
+      changed. It asks the provider whether each configured family, subset
+      and weight actually exists — a subset a family does not ship is
+      served as nothing, silently, and nothing else in the repo notices.
 - [ ] `bun run graph:build` when the diff adds or removes an API call, a
       route, a domain operation or a schema column — then commit the
       regenerated `docs/capability-graph.md`. `graph:check` fails CI when
