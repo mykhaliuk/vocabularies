@@ -196,6 +196,7 @@ const parseConfig = () => {
     families.push({
       name: readString(entry, 'name'),
       provider: readString(entry, 'provider'),
+      isGlobal: /(^|[\s{,])global\s*:\s*true/.test(entry),
       weights: readNumbers(entry, 'weights') ?? defaults.weights,
       styles: readStrings(entry, 'styles') ?? defaults.styles,
       subsets: readStrings(entry, 'subsets') ?? defaults.subsets,
@@ -216,6 +217,29 @@ const parseConfig = () => {
 
   if (families.length === 0)
     fail('`fonts.families` is empty in nuxt.config.js');
+
+  // CSS-driven resolution picks an override with
+  // `families.find(f => f.name === …)`, so a repeated name is config that
+  // cannot run. VKB-157 shipped two `Rubik` entries and the italic one never
+  // loaded a face; verifying that dead entry against the provider is exactly
+  // how it stayed invisible.
+  //
+  // `global: true` is the exception, and a real one: those entries are
+  // emitted by their own loop over the whole list (@nuxt/fonts module.mjs,
+  // `nuxt-fonts-global.css`), so they are consumed no matter what precedes
+  // them.
+  const seen = new Set();
+  for (const family of families) {
+    if (family.name === null || family.isGlobal) continue;
+    if (seen.has(family.name)) {
+      fail(
+        `\`fonts.families\` lists \`${family.name}\` more than once; only ` +
+          'the first entry is ever consulted, so the rest are dead config',
+      );
+    }
+    seen.add(family.name);
+  }
+
   return families;
 };
 
