@@ -95,6 +95,9 @@ export default defineConfig({
   use: {
     baseURL,
     trace: 'on-first-retry',
+    // Nothing sets a locale cookie before a spec does, so Accept-Language
+    // picks the language the English accessible names here are written for.
+    locale: 'en-US',
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: {

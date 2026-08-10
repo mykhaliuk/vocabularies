@@ -23,6 +23,9 @@ export default defineConfig({
   use: {
     baseURL,
     trace: 'on-first-retry',
+    // Accept-Language decides the locale on a first visit with no cookie, so
+    // without this the English cases fail on a French or Ukrainian machine.
+    locale: 'en-US',
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: {
