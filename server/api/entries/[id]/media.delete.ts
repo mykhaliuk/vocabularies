@@ -1,5 +1,3 @@
-// graph-pending: VKB-110 — compose edit mode is the only client that will
-// call this
 import { z } from 'zod';
 import { removeEntryMedia } from '~/server/domain/entries';
 import { requireUser } from '~/server/utils/auth';

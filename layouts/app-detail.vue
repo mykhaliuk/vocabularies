@@ -2,9 +2,10 @@
 // Detail shell (word-detail-spec.html §Metrics). Same frosted 54px bar as
 // the tab shell, but nothing fixed at the bottom: the reply composer went
 // with the social row, so the scroll container recovers its air and a future
-// swipe between siblings has the edge to itself. No BottomNav and no
-// ComposeSheet either — this screen is a page you open to remember, and the
-// way out of it is the back arrow.
+// swipe between siblings has the edge to itself. No BottomNav — this screen
+// is a page you open to remember, and the way out of it is the back arrow.
+// The ComposeSheet is here without that FAB: the ⋯ menu's "edit word" is what
+// raises it (entry-actions-spec §Flow).
 defineProps<{ title?: string }>();
 </script>
 
@@ -18,6 +19,7 @@ defineProps<{ title?: string }>();
     <main class="detail-shell__main">
       <slot />
     </main>
+    <ComposeSheet />
   </div>
 </template>
 

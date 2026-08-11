@@ -75,7 +75,7 @@ test.describe('deleting a word (authed)', () => {
     await authedPage.goto(`/entries/${entryId}`);
 
     await openMenu(authedPage);
-    await expect(authedPage.getByRole('menuitem')).toHaveCount(1);
+    await expect(authedPage.getByRole('menuitem')).toHaveCount(2);
 
     await authedPage.getByRole('menuitem', { name: /delete/i }).click();
 
@@ -143,6 +143,10 @@ test.describe('deleting a word (authed)', () => {
     const entryId = await createEntry(authedPage, { word: 'appo' });
     await authedPage.goto(`/entries/${entryId}`);
     await openMenu(authedPage);
+
+    // Off "edit word" and onto "delete…" — still the menu's own, so it stays.
+    await authedPage.keyboard.press('Tab');
+    await expect(authedPage.locator('.actions__menu')).toHaveCount(1);
 
     await authedPage.keyboard.press('Tab');
     await expect(authedPage.locator('.actions__menu')).toHaveCount(0);

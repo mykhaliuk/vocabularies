@@ -29,6 +29,9 @@ type EntryDetail = {
   word: string;
   gloss: string | null;
   speaker: EntrySpeaker | null;
+  // Display-only `speaker` above cannot drive a chip selection; the edit
+  // sheet prefills its speaker row from this.
+  sid: string | null;
   saidAt: string;
   story: string | null;
   collection: string | null;
@@ -412,6 +415,20 @@ const keptMediaKind = computed(() => {
   return kept && kept.status !== 'failed' ? kept.kind : null;
 });
 
+const { openForEdit, savedVersion, savedEntryId } = useCompose();
+
+const editThisWord = () => {
+  if (!entry.value) return;
+  openForEdit(entry.value, media.value);
+};
+
+// Edit rises over this screen rather than navigating, so a save is reported
+// rather than navigated back to: re-read in place and the scroll stays put.
+watch(savedVersion, async () => {
+  if (savedEntryId.value !== entryId) return;
+  await refresh();
+});
+
 useHead(() => ({
   title: entry.value
     ? t('app.entry.pageTitle', { word: entry.value.word })
@@ -429,6 +446,7 @@ useHead(() => ({
       <EntryActionsMenu
         ref="actionsMenu"
         :disabled="isConfirmOpen"
+        @edit="editThisWord"
         @delete="isConfirmOpen = true"
       />
     </template>

@@ -37,6 +37,12 @@ const remember = (entryId: string, playback: PlaybackUrls) => {
   }
 };
 
+// Editing a word can replace or remove the clip behind these URLs, and the
+// cache would otherwise keep playing the old one until eviction (VKB-110).
+export const forgetPlayback = (entryId: string) => {
+  cache.delete(entryId);
+};
+
 export const useEntryPlayback = () => {
   // The word detail screen already fetched GET /api/entries/:id — including
   // its `playback` — to render the page. Handing that payload over here

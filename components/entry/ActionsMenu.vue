@@ -7,9 +7,6 @@ const props = withDefaults(defineProps<{ disabled?: boolean }>(), {
 
 const emit = defineEmits<{ edit: []; delete: [] }>();
 
-// Flipped on by VKB-110, which gives compose the edit mode this opens.
-const IS_EDIT_ENABLED = false;
-
 const { t } = useI18n();
 
 const isOpen = ref(false);
@@ -125,7 +122,6 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
       :aria-label="t('app.entry.actions.menu')"
     >
       <button
-        v-if="IS_EDIT_ENABLED"
         type="button"
         role="menuitem"
         class="actions__item"

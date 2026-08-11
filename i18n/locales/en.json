@@ -139,9 +139,13 @@
     },
     "compose": {
       "title": "New word",
+      "editTitle": "Edit word",
       "cancel": "Cancel",
       "keep": "Keep",
       "keeping": "Keeping…",
+      "save": "Save changes",
+      "saving": "Saving…",
+      "saveFailed": "we couldn't save your changes just now.",
       "wordLabel": "The word or phrase",
       "wordPlaceholder": "e.g. Appo — or a whole saying",
       "speakerLabel": "Who said it",
@@ -195,7 +199,10 @@
         "tooBig": "that file is too large.",
         "tooLong": "keep videos to {video} and audio to {audio}.",
         "minutes": "{n} min",
-        "seconds": "{n} s"
+        "seconds": "{n} s",
+        "onWord": "already on this word",
+        "onWordWorking": "still being prepared",
+        "onWordFailed": "this one never finished processing"
       },
       "premium": {
         "title": "video moments are premium.",
@@ -211,7 +218,12 @@
         "question": "Discard this word?",
         "body": "Nothing you put here will be kept.",
         "confirm": "Discard",
-        "keep": "Keep editing"
+        "keep": "Keep editing",
+        "editKeep": "Keep editing",
+        "editQuestion": "Discard your changes?",
+        "editBody": "The word stays exactly as it was.",
+        "editBodyPartial": "Some of your changes are already saved and will stay.",
+        "editConfirm": "Discard changes"
       }
     },
     "discover": {

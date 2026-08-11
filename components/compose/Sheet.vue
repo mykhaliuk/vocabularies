@@ -5,7 +5,8 @@ import type { SpeakerView } from '~/server/utils/speaker-view';
 // Compose bottom sheet (prototype compose.jsx / compose-dark screenshot),
 // adapted to upload-first (VKB-67). Rises over the blurred app behind it.
 const { t } = useI18n();
-const { isOpen, close, notifyPosted } = useCompose();
+const { isOpen, close, notifyPosted, notifySaved, editedEntry, editedMedia } =
+  useCompose();
 const {
   phase,
   progress,
@@ -20,6 +21,10 @@ const {
 } = useMediaUpload();
 // Shapes the picker only — the server stays the gate (ADR-0012).
 const { entitlements } = useEntitlements();
+
+// Cancel is closed while these run, so they must not be able to hang: a
+// stalled write would otherwise leave the sheet with no way out at all.
+const WRITE_TIMEOUT_MS = 15_000;
 
 const premiumOpen = ref(false);
 const confirmOpen = ref(false);
@@ -56,6 +61,38 @@ const file = ref<File | null>(null);
 const wordInput = ref<HTMLInputElement | null>(null);
 const speakerChips = ref<{ resetPanel: () => void } | null>(null);
 
+const isEditing = computed(() => editedEntry.value !== null);
+
+const isKeptMediaDropped = ref(false);
+const keptMedia = computed(() =>
+  isKeptMediaDropped.value ? null : editedMedia.value,
+);
+
+// This sheet is writing the entry itself; cancel is closed for it (ADR-0016).
+const isCommitting = ref(false);
+const saveError = ref<string | undefined>();
+
+const hasSavedMedia = ref(false);
+const hasWrittenFields = ref(false);
+
+// Anything past recall. A confirmed upload counts from 'finalizing' on: the
+// confirm is already in the air, and ADR-0009 binds the clip to the word
+// once processing finishes, whatever this sheet does next.
+const isPartlySaved = computed(
+  () =>
+    hasSavedMedia.value ||
+    phase.value === 'finalizing' ||
+    hasWrittenFields.value,
+);
+
+// A different file is a different upload, whatever the last one achieved.
+// The slot goes with it: it is signed against the previous file's length, so
+// reusing it would have the next PUT refused.
+watch(file, () => {
+  hasSavedMedia.value = false;
+  swap();
+});
+
 // The chip row's people. Fetched on every sheet OPENING, never while it is
 // open: the MRU order settles between sessions, so chips do not move under
 // the thumb (speaker-spec §Creation flow). A failed fetch degrades to just
@@ -81,11 +118,36 @@ const onSpeakerCreated = (speaker: SpeakerView) => {
 
 const isBusy = computed(
   () =>
+    isCommitting.value ||
     phase.value === 'creating' ||
     phase.value === 'uploading' ||
     phase.value === 'finalizing',
 );
 const canPost = computed(() => word.value.trim().length > 0 && !isBusy.value);
+
+// Only the row writes close the exit, and they are bounded below. Blocking
+// the upload too would strand an edit behind a stalled connection for no
+// gain: aborted bytes never confirm, so they never reach the word.
+const isCancelBlocked = computed(() => isEditing.value && isCommitting.value);
+
+const sheetTitle = computed(() =>
+  isEditing.value ? t('app.compose.editTitle') : t('app.compose.title'),
+);
+
+const primaryLabel = computed(() => {
+  if (isEditing.value) {
+    return isBusy.value ? t('app.compose.saving') : t('app.compose.save');
+  }
+  return isBusy.value ? t('app.compose.keeping') : t('app.compose.keep');
+});
+
+// A media failure is reported inside the picker, next to the file it is
+// about; everything else belongs to the form.
+const formError = computed(() => {
+  if (saveError.value !== undefined) return saveError.value;
+  if (phase.value === 'error' && file.value === null) return errorMessage.value;
+  return undefined;
+});
 
 // Async progress is otherwise invisible to a screen reader: the button label
 // and the progress bar both change without moving focus.
@@ -97,19 +159,25 @@ const liveStatus = computed(() => {
   return '';
 });
 
-const resetForm = () => {
-  word.value = '';
-  sid.value = undefined;
-  gloss.value = '';
-  story.value = '';
+// The fields never carry over between openings.
+const fillForm = () => {
+  const entry = editedEntry.value;
+  word.value = entry?.word ?? '';
+  sid.value = entry?.sid ?? undefined;
+  gloss.value = entry?.gloss ?? '';
+  story.value = entry?.story ?? '';
   file.value = null;
+  isKeptMediaDropped.value = false;
+  isCommitting.value = false;
+  saveError.value = undefined;
+  hasSavedMedia.value = false;
+  hasWrittenFields.value = false;
   speakerChips.value?.resetPanel();
   reset();
 };
 
-// Reset + focus when the sheet opens; the fields never carry over between
-// words. The timer is cleared on close so focus is never moved into a sheet
-// that has already gone inert.
+// Fill + focus when the sheet opens. The timer is cleared on close so focus
+// is never moved into a sheet that has already gone inert.
 let focusTimer: ReturnType<typeof setTimeout> | null = null;
 
 watch(isOpen, (open) => {
@@ -121,7 +189,7 @@ watch(isOpen, (open) => {
     settleQuestion(true);
     return;
   }
-  resetForm();
+  fillForm();
   void loadSpeakers();
   focusTimer = setTimeout(() => wordInput.value?.focus(), 280);
 });
@@ -129,13 +197,34 @@ watch(isOpen, (open) => {
 // Dismissing is a discard (VKB-154): the sheet goes at once and the composable
 // deletes behind it, so a half-written word never survives as a text-only
 // entry nobody asked for. The confirm is the guard against a mis-tap.
-const isDirty = computed(
+const hasContent = computed(
   () =>
     word.value.trim().length > 0 ||
     gloss.value.trim().length > 0 ||
     story.value.trim().length > 0 ||
     sid.value !== undefined ||
     !!file.value,
+);
+
+// An edit opens full, so "is there anything here?" would ask on every
+// dismissal. What is worth a confirm is what would be lost.
+const hasFieldChanges = computed(() => {
+  const entry = editedEntry.value;
+  if (entry === null) return false;
+  return (
+    word.value !== entry.word ||
+    gloss.value !== (entry.gloss ?? '') ||
+    story.value !== (entry.story ?? '') ||
+    sid.value !== (entry.sid ?? undefined)
+  );
+});
+
+const hasChanges = computed(
+  () => hasFieldChanges.value || !!file.value || isKeptMediaDropped.value,
+);
+
+const isDirty = computed(() =>
+  isEditing.value ? hasChanges.value : hasContent.value,
 );
 
 const discardNow = () => {
@@ -145,6 +234,7 @@ const discardNow = () => {
 };
 
 const onCancel = () => {
+  if (isCancelBlocked.value) return;
   if (isDirty.value) {
     askCancel();
     confirmOpen.value = true;
@@ -176,6 +266,10 @@ onMounted(() => window.addEventListener('keydown', onKeydown));
 onBeforeUnmount(() => {
   if (focusTimer !== null) clearTimeout(focusTimer);
   window.removeEventListener('keydown', onKeydown);
+  // The draft lives in this component, but `isOpen` outlives it: the tab and
+  // detail shells mount a sheet each, so a back gesture mid-edit would raise
+  // the other one over the next page with every field blank.
+  if (isOpen.value) close();
 });
 
 const onKeep = async () => {
@@ -196,8 +290,94 @@ const onKeep = async () => {
   if (confirmOpen.value && !(await questionAnswered())) return;
   notifyPosted();
   close();
-  resetForm();
+  fillForm();
   await navigateTo('/feed');
+};
+
+// Always sends `sid`, as a uuid or an explicit null: the route reads the key
+// being present as "re-point the speaker", and its absence as "leave it" —
+// which would make deselecting a person impossible from here.
+const writeFields = (entryId: string) =>
+  $fetch(`/api/entries/${encodeURIComponent(entryId)}`, {
+    method: 'PATCH',
+    credentials: 'include',
+    timeout: WRITE_TIMEOUT_MS,
+    body: {
+      word: word.value.trim(),
+      gloss: gloss.value.trim(),
+      story: story.value.trim(),
+      sid: sid.value ?? null,
+    },
+  });
+
+const dropMedia = (entryId: string) =>
+  $fetch(`/api/entries/${encodeURIComponent(entryId)}/media`, {
+    method: 'DELETE',
+    credentials: 'include',
+    timeout: WRITE_TIMEOUT_MS,
+  });
+
+// First and alone, and the row writes last — ADR-0016.
+const saveMedia = async (entryId: string) => {
+  if (file.value === null || hasSavedMedia.value) return true;
+  const result = await submit(
+    {
+      word: word.value,
+      gloss: gloss.value,
+      sid: sid.value,
+      story: story.value,
+      file: file.value,
+    },
+    { entryId },
+  );
+  if (result === null) return false;
+  hasSavedMedia.value = true;
+  return true;
+};
+
+// Fields before removal — ADR-0016. Untouched fields are not written at
+// all, so a removal that fails on its own cannot report text as saved.
+const commitChanges = async (entryId: string) => {
+  isCommitting.value = true;
+  try {
+    if (hasFieldChanges.value) {
+      await writeFields(entryId);
+      hasWrittenFields.value = true;
+    }
+    if (file.value === null && isKeptMediaDropped.value) {
+      await dropMedia(entryId);
+    }
+    return true;
+  } catch (error) {
+    console.error('[ComposeSheet] saving the changes failed', error);
+    saveError.value = t('app.compose.saveFailed');
+    return false;
+  } finally {
+    isCommitting.value = false;
+  }
+};
+
+const onSave = async () => {
+  const entry = editedEntry.value;
+  if (entry === null || !canPost.value) return;
+  saveError.value = undefined;
+
+  const isSaved =
+    (await saveMedia(entry.id)) && (await commitChanges(entry.id));
+
+  // Announced on what landed, not on whether everything did: a half-applied
+  // save still leaves the detail screen behind this sheet showing a word the
+  // row no longer has, and re-opening the editor would prefill from it.
+  if (isPartlySaved.value) {
+    forgetPlayback(entry.id);
+    notifySaved(entry.id);
+  }
+  if (isSaved) close();
+};
+
+const onPrimary = async () => {
+  if (isEditing.value) await onSave();
+  else await onKeep();
 };
 </script>
 
@@ -217,16 +397,21 @@ const onKeep = async () => {
       class="compose__sheet"
       role="dialog"
       aria-modal="true"
-      :aria-label="t('app.compose.title')"
+      :aria-label="sheetTitle"
       :inert="confirmOpen"
     >
       <div class="compose__handle" aria-hidden="true" />
 
       <header class="compose__header">
-        <button type="button" class="compose__cancel" @click="onCancel">
+        <button
+          type="button"
+          class="compose__cancel"
+          :disabled="isCancelBlocked"
+          @click="onCancel"
+        >
           {{ t('app.compose.cancel') }}
         </button>
-        <span class="compose__title">{{ t('app.compose.title') }}</span>
+        <span class="compose__title">{{ sheetTitle }}</span>
         <span class="compose__header-spacer" aria-hidden="true" />
       </header>
 
@@ -286,25 +471,21 @@ const onKeep = async () => {
 
         <ComposeMediaAttach
           :file="file"
+          :kept-media="keptMedia"
           :phase="phase"
           :progress="progress"
           :entitlements="entitlements"
           :error-code="errorCode"
           :error-message="errorMessage"
           @update:file="file = $event"
-          @retry="onKeep"
+          @remove-kept="isKeptMediaDropped = true"
+          @retry="onPrimary"
           @swap="swap"
           @see-premium="premiumOpen = true"
         />
 
-        <!-- Only form-level failures: a media failure is reported inside the
-             picker, next to the file it is about. -->
-        <p
-          v-if="phase === 'error' && errorMessage && !file"
-          class="compose__error"
-          role="alert"
-        >
-          {{ errorMessage }}
+        <p v-if="formError" class="compose__error" role="alert">
+          {{ formError }}
         </p>
       </div>
 
@@ -312,11 +493,11 @@ const onKeep = async () => {
            --primary-action surface, so the accent never has to carry text
            contrast on its own. -->
       <div class="compose__footer">
-        <VButton full size="lg" :disabled="!canPost" @click="onKeep">
+        <VButton full size="lg" :disabled="!canPost" @click="onPrimary">
           <template v-if="isBusy" #left>
             <Loader2 :size="16" class="compose__spin" />
           </template>
-          {{ isBusy ? t('app.compose.keeping') : t('app.compose.keep') }}
+          {{ primaryLabel }}
         </VButton>
       </div>
 
@@ -327,6 +508,8 @@ const onKeep = async () => {
 
     <ComposeDiscardSheet
       :open="confirmOpen"
+      :is-edit="isEditing"
+      :is-partly-saved="isPartlySaved"
       @confirm="discardNow"
       @cancel="keepEditing"
     />

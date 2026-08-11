@@ -1,9 +1,37 @@
 <script setup lang="ts">
-const props = defineProps<{ open: boolean }>();
+const props = defineProps<{
+  open: boolean;
+  isEdit: boolean;
+  // Anything that already reached the word stays there whatever this sheet
+  // answers, so the promise below has to know about it.
+  isPartlySaved: boolean;
+}>();
 
 const emit = defineEmits<{ confirm: []; cancel: [] }>();
 
 const { t } = useI18n();
+
+const question = computed(() =>
+  props.isEdit
+    ? t('app.compose.discard.editQuestion')
+    : t('app.compose.discard.question'),
+);
+const body = computed(() => {
+  if (!props.isEdit) return t('app.compose.discard.body');
+  if (props.isPartlySaved) return t('app.compose.discard.editBodyPartial');
+  return t('app.compose.discard.editBody');
+});
+const confirmLabel = computed(() =>
+  props.isEdit
+    ? t('app.compose.discard.editConfirm')
+    : t('app.compose.discard.confirm'),
+);
+// Separate keys because fr/uk say "keep writing", which an editor is not.
+const keepLabel = computed(() =>
+  props.isEdit
+    ? t('app.compose.discard.editKeep')
+    : t('app.compose.discard.keep'),
+);
 
 const keepWrapper = ref<HTMLElement | null>(null);
 
@@ -36,17 +64,17 @@ watch(
       <div class="discard__grab" aria-hidden="true" />
 
       <p id="compose-discard-question" class="discard__question">
-        {{ t('app.compose.discard.question') }}
+        {{ question }}
       </p>
-      <p class="discard__body">{{ t('app.compose.discard.body') }}</p>
+      <p class="discard__body">{{ body }}</p>
 
       <div class="discard__stack">
         <VButton variant="danger" size="lg" full @click="emit('confirm')">
-          {{ t('app.compose.discard.confirm') }}
+          {{ confirmLabel }}
         </VButton>
         <span ref="keepWrapper" class="discard__keep">
           <VButton variant="secondary" size="lg" full @click="emit('cancel')">
-            {{ t('app.compose.discard.keep') }}
+            {{ keepLabel }}
           </VButton>
         </span>
       </div>

@@ -139,9 +139,13 @@
     },
     "compose": {
       "title": "Nouveau mot",
+      "editTitle": "Modifier le mot",
       "cancel": "Annuler",
       "keep": "Garder",
       "keeping": "Enregistrement…",
+      "save": "Enregistrer les modifications",
+      "saving": "Enregistrement…",
+      "saveFailed": "impossible d'enregistrer vos modifications pour l'instant.",
       "wordLabel": "Le mot ou la phrase",
       "wordPlaceholder": "ex. Appo — ou toute une expression",
       "speakerLabel": "Qui l'a dit",
@@ -195,7 +199,10 @@
         "tooBig": "ce fichier est trop lourd.",
         "tooLong": "vidéos jusqu'à {video}, audio jusqu'à {audio}.",
         "minutes": "{n} min",
-        "seconds": "{n} s"
+        "seconds": "{n} s",
+        "onWord": "déjà sur ce mot",
+        "onWordWorking": "en cours de préparation",
+        "onWordFailed": "ce fichier n'a jamais pu être traité"
       },
       "premium": {
         "title": "les moments vidéo sont premium.",
@@ -211,7 +218,12 @@
         "question": "Abandonner ce mot ?",
         "body": "Rien de ce que vous avez mis ici ne sera gardé.",
         "confirm": "Abandonner",
-        "keep": "Continuer à écrire"
+        "keep": "Continuer à écrire",
+        "editKeep": "Continuer à modifier",
+        "editQuestion": "Abandonner vos modifications ?",
+        "editBody": "Le mot reste exactement tel qu'il était.",
+        "editBodyPartial": "Certaines de vos modifications sont déjà enregistrées et resteront.",
+        "editConfirm": "Abandonner les modifications"
       }
     },
     "discover": {
