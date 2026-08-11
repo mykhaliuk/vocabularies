@@ -280,11 +280,12 @@ watch(
   { immediate: true },
 );
 
-// A word composed via the sheet lands as a processing entry; pull it into
-// view right away. The refresh changes the processing set, so the watcher
-// above restarts the poll with a fresh attempt budget.
-const { postedVersion } = useCompose();
-watch(postedVersion, () => {
+// A word composed via the sheet lands as a processing entry, and an edited
+// one can pick up fresh media the same way; pull either into view right
+// away. The refresh changes the processing set, so the watcher above
+// restarts the poll with a fresh attempt budget.
+const { postedVersion, savedVersion } = useCompose();
+watch([postedVersion, savedVersion], () => {
   void refreshFirstPage();
 });
 

@@ -60,3 +60,7 @@ Format: `NNNN-short-slug.md`, template in [0000-template.md](0000-template.md).
 - [ADR-0015](0015-pwa-update-prompt.md) — PWA updates are offered, not
   applied: the worker waits for a `SKIP_WAITING` message and a dismissible
   prompt does the asking, instead of `autoUpdate` reloading mid-session
+- [ADR-0016](0016-edit-cancel-leaves-the-word-untouched.md) — an abandoned
+  edit leaves the word untouched: the save uploads first and commits the row
+  last, cancel closes only for that commit, and the discard copy switches
+  once a clip is past the point of recall

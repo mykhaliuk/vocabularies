@@ -12,6 +12,7 @@ import {
 } from 'lucide-vue-next';
 import type { ComposePhase } from '~/composables/useMediaUpload';
 import type { Entitlements } from '~/server/utils/entitlements';
+import type { MediaView } from '~/server/utils/entry-view';
 import { ALLOWED_MEDIA_CONTENT_TYPES } from '~/shared/media-types';
 
 // The media affordance (docs/design/prototype/project/Vocabu/media-spec.html).
@@ -25,6 +26,9 @@ import { ALLOWED_MEDIA_CONTENT_TYPES } from '~/shared/media-types';
 // below has a branch for it rather than a dead end.
 const props = defineProps<{
   file: File | null;
+  // The clip the word being edited already carries, until it is removed or a
+  // replacement is picked; always null while composing a fresh word.
+  keptMedia: MediaView | null;
   phase: ComposePhase;
   progress: number;
   entitlements: Entitlements | null;
@@ -34,6 +38,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'update:file': [File | null];
+  'remove-kept': [];
   retry: [];
   swap: [];
   'see-premium': [];
@@ -224,6 +229,19 @@ const bars = Array.from({ length: BAR_COUNT }, (_, index) =>
   Math.round(16 + Math.abs(Math.sin(index * 1.7 + 3)) * 84),
 );
 const litBars = computed(() => Math.round((props.progress / 100) * BAR_COUNT));
+
+const keptLabel = computed(() =>
+  props.keptMedia?.kind === 'video'
+    ? t('app.compose.media.keptVideo')
+    : t('app.compose.media.keptVoice'),
+);
+
+const keptDetail = computed(() => {
+  const status = props.keptMedia?.status;
+  if (status === 'processing') return t('app.compose.media.onWordWorking');
+  if (status === 'failed') return t('app.compose.media.onWordFailed');
+  return t('app.compose.media.onWord');
+});
 </script>
 
 <template>
@@ -336,6 +354,32 @@ const litBars = computed(() => Math.round((props.progress / 100) * BAR_COUNT));
           class="attach__remove"
           :aria-label="t('app.compose.media.remove')"
           @click="clearFile"
+        >
+          <X :size="16" />
+        </button>
+      </div>
+    </div>
+
+    <!-- the clip the word already has: same kept furniture as a fresh pick,
+         so replace and remove sit where the composer left them. -->
+    <div v-else-if="keptMedia" class="attach__panel">
+      <div class="attach__kept">
+        <span class="attach__tick" aria-hidden="true"
+          ><Check :size="11"
+        /></span>
+        <span class="attach__kept-label">{{ keptLabel }}</span>
+        <button type="button" class="attach__replace" @click="openPicker">
+          <Repeat :size="14" aria-hidden="true" />
+          {{ t('app.compose.media.replace') }}
+        </button>
+      </div>
+      <div class="attach__row">
+        <span class="attach__name">{{ keptDetail }}</span>
+        <button
+          type="button"
+          class="attach__remove"
+          :aria-label="t('app.compose.media.remove')"
+          @click="emit('remove-kept')"
         >
           <X :size="16" />
         </button>
