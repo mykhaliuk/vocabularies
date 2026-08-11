@@ -1,5 +1,5 @@
 import { chromium } from '@playwright/test';
-import { STANDALONE_INIT, clickAndReadCode } from './helpers.mjs';
+import { EN, STANDALONE_INIT, clickAndReadCode } from './helpers.mjs';
 
 // Local-only integration test for the poll/claim + confirmation-code client
 // (VKB-70): the full cross-jar scenario the ticket describes. NOT part of the
@@ -21,7 +21,7 @@ export const run = async ({ base, findLink }) => {
   try {
     console.log('\n== Happy path: send -> click reveals code -> confirm ==');
     const email = `client-${Date.now()}@example.com`;
-    const pwa = await browser.newContext();
+    const pwa = await browser.newContext(EN);
     await pwa.addInitScript(STANDALONE_INIT);
     const pwaPage = await pwa.newPage();
 
@@ -109,7 +109,7 @@ export const run = async ({ base, findLink }) => {
 
     console.log('\n== Wrong code shows an inline error and allows retry ==');
     const email2 = `retry-${Date.now()}@example.com`;
-    const pwa2 = await browser.newContext();
+    const pwa2 = await browser.newContext(EN);
     await pwa2.addInitScript(STANDALONE_INIT);
     const p2 = await pwa2.newPage();
     await p2.goto(`${base}/login`);
@@ -151,7 +151,7 @@ export const run = async ({ base, findLink }) => {
 
     console.log('\n== Cold-start resume into the confirm step ==');
     const email3 = `resume-${Date.now()}@example.com`;
-    const resume = await browser.newContext();
+    const resume = await browser.newContext(EN);
     await resume.addInitScript(STANDALONE_INIT);
     const r1 = await resume.newPage();
     await r1.goto(`${base}/login`);

@@ -2,6 +2,10 @@
 // simulate the installed-PWA jar boundary with separate browser contexts; they
 // prove the mechanism, not the on-device iOS jar (which needs a real iPhone).
 
+// English locale so the assertions match the en copy regardless of the host's
+// Accept-Language, and so the entry-locale redirect never bounces `/` to /fr.
+export const EN = { locale: 'en-US' };
+
 // Force the "installed standalone PWA" signal so the client mints a poll key
 // and /login shows the code field up front. Injected before any page script
 // runs (addInitScript) so isStandalone() reads true on first render.
@@ -24,6 +28,7 @@ export const sendFrom = async (page, base, email) => {
 };
 
 // Open the emailed link in a separate jar (Safari) and read the code it reveals.
+// Not EN: nothing below is read by name — a role and a URL path only.
 export const clickAndReadCode = async (browser, link) => {
   const safari = await browser.newContext();
   const page = await safari.newPage();

@@ -658,12 +658,17 @@ onMounted(() => {
 
 .field-row {
   display: flex;
+  /* Paired with the input's min-width below — the floor is what makes this row
+     break rather than squeeze, and neither half works alone. */
+  flex-wrap: wrap;
   gap: 10px;
 }
 
 .field-row__input {
   flex: 1;
-  min-width: 0;
+  /* The submit never wraps its label, so without a floor a long translation
+     shrinks this field until the address it asks for no longer fits. */
+  min-width: 11em;
   font-family: var(--font-sans);
   font-size: 16px;
   color: var(--text);

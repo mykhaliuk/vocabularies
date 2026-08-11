@@ -1,5 +1,5 @@
 import { chromium } from '@playwright/test';
-import { sendFrom } from './helpers.mjs';
+import { EN, sendFrom } from './helpers.mjs';
 
 // Local-only UI tests for the compose write path (VKB-67): the sheet posts a
 // word (text-only and with a small voice fixture), the feed shows it without
@@ -10,8 +10,6 @@ import { sendFrom } from './helpers.mjs';
 // NOT part of the CI e2e suite (needs a DB + MinIO + the inline transcode
 // path) — see e2e/local/README. Invoked by e2e/local/run.mjs with
 // { base, findLink }.
-
-const EN = { locale: 'en-US' };
 
 // Minimal real WAV: RIFF header + 1s of 8kHz 16-bit mono silence. Generated
 // here so the repo carries no binary fixture; ffmpeg reads it fine.

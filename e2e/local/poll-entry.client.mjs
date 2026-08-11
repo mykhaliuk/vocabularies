@@ -1,5 +1,5 @@
 import { chromium } from '@playwright/test';
-import { STANDALONE_INIT, clickAndReadCode, sendFrom } from './helpers.mjs';
+import { EN, STANDALONE_INIT, clickAndReadCode, sendFrom } from './helpers.mjs';
 
 // Local-only UI tests for the VKB-70 QA fixes: an installed standalone PWA
 // resolves its entry (the app when signed in, /login otherwise) instead of
@@ -11,10 +11,6 @@ import { STANDALONE_INIT, clickAndReadCode, sendFrom } from './helpers.mjs';
 // "ask for a new link" is always one tap away. NOT part of the CI e2e suite
 // (needs a DB + console email) — see e2e/local/README. Invoked by
 // e2e/local/run.mjs with { base, findLink }.
-
-// English locale so the assertions match the en copy regardless of the host's
-// Accept-Language, and so the entry-locale redirect never bounces `/` to /fr.
-const EN = { locale: 'en-US' };
 
 // Mirrors MAGIC_LINK_TTL_MINUTES in shared/magic-link.ts (not imported: this
 // runner is plain node ESM and that module is TypeScript).
