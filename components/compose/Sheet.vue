@@ -73,12 +73,16 @@ const isCommitting = ref(false);
 const saveError = ref<string | undefined>();
 
 const hasSavedMedia = ref(false);
+const hasWrittenFields = ref(false);
 
-// Past the point where abandoning still leaves the clip alone: a confirmed
-// upload becomes the word's when processing finishes (ADR-0009), and the
-// confirm is already in the air during 'finalizing'.
-const isMediaSent = computed(
-  () => hasSavedMedia.value || phase.value === 'finalizing',
+// Anything past recall. A confirmed upload counts from 'finalizing' on: the
+// confirm is already in the air, and ADR-0009 binds the clip to the word
+// once processing finishes, whatever this sheet does next.
+const isPartlySaved = computed(
+  () =>
+    hasSavedMedia.value ||
+    phase.value === 'finalizing' ||
+    hasWrittenFields.value,
 );
 
 // A different file is a different upload, whatever the last one achieved.
@@ -167,6 +171,7 @@ const fillForm = () => {
   isCommitting.value = false;
   saveError.value = undefined;
   hasSavedMedia.value = false;
+  hasWrittenFields.value = false;
   speakerChips.value?.resetPanel();
   reset();
 };
@@ -203,18 +208,20 @@ const hasContent = computed(
 
 // An edit opens full, so "is there anything here?" would ask on every
 // dismissal. What is worth a confirm is what would be lost.
-const hasChanges = computed(() => {
+const hasFieldChanges = computed(() => {
   const entry = editedEntry.value;
   if (entry === null) return false;
   return (
     word.value !== entry.word ||
     gloss.value !== (entry.gloss ?? '') ||
     story.value !== (entry.story ?? '') ||
-    sid.value !== (entry.sid ?? undefined) ||
-    !!file.value ||
-    isKeptMediaDropped.value
+    sid.value !== (entry.sid ?? undefined)
   );
 });
+
+const hasChanges = computed(
+  () => hasFieldChanges.value || !!file.value || isKeptMediaDropped.value,
+);
 
 const isDirty = computed(() =>
   isEditing.value ? hasChanges.value : hasContent.value,
@@ -328,13 +335,18 @@ const saveMedia = async (entryId: string) => {
   return true;
 };
 
+// Fields before removal — ADR-0016. Untouched fields are not written at
+// all, so a removal that fails on its own cannot report text as saved.
 const commitChanges = async (entryId: string) => {
   isCommitting.value = true;
   try {
+    if (hasFieldChanges.value) {
+      await writeFields(entryId);
+      hasWrittenFields.value = true;
+    }
     if (file.value === null && isKeptMediaDropped.value) {
       await dropMedia(entryId);
     }
-    await writeFields(entryId);
     return true;
   } catch (error) {
     console.error('[ComposeSheet] saving the changes failed', error);
@@ -350,12 +362,17 @@ const onSave = async () => {
   if (entry === null || !canPost.value) return;
   saveError.value = undefined;
 
-  if (!(await saveMedia(entry.id))) return;
-  if (!(await commitChanges(entry.id))) return;
+  const isSaved =
+    (await saveMedia(entry.id)) && (await commitChanges(entry.id));
 
-  forgetPlayback(entry.id);
-  notifySaved(entry.id);
-  close();
+  // Announced on what landed, not on whether everything did: a half-applied
+  // save still leaves the detail screen behind this sheet showing a word the
+  // row no longer has, and re-opening the editor would prefill from it.
+  if (isPartlySaved.value) {
+    forgetPlayback(entry.id);
+    notifySaved(entry.id);
+  }
+  if (isSaved) close();
 };
 
 const onPrimary = async () => {
@@ -492,7 +509,7 @@ const onPrimary = async () => {
     <ComposeDiscardSheet
       :open="confirmOpen"
       :is-edit="isEditing"
-      :is-media-sent="isMediaSent"
+      :is-partly-saved="isPartlySaved"
       @confirm="discardNow"
       @cancel="keepEditing"
     />

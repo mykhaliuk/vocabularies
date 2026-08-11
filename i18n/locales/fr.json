@@ -222,7 +222,7 @@
         "editKeep": "Continuer à modifier",
         "editQuestion": "Abandonner vos modifications ?",
         "editBody": "Le mot reste exactement tel qu'il était.",
-        "editBodySent": "Vos autres modifications sont abandonnées. Le nouveau clip est déjà enregistré.",
+        "editBodyPartial": "Certaines de vos modifications sont déjà enregistrées et resteront.",
         "editConfirm": "Abandonner les modifications"
       }
     },

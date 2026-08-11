@@ -222,7 +222,7 @@
         "editKeep": "Keep editing",
         "editQuestion": "Discard your changes?",
         "editBody": "The word stays exactly as it was.",
-        "editBodySent": "Your other changes go. The new clip is already saved.",
+        "editBodyPartial": "Some of your changes are already saved and will stay.",
         "editConfirm": "Discard changes"
       }
     },

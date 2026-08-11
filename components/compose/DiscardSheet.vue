@@ -2,9 +2,9 @@
 const props = defineProps<{
   open: boolean;
   isEdit: boolean;
-  // A clip that already reached the server lands on the word whatever this
-  // sheet answers, so the promise below has to know about it.
-  isMediaSent: boolean;
+  // Anything that already reached the word stays there whatever this sheet
+  // answers, so the promise below has to know about it.
+  isPartlySaved: boolean;
 }>();
 
 const emit = defineEmits<{ confirm: []; cancel: [] }>();
@@ -18,7 +18,7 @@ const question = computed(() =>
 );
 const body = computed(() => {
   if (!props.isEdit) return t('app.compose.discard.body');
-  if (props.isMediaSent) return t('app.compose.discard.editBodySent');
+  if (props.isPartlySaved) return t('app.compose.discard.editBodyPartial');
   return t('app.compose.discard.editBody');
 });
 const confirmLabel = computed(() =>

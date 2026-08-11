@@ -25,8 +25,8 @@ processing, and the `PATCH`/`DELETE` pair that changes the row immediately.
 Cancelling an edit leaves the word as you found it, and **the sheet only
 ever promises what is still true**.
 
-A save does its media work **first** and its row writes **last**, in one
-short committing step. Cancel is then closed for exactly one window — while
+A save does its **upload** first and its row writes last, in one short
+committing step. Cancel is then closed for exactly one window — while
 those row writes are in flight (`isCommitting`, edit mode only): the header
 button disables, and the scrim and Escape do nothing. Both writes carry a
 timeout, so that window cannot become permanent.
@@ -36,12 +36,37 @@ costs nothing: aborted bytes are never confirmed, and a clip that is never
 confirmed never becomes the word's. Blocking it would only strand an edit
 behind a stalled connection.
 
-The one thing a cancel cannot undo is a clip that already reached the
-server — past the confirm, ADR-0009's pipeline binds it to the entry when
-processing finishes, and no answer to a dialog can recall it. So the sheet
-does not claim otherwise: from `finalizing` onward the discard body switches
-to `editBodySent` ("the new clip is already saved"), while every earlier
-cancel gets the unqualified `editBody` ("The word stays exactly as it was").
+The commit is two requests — `PATCH` then `DELETE …/media` — with no
+transaction behind them, so one can land without the other. **The fields go
+first**, and untouched fields are not sent at all. The two failures are not
+equally recoverable: a `PATCH` refused outright has written nothing, while a
+refused `DELETE` leaves text the user can still see and change. The other
+order can only fail by destroying a recording they cannot get back. A retry
+re-runs both safely: `removeEntryMedia` deletes nothing once the row is gone
+(`server/domain/entries.ts`), and re-sending the same field values changes
+nothing but `updatedAt`.
+
+What no cancel can undo is anything that already reached the word: a clip
+past the confirm (ADR-0009 binds it when processing finishes) or a `PATCH`
+that landed. So the sheet does not claim otherwise. `isPartlySaved` covers
+**all** of it — `hasSavedMedia`, `phase === 'finalizing'`, and
+`hasWrittenFields` — and switches the discard body to `editBodyPartial`
+("Some of your changes are already saved and will stay"). Only a cancel with
+nothing behind it gets the unqualified `editBody` ("The word stays exactly
+as it was").
+
+Two things make that flag honest rather than merely present. It is set only
+when the fields actually differed, so a removal-only save whose `DELETE`
+fails does not claim the user's text was saved — nothing of theirs was. And
+whatever landed is announced to the screens behind the sheet even when the
+save as a whole failed, so the detail underneath is never left rendering a
+word the row no longer has.
+
+The remaining hole is a `PATCH` that times out client-side (15s) after the
+server committed it: the row changed and `hasWrittenFields` is false, so
+that one cancel gets the unqualified promise. Chasing it would need the
+write to be idempotent by key rather than by value; it is recorded here
+rather than papered over.
 
 Compose keeps its existing mid-flight cancel unchanged: there, cancelling
 has a coherent meaning, because the entry being thrown away is the one the
@@ -58,6 +83,14 @@ session just made.
   the text not. Retrying does not re-upload the same bytes; the sheet
   remembers the media step landed, and forgets it the moment the file
   changes, so a replacement picked after a partial failure is really sent.
+- The save is still **not atomic**, and this decision does not make it so —
+  it makes the residue harmless and honest. The one partial state left is
+  "text saved, removal not applied": visible on the screen, fixed by
+  retrying, and named by the copy. Making it truly atomic means teaching
+  `PATCH` to drop media in one transaction, which reverses VKB-100's
+  deliberate exclusion of media from that route and VKB-107's entry-bound
+  media routes. That trade is available, but it is a server contract change
+  and it is not this ticket's to make.
 - Leaving the screen mid-edit (the back gesture) is not a cancel and does
   not try to be one: the sheet's draft dies with its component, so it closes
   itself on unmount rather than surfacing blank over the next page. A save
@@ -83,9 +116,17 @@ session just made.
   buy, and it traded a real hazard for a theoretical one: a phone losing
   signal mid-upload left the sheet undismissable, since a stalled `XHR` has
   no timeout and nothing else could end the phase.
-- **Write the row first, then the media** — makes the retry after a failed
+- **Write the row before the upload** — makes the retry after a failed
   upload trivially idempotent, but any cancel during the upload would then
   come after the text had already changed. Cleaner code, dishonest copy.
+  (This is about the _upload_; within the commit the row write does go
+  first, for the reason given above — the two orderings are not in
+  conflict.)
+- **Extend `PATCH` with a `media: null` instruction and one transaction** —
+  genuinely atomic, and the right shape if the partial state ever bites.
+  Rejected here because it reverses two recorded decisions (VKB-100 keeping
+  media out of `PATCH`, VKB-107 giving media its own routes) to remove a
+  residue that is already visible, retryable and truthfully described.
 - **Reuse the compose discard wording** — mechanically harmless and the
   worst option for the user: "Nothing you put here will be kept" over a word
   they already own reads as a threat to delete it.

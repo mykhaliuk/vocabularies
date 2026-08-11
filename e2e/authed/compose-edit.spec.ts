@@ -43,6 +43,15 @@ const openEditor = async (page: Page) => {
 
 const confirmSheet = (page: Page) => page.locator('.discard--open');
 
+const failMethod = (page: Page, method: string) =>
+  page.route('**/api/entries/**', async (route) => {
+    if (route.request().method() === method) {
+      await route.fulfill({ status: 500, body: '{}' });
+      return;
+    }
+    await route.continue();
+  });
+
 const watchDeletes = (page: Page) => {
   const seen: string[] = [];
   page.on('request', (request) => {
@@ -316,6 +325,9 @@ test.describe('replacing a clip after a failed save', () => {
     const save = () =>
       authedPage.getByRole('button', { name: /save changes/i }).click();
 
+    // An edited field is what gives the commit a PATCH to refuse; without one
+    // the save would succeed and close over the landed upload.
+    await authedPage.locator('#compose-word').fill('bapple-corrected');
     await pick('first.m4a', 'the first clip');
     await save();
     await expect(authedPage.locator('.compose__error')).toBeVisible();
@@ -329,6 +341,131 @@ test.describe('replacing a clip after a failed save', () => {
     expect(uploaded[1]).not.toBe(uploaded[0]);
     // Signed against the first file's length, the old slot would refuse them.
     expect(slots[1]).not.toBe(slots[0]);
+  });
+});
+
+test.describe('a half-applied save', () => {
+  test.use({ serviceWorkers: 'block' });
+
+  test('a refused write keeps the clip the user asked to drop', async ({
+    authedPage,
+  }) => {
+    const entryId = await createEntry(authedPage, {
+      word: 'bapple',
+      media: AUDIO,
+    });
+    const kept = (await readEntry(authedPage, entryId)).media?.mediaId;
+    await authedPage.goto(`/entries/${entryId}`);
+    await openEditor(authedPage);
+
+    await authedPage.locator('.attach__remove').click();
+    await authedPage.locator('#compose-word').fill('bapple-corrected');
+    await failMethod(authedPage, 'PATCH');
+    await authedPage.getByRole('button', { name: /save changes/i }).click();
+    await expect(authedPage.locator('.compose__error')).toBeVisible();
+
+    // A recording is the one thing here the user cannot get back, so a save
+    // that refuses must not have spent it on the way to failing.
+    expect((await readEntry(authedPage, entryId)).media?.mediaId).toBe(kept);
+  });
+
+  test('dropping only the clip claims nothing else was saved', async ({
+    authedPage,
+  }) => {
+    const entryId = await createEntry(authedPage, {
+      word: 'bapple',
+      media: AUDIO,
+    });
+    await authedPage.goto(`/entries/${entryId}`);
+    await openEditor(authedPage);
+
+    // The clip is the only thing touched, and its removal is what fails, so
+    // there is nothing the sheet could honestly call saved.
+    await authedPage.locator('.attach__remove').click();
+    await failMethod(authedPage, 'DELETE');
+    await authedPage.getByRole('button', { name: /save changes/i }).click();
+    await expect(authedPage.locator('.compose__error')).toBeVisible();
+
+    await authedPage.getByRole('button', { name: /^cancel$/i }).click();
+    await expect(confirmSheet(authedPage)).toContainText(
+      'The word stays exactly as it was.',
+    );
+  });
+
+  test('nothing landed, so the question still promises nothing did', async ({
+    authedPage,
+  }) => {
+    const entryId = await createEntry(authedPage, { word: 'bapple' });
+    await authedPage.goto(`/entries/${entryId}`);
+    await openEditor(authedPage);
+
+    await authedPage.locator('#compose-word').fill('bapple-corrected');
+    await failMethod(authedPage, 'PATCH');
+    await authedPage.getByRole('button', { name: /save changes/i }).click();
+    await expect(authedPage.locator('.compose__error')).toBeVisible();
+
+    await authedPage.getByRole('button', { name: /^cancel$/i }).click();
+    await expect(confirmSheet(authedPage)).toContainText(
+      'The word stays exactly as it was.',
+    );
+  });
+
+  test('once the text landed, the question stops saying it did not', async ({
+    authedPage,
+  }) => {
+    const entryId = await createEntry(authedPage, {
+      word: 'bapple',
+      media: AUDIO,
+    });
+    await authedPage.goto(`/entries/${entryId}`);
+    await openEditor(authedPage);
+
+    // The removal is refused, so the PATCH ahead of it has already landed.
+    await authedPage.locator('.attach__remove').click();
+    await authedPage.locator('#compose-word').fill('bapple-corrected');
+    await failMethod(authedPage, 'DELETE');
+    await authedPage.getByRole('button', { name: /save changes/i }).click();
+    await expect(authedPage.locator('.compose__error')).toBeVisible();
+    expect((await readEntry(authedPage, entryId)).entry.word).toBe(
+      'bapple-corrected',
+    );
+
+    await authedPage.getByRole('button', { name: /^cancel$/i }).click();
+    const question = confirmSheet(authedPage);
+    await expect(question).toContainText(
+      'Some of your changes are already saved',
+    );
+    await expect(question).not.toContainText(
+      'The word stays exactly as it was.',
+    );
+  });
+
+  test('the screen behind catches up on what did land', async ({
+    authedPage,
+  }) => {
+    const entryId = await createEntry(authedPage, {
+      word: 'bapple',
+      media: AUDIO,
+    });
+    await authedPage.goto(`/entries/${entryId}`);
+    await openEditor(authedPage);
+
+    await authedPage.locator('.attach__remove').click();
+    await authedPage.locator('#compose-word').fill('bapple-corrected');
+    await failMethod(authedPage, 'DELETE');
+    await authedPage.getByRole('button', { name: /save changes/i }).click();
+    await expect(authedPage.locator('.compose__error')).toBeVisible();
+
+    await authedPage.getByRole('button', { name: /^cancel$/i }).click();
+    await authedPage.getByRole('button', { name: /discard changes/i }).click();
+    await expect(authedPage.locator('.compose--open')).toBeHidden();
+
+    // Left on the old word, the detail would contradict the sheet that just
+    // said some changes were saved — and re-opening the editor would prefill
+    // from it and write the correction back out.
+    await expect(authedPage.locator('.detail__word')).toHaveText(
+      '“bapple-corrected”',
+    );
   });
 });
 
