@@ -83,6 +83,15 @@ session just made.
   the text not. Retrying does not re-upload the same bytes; the sheet
   remembers the media step landed, and forgets it the moment the file
   changes, so a replacement picked after a partial failure is really sent.
+- That replacement is also where this ADR's retry path meets a hazard it
+  does not own (**VKB-159**). Forgetting the slot is all a client can do:
+  the superseded row keeps its `pending_entry_id`, minting detaches
+  nothing, and the claim on `ready` deletes only rows already _bound_ — so
+  two clips can sit pending against one entry and the **last to finish
+  transcoding wins**, not the last picked. Swap a long video for a short
+  clip and the clip lands first, then the video overwrites it. The
+  mechanism is ADR-0009's and predates this ticket; what this ticket adds
+  is an ordinary way to reach it.
 - The save is still **not atomic**, and this decision does not make it so —
   it makes the residue harmless and honest. The one partial state left is
   "text saved, removal not applied": visible on the screen, fixed by
