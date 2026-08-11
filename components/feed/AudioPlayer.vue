@@ -27,13 +27,17 @@ const styleVars = computed(() => audioStyleVars(props.variant));
 // row still reads as an audio waveform rather than an empty strip.
 const SYNTH_BAR_COUNT = 40;
 
-// Deterministic 0..1 amplitudes per bar. Real peaks are integers 0..100;
-// when absent we derive a stable pseudo-wave from the entry id so the same
-// entry always renders the same shape.
+// Deterministic 0..1 amplitudes per bar. Real peaks are integers 0..100 on
+// an absolute scale, so a quiet recording would render as a near-flat strip;
+// normalizing to the clip's own loudest bucket keeps the wave shapely at any
+// recording level. When peaks are absent we derive a stable pseudo-wave from
+// the entry id so the same entry always renders the same shape.
 const bars = computed<number[]>(() => {
   const { peaks } = props;
   if (peaks && peaks.length > 0) {
-    return peaks.map((peak) => Math.min(1, Math.max(0, peak / 100)));
+    const loudest = Math.max(...peaks);
+    if (loudest <= 0) return peaks.map(() => 0);
+    return peaks.map((peak) => Math.min(1, Math.max(0, peak / loudest)));
   }
   let seed = 0;
   for (let index = 0; index < props.entryId.length; index++) {
