@@ -202,7 +202,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
   margin: 12px 0 0;
   max-width: 280px;
   font-family: var(--font-sans);
-  font-size: 14px;
+  font-size: var(--text-sm);
   line-height: var(--leading-normal);
   color: var(--danger);
 }

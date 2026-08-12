@@ -171,7 +171,7 @@ const openEntry = (event: MouseEvent) => {
 .entry__gloss {
   margin: 0;
   font-family: var(--font-sans);
-  font-size: 16px;
+  font-size: var(--text-base);
   font-style: italic;
   color: var(--ink-2);
 }

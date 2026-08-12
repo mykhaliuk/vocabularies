@@ -590,7 +590,7 @@ const onPrimary = async () => {
 }
 .compose__title {
   font-family: var(--font-sans);
-  font-size: 16px;
+  font-size: var(--text-base);
   font-weight: var(--w-bold);
   color: var(--ink);
 }
@@ -703,7 +703,7 @@ const onPrimary = async () => {
   outline: 0;
   background: var(--surface);
   font-family: var(--font-sans);
-  font-size: 16px;
+  font-size: var(--text-base);
   color: var(--ink);
   transition: border-color var(--dur-fast);
 }
@@ -718,7 +718,7 @@ const onPrimary = async () => {
 .compose__error {
   margin: 14px 0 0;
   font-family: var(--font-sans);
-  font-size: 14px;
+  font-size: var(--text-sm);
   color: var(--danger);
 }
 
