@@ -85,7 +85,7 @@ const { t } = useI18n();
   margin: 10px 0 0;
   max-width: 270px;
   font-family: var(--font-sans);
-  font-size: 16px;
+  font-size: var(--text-base);
   line-height: var(--leading-normal);
   color: var(--ink-2);
 }

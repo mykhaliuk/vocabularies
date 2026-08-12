@@ -145,7 +145,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown));
 .upsell__title {
   margin: 0;
   font-family: var(--font-sans);
-  font-size: 20px;
+  font-size: var(--text-lg);
   font-weight: var(--w-semibold);
   letter-spacing: -0.02em;
   color: var(--ink);

@@ -531,7 +531,7 @@ const keptDetail = computed(() => {
   gap: 8px;
   margin-bottom: 14px;
   font-family: var(--font-sans);
-  font-size: 14px;
+  font-size: var(--text-sm);
   font-weight: var(--w-semibold);
   color: var(--ink-2);
 }
@@ -654,7 +654,7 @@ const keptDetail = computed(() => {
   flex: 1;
   min-width: 0;
   font-family: var(--font-sans);
-  font-size: 14px;
+  font-size: var(--text-sm);
   font-weight: var(--w-medium);
   color: var(--ink);
   overflow: hidden;
@@ -700,7 +700,7 @@ const keptDetail = computed(() => {
 .attach__fail-title {
   display: block;
   margin-bottom: 3px;
-  font-size: 14px;
+  font-size: var(--text-sm);
   font-weight: var(--w-semibold);
   color: var(--ink);
 }
@@ -721,7 +721,7 @@ const keptDetail = computed(() => {
   background: var(--surface);
   cursor: pointer;
   font-family: var(--font-sans);
-  font-size: 14px;
+  font-size: var(--text-sm);
   font-weight: var(--w-semibold);
   color: var(--ink);
 }

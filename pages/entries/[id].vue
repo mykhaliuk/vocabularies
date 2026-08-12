@@ -817,7 +817,7 @@ useHead(() => ({
   background: transparent;
   cursor: pointer;
   font-family: var(--font-sans);
-  font-size: 14px;
+  font-size: var(--text-sm);
   font-weight: var(--w-semibold);
   color: var(--link);
 }

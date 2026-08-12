@@ -670,7 +670,7 @@ onMounted(() => {
      shrinks this field until the address it asks for no longer fits. */
   min-width: 11em;
   font-family: var(--font-sans);
-  font-size: 16px;
+  font-size: var(--text-base);
   color: var(--text);
   background: var(--surface);
   border: 1.5px solid var(--hairline-2);
@@ -743,14 +743,14 @@ onMounted(() => {
 
 .sent__h {
   margin: 0;
-  font-size: 16px;
+  font-size: var(--text-base);
   font-weight: var(--w-bold);
   color: var(--text);
 }
 
 .sent__p {
   margin: 4px 0 0;
-  font-size: 14px;
+  font-size: var(--text-sm);
   line-height: 1.5;
   color: var(--text-muted);
 }
@@ -978,7 +978,7 @@ onMounted(() => {
 }
 
 .foot__tag {
-  font-size: 14px;
+  font-size: var(--text-sm);
   color: var(--text-muted);
   white-space: nowrap;
 }
@@ -990,7 +990,7 @@ onMounted(() => {
 }
 
 .foot__links a {
-  font-size: 14px;
+  font-size: var(--text-sm);
   font-weight: var(--w-medium);
   color: var(--text-muted);
   white-space: nowrap;

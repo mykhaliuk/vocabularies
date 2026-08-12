@@ -112,6 +112,8 @@ const FILLED_BARS = 11;
 </template>
 
 <style scoped>
+/* Illustration geometry, not product UI: the headword is nowrap inside a fixed
+   310px frame and the size ladder is half off-scale, so these stay literals. */
 .stage {
   position: relative;
   display: flex;
