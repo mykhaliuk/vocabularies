@@ -1,4 +1,4 @@
-import { clickUntil, expect, test } from './fixtures';
+import { expect, openCompose, test } from './fixtures';
 import type { Page } from '@playwright/test';
 
 // Resolves a token the same way the page does. Asserting against a px number
@@ -27,13 +27,6 @@ const skewRoot = (page: Page) =>
   page.evaluate((size) => {
     document.documentElement.style.fontSize = size;
   }, SKEWED_ROOT);
-
-const openCompose = async (page: Page) => {
-  const sheet = page.locator('.compose--open');
-  await clickUntil(page.locator('.bottom-nav__fab'), () =>
-    expect(sheet).toBeVisible({ timeout: 1000 }),
-  );
-};
 
 test('the compose sheet sizes its chrome from the type scale', async ({
   authedPage,
