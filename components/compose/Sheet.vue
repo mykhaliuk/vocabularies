@@ -74,6 +74,7 @@ const saveError = ref<string | undefined>();
 
 const hasSavedMedia = ref(false);
 const hasWrittenFields = ref(false);
+const hasDroppedMedia = ref(false);
 
 // Anything past recall. A confirmed upload counts from 'finalizing' on: the
 // confirm is already in the air, and ADR-0009 binds the clip to the word
@@ -82,7 +83,8 @@ const isPartlySaved = computed(
   () =>
     hasSavedMedia.value ||
     phase.value === 'finalizing' ||
-    hasWrittenFields.value,
+    hasWrittenFields.value ||
+    hasDroppedMedia.value,
 );
 
 // A different file is a different upload, whatever the last one achieved.
@@ -172,6 +174,7 @@ const fillForm = () => {
   saveError.value = undefined;
   hasSavedMedia.value = false;
   hasWrittenFields.value = false;
+  hasDroppedMedia.value = false;
   speakerChips.value?.resetPanel();
   reset();
 };
@@ -346,6 +349,7 @@ const commitChanges = async (entryId: string) => {
     }
     if (file.value === null && isKeptMediaDropped.value) {
       await dropMedia(entryId);
+      hasDroppedMedia.value = true;
     }
     return true;
   } catch (error) {
