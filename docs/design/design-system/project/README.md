@@ -109,7 +109,7 @@ White-label buttons render on **`--primary-action` (`#CF3A60`, 4.74:1)** and **`
 | `ui_kits/app/` | High-fidelity, click-through recreation of the Vocabu PWA. See its own README. |
 
 ### Fonts
-Fonts load from **Google Fonts CDN** (`Rubik` — the single family), imported at the top of `colors_and_type.css`. No font files are bundled. To ship offline/PWA, download the `.woff2` files into `fonts/` and replace the `@import` with `@font-face` rules. ⚠️ Hanken Grotesk is a *chosen* default, not from an existing brand — confirm or replace. A legacy `--font-serif` token still exists but now **aliases the sans stack** so older references resolve to one family.
+Fonts load from **Google Fonts CDN** (`Rubik` — the single family), imported at the top of `colors_and_type.css`. No font files are bundled. To ship offline/PWA, download the `.woff2` files into `fonts/` and replace the `@import` with `@font-face` rules. A legacy `--font-serif` token still exists but now **aliases the sans stack** so older references resolve to one family.
 
 ---
 
