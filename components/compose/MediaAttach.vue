@@ -13,7 +13,12 @@ import {
 import type { ComposePhase } from '~/composables/useMediaUpload';
 import type { Entitlements } from '~/server/utils/entitlements';
 import type { MediaView } from '~/server/utils/entry-view';
-import { ALLOWED_MEDIA_CONTENT_TYPES } from '~/shared/media-types';
+import {
+  ALLOWED_MEDIA_CONTENT_TYPES,
+  AUDIO_ACCEPT,
+  AUDIO_VIDEO_ACCEPT,
+  TYPE_BY_EXTENSION,
+} from '~/shared/media-types';
 
 // The media affordance (docs/design/prototype/project/Vocabu/media-spec.html).
 // Tier decides the shape: premium gets one combined control that infers the
@@ -134,14 +139,30 @@ const withinDuration = async (
   return probeElementDuration(file, limitSec);
 };
 
-const accept = async (file: File | undefined) => {
-  if (!file) return;
+// iOS pickers routinely deliver a file with an empty (or vendor) MIME type;
+// the extension still names the container, so a roster type inferred from it
+// keeps the gate honest without turning away a perfectly valid clip. The
+// rebuilt File carries the inferred type into the upload headers too.
+const withRosterType = (file: File): File | null => {
+  if (ALLOWED_TYPES.has(file.type)) return file;
+  const extension = file.name.slice(file.name.lastIndexOf('.') + 1);
+  const inferred = TYPE_BY_EXTENSION[extension.toLowerCase()];
+  if (inferred === undefined) return null;
+  return new File([file], file.name, {
+    type: inferred,
+    lastModified: file.lastModified,
+  });
+};
+
+const accept = async (picked: File | undefined) => {
+  if (!picked) return;
   localError.value = undefined;
 
   // Strict roster gate: the server requires a contentType from the same
-  // roster, so anything outside it (including an empty type from an odd
-  // picker) would only die later as a bare 400 — say it here instead.
-  if (!ALLOWED_TYPES.has(file.type)) {
+  // roster, so anything outside it would only die later as a bare 400 —
+  // say it here instead.
+  const file = withRosterType(picked);
+  if (file === null) {
     localError.value = t('app.compose.media.invalidType');
     return;
   }
@@ -217,8 +238,8 @@ const isMediaFailure = computed(
 // wide open — narrowing it would GUESS a tier and block a premium user's
 // video pick; the guards are skipped, and the server stays the gate.
 const acceptAttribute = computed(() => {
-  if (limits.value === null) return 'audio/*,video/*';
-  return canUploadVideo.value ? 'audio/*,video/*' : 'audio/*';
+  if (limits.value === null) return AUDIO_VIDEO_ACCEPT;
+  return canUploadVideo.value ? AUDIO_VIDEO_ACCEPT : AUDIO_ACCEPT;
 });
 
 // A static bar field that reads as a waveform while bytes move. Heights are

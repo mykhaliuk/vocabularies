@@ -30,3 +30,32 @@ export type MediaContentType = keyof typeof EXTENSION_BY_TYPE;
 export const ALLOWED_MEDIA_CONTENT_TYPES = Object.freeze(
   Object.keys(EXTENSION_BY_TYPE),
 );
+
+// Extension → MIME for pickers that hand over a file with an empty or alien
+// type (iOS Files does, routinely). Where one extension serves two types the
+// FIRST roster listing wins (.m4a → audio/mp4, .3gp → audio/3gpp).
+export const TYPE_BY_EXTENSION: Readonly<Record<string, MediaContentType>> =
+  Object.freeze(
+    Object.fromEntries(
+      Object.entries(EXTENSION_BY_TYPE)
+        .reverse()
+        .map(([type, extension]) => [extension, type]),
+    ),
+  ) as Record<string, MediaContentType>;
+
+// iOS resolves accept extensions to UTIs far more reliably than MIME
+// wildcards, which grey out perfectly valid files in the Files picker —
+// so the accept string always carries both forms.
+const buildAccept = (prefixes: readonly string[]): string => {
+  const wildcards = prefixes.map((prefix) => `${prefix}*`);
+  const extensions = new Set<string>();
+  for (const [type, extension] of Object.entries(EXTENSION_BY_TYPE)) {
+    if (prefixes.some((prefix) => type.startsWith(prefix))) {
+      extensions.add(`.${extension}`);
+    }
+  }
+  return [...wildcards, ...extensions].join(',');
+};
+
+export const AUDIO_ACCEPT = buildAccept(['audio/']);
+export const AUDIO_VIDEO_ACCEPT = buildAccept(['audio/', 'video/']);
