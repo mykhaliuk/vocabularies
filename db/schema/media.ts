@@ -48,6 +48,10 @@ export const media = pgTable(
     height: integer('height'),
     peaks: jsonb('peaks').$type<number[]>(),
     error: text('error'),
+    // Set when POST /api/media/confirm accepts the upload. Only a confirmed
+    // pending row is a truthful "processing" to surface on its entry — an
+    // abandoned, never-confirmed slot must stay invisible.
+    confirmedAt: timestamp('confirmed_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true })
       .defaultNow()
       .notNull(),

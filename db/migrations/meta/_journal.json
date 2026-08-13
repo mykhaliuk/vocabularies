@@ -57,6 +57,13 @@
       "when": 1785792984017,
       "tag": "0007_tough_scalphunter",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1786638319072,
+      "tag": "0008_wealthy_titania",
+      "breakpoints": true
     }
   ]
 }

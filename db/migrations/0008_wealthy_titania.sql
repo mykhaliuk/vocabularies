@@ -1,0 +1,1 @@
+ALTER TABLE "media" ADD COLUMN "confirmed_at" timestamp with time zone;

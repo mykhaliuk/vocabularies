@@ -127,7 +127,7 @@ placeholder awaiting its ticket.
 
 ### `media`
 
-`createdAt`, `derivativeKey`, `durationSec`, `entryId`, `error`, `height`, `id`, `kind`, `originalKey`, `ownerId`, `peaks`, `pendingEntryId`, `posterKey`, `status`, `updatedAt`, `width`
+`confirmedAt`, `createdAt`, `derivativeKey`, `durationSec`, `entryId`, `error`, `height`, `id`, `kind`, `originalKey`, `ownerId`, `peaks`, `pendingEntryId`, `posterKey`, `status`, `updatedAt`, `width`
 
 ### `sessions`
 

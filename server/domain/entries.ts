@@ -1,4 +1,5 @@
-import { and, desc, eq, sql } from 'drizzle-orm';
+import { and, desc, eq, isNotNull, sql } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
 import { entries } from '~/db/schema/entries';
 import { media } from '~/db/schema/media';
 import { speakers } from '~/db/schema/speakers';
@@ -34,6 +35,18 @@ export interface EntryWithMedia {
 export interface CreatedEntry extends EntryWithMedia {
   upload: UploadSlot | null;
 }
+
+// A confirmed upload still waiting for its ready-swap (ADR-0009) surfaces as
+// the entry's media when none is attached yet, so the client shows
+// "processing" instead of a blank between confirm and claim.
+const pendingMedia = alias(media, 'pending_media');
+
+const pendingMediaJoin = () =>
+  and(
+    eq(pendingMedia.pendingEntryId, entries.id),
+    eq(pendingMedia.status, 'processing'),
+    isNotNull(pendingMedia.confirmedAt),
+  );
 
 export const createEntry = async (
   user: AuthUser,
@@ -104,7 +117,7 @@ export const getFeedPage = async (
   }
 
   const rows = await db
-    .select({ entry: entries, speaker: speakers, media })
+    .select({ entry: entries, speaker: speakers, media, pending: pendingMedia })
     .from(entries)
     .leftJoin(
       speakers,
@@ -117,15 +130,21 @@ export const getFeedPage = async (
       ),
     )
     .leftJoin(media, eq(media.entryId, entries.id))
+    .leftJoin(pendingMedia, pendingMediaJoin())
     .where(and(...conditions))
     .orderBy(desc(entries.createdAt), desc(entries.id))
     .limit(options.limit);
 
-  return rows.map(({ entry, speaker, media: mediaRow }) => ({
-    entry,
-    speaker,
-    media: mediaRow,
-  }));
+  // Two confirmed pendings on one entry would duplicate its row through the
+  // join; the first (newest-first order) wins.
+  const page: EntryWithMedia[] = [];
+  const seen = new Set<string>();
+  for (const { entry, speaker, media: mediaRow, pending } of rows) {
+    if (seen.has(entry.id)) continue;
+    seen.add(entry.id);
+    page.push({ entry, speaker, media: mediaRow ?? pending });
+  }
+  return page;
 };
 
 export const getOwnEntry = async (
@@ -134,19 +153,24 @@ export const getOwnEntry = async (
 ): Promise<EntryWithMedia> => {
   const db = useDb();
   const [row] = await db
-    .select({ entry: entries, speaker: speakers, media })
+    .select({ entry: entries, speaker: speakers, media, pending: pendingMedia })
     .from(entries)
     .leftJoin(
       speakers,
       and(eq(speakers.id, entries.sid), eq(speakers.ownerId, entries.ownerId)),
     )
     .leftJoin(media, eq(media.entryId, entries.id))
+    .leftJoin(pendingMedia, pendingMediaJoin())
     .where(and(eq(entries.id, entryId), eq(entries.ownerId, ownerId)))
     .limit(1);
   if (!row) {
     throw new DomainError(DOMAIN_ERROR_CODES.entryNotFound, 'entry not found');
   }
-  return { entry: row.entry, speaker: row.speaker, media: row.media };
+  return {
+    entry: row.entry,
+    speaker: row.speaker,
+    media: row.media ?? row.pending,
+  };
 };
 
 export interface AttachedMedia {

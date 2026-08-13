@@ -156,6 +156,12 @@ export const confirmMediaUpload = async (
   if (row.status === 'ready' || row.status === 'failed') {
     return { status: row.status, transport: null };
   }
+  if (row.confirmedAt === null) {
+    await useDb()
+      .update(media)
+      .set({ confirmedAt: new Date(), updatedAt: new Date() })
+      .where(and(eq(media.id, mediaId), eq(media.ownerId, ownerId)));
+  }
   const transport = await enqueueMediaProcessing(
     key,
     ownerId,
