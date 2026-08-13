@@ -38,6 +38,10 @@ const toggle = () => {
 
 const onFocusOut = (event: FocusEvent) => {
   const next = event.relatedTarget;
+  // Safari taps never focus buttons: focus leaves with a null relatedTarget
+  // BEFORE the menu item's click, and closing here would unmount the item
+  // mid-tap and swallow the action. Outside taps close through the scrim.
+  if (next === null) return;
   if (next instanceof Node && menu.value?.contains(next)) return;
   close();
 };
