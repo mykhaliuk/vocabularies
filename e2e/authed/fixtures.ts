@@ -147,6 +147,16 @@ export const clickUntil = async (
   }).toPass({ timeout: HYDRATION_TIMEOUT_MS });
 };
 
+// The FAB is addressed by class, not by its accessible name: that name is
+// translated, and the specs that switch locale would stop finding it.
+export const openCompose = async (page: Page) => {
+  const sheet = page.locator('.compose--open');
+  await clickUntil(page.locator('.bottom-nav__fab'), () =>
+    expect(sheet).toBeVisible({ timeout: 1000 }),
+  );
+  return sheet;
+};
+
 interface AuthedFixtures {
   authedPage: Page;
 }

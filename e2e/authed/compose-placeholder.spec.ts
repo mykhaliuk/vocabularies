@@ -1,4 +1,4 @@
-import { clickUntil, expect, test } from './fixtures';
+import { expect, openCompose, test } from './fixtures';
 import type { Locator, Page } from '@playwright/test';
 
 // VKB-156. An <input> cuts a placeholder it cannot fit with no ellipsis and no
@@ -42,13 +42,9 @@ const contentWidth = (field: Locator) =>
   });
 
 // The sheet rises on a transform, so anything measured before it settles is
-// measured against a moving box. The FAB is addressed by class because its
-// accessible name is translated.
-const openCompose = async (page: Page) => {
-  const sheet = page.locator('.compose--open');
-  await clickUntil(page.locator('.bottom-nav__fab'), () =>
-    expect(sheet).toBeVisible({ timeout: 1000 }),
-  );
+// measured against a moving box.
+const openSettledCompose = async (page: Page) => {
+  await openCompose(page);
   await page.waitForFunction(() => {
     const el = document.querySelector('.compose__sheet');
     if (!el) return false;
@@ -69,7 +65,7 @@ for (const locale of ['en', 'fr', 'uk'] as const) {
       },
     ]);
     await authedPage.goto('/feed');
-    await openCompose(authedPage);
+    await openSettledCompose(authedPage);
 
     const field = authedPage.locator('#compose-word');
     await expect(field).toHaveAttribute('placeholder', HINT[locale]);
@@ -84,7 +80,7 @@ test('the hint shrinks without touching the headword the field renders', async (
 }) => {
   await authedPage.setViewportSize(NARROWEST);
   await authedPage.goto('/feed');
-  await openCompose(authedPage);
+  await openSettledCompose(authedPage);
   const field = authedPage.locator('#compose-word');
 
   await expect(field).toHaveCSS('font-size', '26px');

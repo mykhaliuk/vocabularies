@@ -1,18 +1,10 @@
-import { clickUntil, expect, test } from './fixtures';
+import { expect, openCompose, test } from './fixtures';
 import type { Page } from '@playwright/test';
 
 // The dismiss half of VKB-154. The upload phases need MinIO and are covered by
 // tests/unit/media-upload.test.ts instead; what runs here is everything a
 // discard does without storage — the confirm, and the delete that follows a
 // cancel while the entry is being created.
-
-const openCompose = async (page: Page) => {
-  const sheet = page.locator('.compose--open');
-  await clickUntil(page.getByRole('button', { name: /new word/i }), () =>
-    expect(sheet).toBeVisible({ timeout: 1000 }),
-  );
-  return sheet;
-};
 
 const write = async (page: Page, word: string) => {
   await page.locator('#compose-word').fill(word);
