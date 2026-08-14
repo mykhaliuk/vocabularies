@@ -245,6 +245,13 @@
     "backToFeed": "Back to the feed",
     "greeting": "Hello, {name}",
     "emailLabel": "email: {email}",
+    "name": {
+      "title": "Name",
+      "placeholder": "What should we call you?",
+      "save": "Save",
+      "saved": "Saved.",
+      "error": "Couldn't save your name. Try again."
+    },
     "avatar": {
       "title": "Avatar",
       "alt": "Avatar",

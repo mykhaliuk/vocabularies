@@ -29,7 +29,7 @@ None — every route has a caller and every call resolves.
 | `POST /api/entries/:id/media` | `composables/useMediaUpload.ts` | `entries.attachEntryMedia` |
 | `GET /api/health` | `pages/offline.vue` | _inline_ |
 | `GET /api/me` | `composables/useEntitlements.ts`<br>`composables/useSession.ts`<br>`middleware/auth.ts`<br>`pages/me.vue` | _inline_ |
-| `PATCH /api/me` | _none yet — VKB-94_ | _direct db (ADR-0010 legacy):_ `users` |
+| `PATCH /api/me` | `pages/me.vue` | _direct db (ADR-0010 legacy):_ `users` |
 | `POST /api/me/avatar` | `pages/me.vue` | _inline_ |
 | `GET /api/me/avatar-url` | `pages/me.vue` | _inline_ |
 | `POST /api/me/avatar/confirm` | `pages/me.vue` | _direct db (ADR-0010 legacy):_ `users` |
@@ -43,17 +43,6 @@ None — every route has a caller and every call resolves.
 Routes marked _direct db_ reach tables from transport instead of a
 domain operation. They are the grandfathered set in
 `scripts/layering-check.js`; the list only shrinks.
-
-## Pending wiring
-
-Real gaps with a ticket: the endpoint exists, the screen that will
-call it does not. Kept out of Findings so a NEW gap stands out —
-not hidden. Wiring one makes its annotation stale, which is a
-finding, so the note cannot outlive the gap.
-
-| Route | Tracked by | Note |
-| --- | --- | --- |
-| `PATCH /api/me` | VKB-94 | /me reads displayName but offers no way to edit it. |
 
 ## Client surfaces without API calls
 
@@ -99,6 +88,7 @@ placeholder awaiting its ticket.
 - `pages/profile.vue`
 - `pages/saved.vue`
 - `pages/uk.vue`
+- `shared/display-name.ts`
 - `shared/landing-locales.ts`
 - `shared/magic-link.ts`
 - `shared/media-types.ts`
@@ -184,7 +174,7 @@ flowchart LR
     r_POST__api_entries__id_media["POST /api/entries/:id/media"]
     r_GET__api_health["GET /api/health"]
     r_GET__api_me["GET /api/me"]
-    r_PATCH__api_me("PATCH /api/me")
+    r_PATCH__api_me["PATCH /api/me"]
     r_POST__api_me_avatar["POST /api/me/avatar"]
     r_GET__api_me_avatar_url["GET /api/me/avatar-url"]
     r_POST__api_me_avatar_confirm["POST /api/me/avatar/confirm"]
@@ -262,6 +252,7 @@ flowchart LR
   c_composables_useSession_ts --> r_GET__api_me
   c_middleware_auth_ts --> r_GET__api_me
   c_pages_me_vue --> r_GET__api_me
+  c_pages_me_vue --> r_PATCH__api_me
   r_PATCH__api_me -.-> e_users
   c_pages_me_vue --> r_POST__api_me_avatar
   c_pages_me_vue --> r_GET__api_me_avatar_url

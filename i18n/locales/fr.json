@@ -245,6 +245,13 @@
     "backToFeed": "Retour au fil",
     "greeting": "Bonjour, {name}",
     "emailLabel": "e-mail : {email}",
+    "name": {
+      "title": "Nom",
+      "placeholder": "Comment devons-nous vous appeler ?",
+      "save": "Enregistrer",
+      "saved": "Enregistré.",
+      "error": "Impossible d'enregistrer votre nom. Réessayez."
+    },
     "avatar": {
       "title": "Avatar",
       "alt": "Avatar",

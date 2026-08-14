@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import type { MeResponse } from '~/server/utils/auth';
+import type { MeResponse, PublicUser } from '~/server/utils/auth';
+import { DISPLAY_NAME_MAX } from '~/shared/display-name';
 import { PWA_API_CACHE, PWA_AVATARS_CACHE } from '~/shared/pwa-caches';
 
 interface FetchError {
@@ -24,11 +25,9 @@ const { t, locale, locales, setLocale } = useI18n();
 
 useHead(() => ({ title: t('me.pageTitle') }));
 
-const {
-  data: me,
-  error,
-  refresh,
-} = await useFetch<MeResponse>('/api/me', { credentials: 'include' });
+const { data: me, error } = await useFetch<MeResponse>('/api/me', {
+  credentials: 'include',
+});
 
 if (error.value) {
   if (error.value.statusCode === 401) {
@@ -50,6 +49,77 @@ type UploadFailure =
   | { kind: 'invalid-type' }
   | { kind: 'upload'; cause: unknown };
 const uploadFailure = ref<UploadFailure | null>(null);
+
+const nameDraft = ref('');
+const savingName = ref(false);
+const nameSaveFailed = ref(false);
+const nameSaved = ref(false);
+
+watch(
+  () => me.value?.displayName,
+  (value) => {
+    nameDraft.value = value ?? '';
+  },
+  { immediate: true },
+);
+
+const trimmedName = computed(() => nameDraft.value.trim());
+// `!uploading`: uploadAvatar ends with its own /api/me state write, and a
+// save landing between the avatar PATCH and that write would be overwritten.
+const canSaveName = computed(
+  () =>
+    trimmedName.value.length > 0 &&
+    trimmedName.value !== (me.value?.displayName ?? '') &&
+    !savingName.value &&
+    !uploading.value,
+);
+
+const nameError = computed(() =>
+  nameSaveFailed.value ? t('me.name.error') : '',
+);
+
+const nameSavedMessage = computed(() =>
+  nameSaved.value ? t('me.name.saved') : '',
+);
+
+function onNameInput() {
+  nameSaved.value = false;
+  nameSaveFailed.value = false;
+}
+
+// Not @keydown.enter="saveName": Vue's .enter modifier checks only the key,
+// so it would also fire on the Enter that commits an IME composition — with
+// the pre-composition draft.
+function onNameEnter(keyEvent: KeyboardEvent) {
+  if (!keyEvent.isComposing) saveName();
+}
+
+async function saveName() {
+  if (!canSaveName.value) return;
+  const displayName = trimmedName.value;
+  savingName.value = true;
+  nameSaveFailed.value = false;
+  try {
+    // The PATCH response is merged into `me` instead of refresh(): refresh
+    // swallows its own fetch error and resets `me` to undefined, which would
+    // unmount the page while reporting success.
+    const updated = await $fetch<PublicUser>('/api/me', {
+      method: 'PATCH',
+      body: { displayName },
+    });
+    if (me.value) me.value = { ...me.value, ...updated };
+    nameSaved.value = true;
+  } catch (err) {
+    console.error('[me] display name save failed', err);
+    if (isFetchError(err) && err.statusCode === 401) {
+      await navigateTo('/login');
+      return;
+    }
+    nameSaveFailed.value = true;
+  } finally {
+    savingName.value = false;
+  }
+}
 
 // Transient messages are derived from state at render time (not captured
 // via t() when the failure happens) so they re-translate on locale switch.
@@ -81,7 +151,14 @@ async function loadAvatarUrl() {
   }
 }
 
-watchEffect(loadAvatarUrl);
+// Keyed on hasAvatar, not watchEffect: the name-save merge replaces
+// me.value's identity, and an identity-tracking effect would re-sign and
+// re-download an unchanged avatar on every rename.
+watch(
+  () => me.value?.hasAvatar,
+  () => loadAvatarUrl(),
+  { immediate: true },
+);
 
 async function uploadAvatar(domEvent: Event) {
   const target = domEvent.target as HTMLInputElement;
@@ -109,11 +186,18 @@ async function uploadAvatar(domEvent: Event) {
     if (!putResponse.ok) {
       throw new Error(`upload failed: ${putResponse.status}`);
     }
-    await $fetch('/api/me/avatar/confirm', {
+    // Same merge-not-refresh treatment as saveName: confirm returns the
+    // updated PublicUser, and refresh() failing here would blank the page
+    // after an upload that worked.
+    const hadAvatar = me.value?.hasAvatar === true;
+    const updated = await $fetch<PublicUser>('/api/me/avatar/confirm', {
       method: 'POST',
       body: { key },
     });
-    await refresh();
+    if (me.value) me.value = { ...me.value, ...updated };
+    // Replacing an avatar stores a new key while hasAvatar stays true, so
+    // the keyed watch above won't re-sign the URL — do it explicitly.
+    if (hadAvatar) await loadAvatarUrl();
   } catch (err) {
     console.error('[me] avatar upload failed', err);
     uploadFailure.value = { kind: 'upload', cause: err };
@@ -216,6 +300,35 @@ async function logout() {
     <p>{{ $t('me.emailLabel', { email: me.email }) }}</p>
 
     <section>
+      <h2>{{ $t('me.name.title') }}</h2>
+      <div class="name-row">
+        <input
+          v-model="nameDraft"
+          class="name-input"
+          type="text"
+          :maxlength="DISPLAY_NAME_MAX"
+          :placeholder="$t('me.name.placeholder')"
+          :aria-label="$t('me.name.title')"
+          :readonly="savingName"
+          @input="onNameInput"
+          @keydown.enter="onNameEnter"
+        />
+        <VButton
+          class="name-save"
+          :loading="savingName"
+          :disabled="!canSaveName"
+          @click="saveName"
+        >
+          {{ $t('me.name.save') }}
+        </VButton>
+      </div>
+      <p v-if="nameError" role="alert">{{ nameError }}</p>
+      <!-- Always present: a live region announces only content CHANGES, so a
+           conditionally-inserted one is never read out. -->
+      <p class="name-status" role="status">{{ nameSavedMessage }}</p>
+    </section>
+
+    <section>
       <h2>{{ $t('me.avatar.title') }}</h2>
       <img
         v-if="avatarUrl"
@@ -275,6 +388,46 @@ async function logout() {
 </template>
 
 <style scoped>
+.name-row {
+  display: flex;
+  gap: var(--space-2);
+  max-width: 420px;
+}
+
+.name-input {
+  flex: 1;
+  min-width: 0;
+  min-height: var(--tap-min);
+  padding: 5px 12px;
+  border: 1.5px solid var(--hairline-2);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  transition:
+    border-color var(--dur-fast),
+    box-shadow var(--dur-fast);
+}
+
+.name-input::placeholder {
+  color: var(--text-faint);
+}
+
+.name-input:focus-visible {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-soft);
+}
+
+.name-input:read-only {
+  background: var(--surface-sunk);
+}
+
+.name-status:empty {
+  margin: 0;
+}
+
 .locale-chips {
   display: flex;
   flex-wrap: wrap;
