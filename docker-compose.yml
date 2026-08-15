@@ -54,7 +54,16 @@ services:
         mc alias set local http://minio:9000 minioadmin minioadmin
         mc mb -p local/vocabu-media-local
         mc mb -p local/vocabu-originals-local
-        echo 'minio-init: buckets ready (CORS handled by MINIO_API_CORS_ALLOW_ORIGIN)'
+        # One user per bucket, mirroring the scoped R2 tokens the cloud
+        # stages use (VKB-126) — so a credential mix-up fails locally too,
+        # instead of only in production.
+        for kind in media originals; do
+          printf '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["s3:*"],"Resource":["arn:aws:s3:::vocabu-%s-local","arn:aws:s3:::vocabu-%s-local/*"]}]}' "$$kind" "$$kind" > /tmp/$$kind.json
+          mc admin user add local vocabu-$$kind-local vocabu-$$kind-local-secret
+          mc admin policy create local vocabu-$$kind-only /tmp/$$kind.json
+          mc admin policy attach local vocabu-$$kind-only --user vocabu-$$kind-local
+        done
+        echo 'minio-init: buckets + scoped users ready (CORS handled by MINIO_API_CORS_ALLOW_ORIGIN)'
     restart: 'no'
 
 volumes:

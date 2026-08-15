@@ -12,8 +12,11 @@ import {
 
 const endpoint = process.env.S3_ENDPOINT;
 const region = process.env.S3_REGION ?? 'auto';
-const accessKeyId = process.env.S3_ACCESS_KEY_ID;
-const secretAccessKey = process.env.S3_SECRET_ACCESS_KEY;
+// Its own admin-scoped pair (VKB-24): configuring CORS needs `r2:cors:*`,
+// which neither per-bucket application credential carries, and this script
+// writes to BOTH buckets. Naming it apart keeps that reach visible.
+const accessKeyId = process.env.S3_ADMIN_ACCESS_KEY_ID;
+const secretAccessKey = process.env.S3_ADMIN_SECRET_ACCESS_KEY;
 const mediaBucket = process.env.S3_BUCKET_MEDIA;
 const originalsBucket = process.env.S3_BUCKET_ORIGINALS;
 const appUrl = process.env.APP_URL;
@@ -21,7 +24,7 @@ const stage = process.env.APP_ENV;
 
 if (!endpoint || !accessKeyId || !secretAccessKey || !mediaBucket || !appUrl) {
   console.error(
-    '[r2-cors-set] missing one of S3_ENDPOINT, S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY, S3_BUCKET_MEDIA, APP_URL',
+    '[r2-cors-set] missing one of S3_ENDPOINT, S3_ADMIN_ACCESS_KEY_ID, S3_ADMIN_SECRET_ACCESS_KEY, S3_BUCKET_MEDIA, APP_URL',
   );
   process.exit(2);
 }

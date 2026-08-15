@@ -90,8 +90,12 @@ let fake = createFakeDb([]);
 // so a slot needs no reachable bucket (playwright.authed.config.ts does this
 // too). Keeping storage.ts real avoids stubbing a module media-process needs.
 process.env.S3_ENDPOINT ??= 'http://s3.invalid';
-process.env.S3_ACCESS_KEY_ID ??= 'unit-test-placeholder-key';
-process.env.S3_SECRET_ACCESS_KEY ??= 'unit-test-placeholder-secret';
+process.env.S3_MEDIA_ACCESS_KEY_ID ??= 'unit-test-placeholder-media-key';
+process.env.S3_MEDIA_SECRET_ACCESS_KEY ??= 'unit-test-placeholder-media-secret';
+process.env.S3_ORIGINALS_ACCESS_KEY_ID ??=
+  'unit-test-placeholder-originals-key';
+process.env.S3_ORIGINALS_SECRET_ACCESS_KEY ??=
+  'unit-test-placeholder-originals-secret';
 process.env.S3_BUCKET_MEDIA ??= 'unit-test-placeholder-media';
 process.env.S3_BUCKET_ORIGINALS ??= 'unit-test-placeholder-originals';
 process.env.S3_FORCE_PATH_STYLE ??= 'true';
