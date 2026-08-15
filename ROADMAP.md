@@ -13,13 +13,19 @@ Smoke-test scaffold (v0). Each milestone is independently verifiable and tagged 
 | M7  | Rate limit on magic-link        | ✅ done    | `m7`  | dev: 6 rapid POSTs → 6th = 429                                                                        |
 | M8  | PWA                             | ✅ done    | `m8`  | offline page renders airplane-mode; `/me` not cached                                                  |
 | M9  | Multi-env runner + DB dump      | ✅ done    | `m9`  | health passes for all 3 envs; `db:dump:dev` populates local                                           |
-| M10 | i18n core (En/Fr/Uk) + switcher | ⏳ planned | `m10` | device locale `fr` → app loads in French; switch to Uk in settings → persists across reload           |
-| M11 | Localized landing (per-locale)  | ⏳ planned | `m11` | `/`, `/fr`, `/uk` prerender to static HTML; mobile Lighthouse still 95+/100/100/100                   |
-| M12 | Media pipeline spike            | ⏳ planned | `m12` | 20s 4K60 iPhone .mov: presigned PUT → async ffmpeg → 720p + poster → plays; ADR on transcode location |
-| M13 | Entries + media schema & API    | ⏳ planned | `m13` | `db:migrate` creates `entries`+`media`; API lifecycle create → upload → processing → ready            |
-| M14 | App shell (chrome)              | ⏳ planned | `m14` | BottomNav/TopBar tabs render in both themes; `ds:check` green                                         |
-| M15 | Feed (read path)                | ⏳ planned | `m15` | seeded entries render with media playback; empty state; `processing` placeholder                      |
-| M16 | Compose (write path)            | ⏳ planned | `m16` | phone: compose → upload 20s video → feed shows processing → ready → plays                             |
+| M10 | i18n core (En/Fr/Uk) + switcher | ✅ done    | `m10` | device locale `fr` → app loads in French; switch to Uk in settings → persists across reload           |
+| M11 | Localized landing (per-locale)  | ✅ done    | `m11` | `/`, `/fr`, `/uk` prerender to static HTML; mobile Lighthouse still 95+/100/100/100                   |
+| M12 | Media pipeline spike            | ✅ done    | `m12` | 20s 4K60 iPhone .mov: presigned PUT → async ffmpeg → 720p + poster → plays; ADR on transcode location |
+| M13 | Entries + media schema & API    | ✅ done    | `m13` | `db:migrate` creates `entries`+`media`; API lifecycle create → upload → processing → ready            |
+| M14 | App shell (chrome)              | ✅ done    | `m14` | BottomNav/TopBar tabs render in both themes; `ds:check` green                                         |
+| M15 | Feed (read path)                | ✅ done    | `m15` | seeded entries render with media playback; empty state; `processing` placeholder                      |
+| M16 | Compose (write path)            | ✅ done    | `m16` | phone: compose → upload 20s video → feed shows processing → ready → plays                             |
+| M17 | Word detail + entry actions     | ✅ done    | `m17` | card → detail → edit story/speaker, replace media, correct saidAt, delete; `graph:check` green        |
+| M18 | Your people + Settings-lite     | ⏳ planned | `m18` | speaker rename/remove with snapshot policy; «Your people» screen; minimal `/settings`                 |
+| M19 | Collections + Saved tab         | ⏳ planned | `m19` | collections entity + backfill; compose chips; Saved tab tiles                                         |
+| M20 | Profile (retire `/me`)          | ⏳ planned | `m20` | profile screen with counts/people/collections; all six `/me` callers moved                            |
+| M21 | Memory loop (on-this-day)       | ⏳ planned | `m21` | on-this-day band in the feed, backed by an index on (owner, month/day of said_at)                     |
+| M22 | Release readiness → v1          | ⏳ planned | `m22` | prod/preprod unfreeze; QA Prod column swept; preprod runs all 0007+ migrations                        |
 
 ## Internationalization (M10–M11)
 
@@ -93,6 +99,16 @@ settled 2026-07-17 (details in the M12 ADR once the spike lands):
 
 Linear: VKB-63 (spike) → VKB-64 (schema/API + entitlements) → VKB-65
 (shell) → VKB-66 (feed) → VKB-67 (compose, incl. Plus upsell).
+
+## Product arc (M17–M22)
+
+M17 closed the entry lifecycle: a word can now be read, edited, corrected and
+deleted, and the profile can be renamed. What follows widens the dictionary
+around that entry — the people it quotes (M18), the collections it sits in
+(M19), the profile that sums it up (M20) and the memory loop that brings it
+back (M21) — before M22 unfreezes prod for v1. Milestone tickets are created
+just-in-time as the previous milestone nears completion; the audited ticket
+tables live in the Linear project document «Roadmap M17–M22».
 
 ## Out of scope for v0
 
