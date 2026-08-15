@@ -9,7 +9,7 @@ import {
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
-// Two buckets per stage (ADR pending in VKB-63):
+// Two buckets per stage (ADR-0009):
 // - media: derivatives + posters + avatars; the only bucket the app reads.
 // - originals: private ingest for raw uploads; presigned PUT + transcoder
 //   reads, never served to clients.
@@ -31,18 +31,42 @@ const parseBool = (raw: unknown, key: string) => {
 };
 
 interface Storage {
-  client: S3Client;
+  endpoint: string;
+  region: string;
+  forcePathStyle: boolean;
   mediaBucket: string;
   originalsBucket: string | undefined;
 }
 
+interface BucketAccess {
+  client: S3Client;
+  bucket: string;
+}
+
 let cached: Storage | null = null;
+
+// One credential pair per bucket, so a leaked application key reaches only
+// the bucket its job needs — the isolation ADR-0009 designs the two-bucket
+// split for. The pairs never fall back to one another.
+const CREDENTIAL_KEYS: Record<
+  BucketKind,
+  { accessKeyId: string; secretAccessKey: string }
+> = {
+  media: {
+    accessKeyId: 'S3_MEDIA_ACCESS_KEY_ID',
+    secretAccessKey: 'S3_MEDIA_SECRET_ACCESS_KEY',
+  },
+  originals: {
+    accessKeyId: 'S3_ORIGINALS_ACCESS_KEY_ID',
+    secretAccessKey: 'S3_ORIGINALS_SECRET_ACCESS_KEY',
+  },
+};
+
+const clients = new Map<BucketKind, S3Client>();
 
 const create = (): Storage => {
   const endpoint = process.env.S3_ENDPOINT;
   const region = process.env.S3_REGION ?? 'auto';
-  const accessKeyId = process.env.S3_ACCESS_KEY_ID;
-  const secretAccessKey = process.env.S3_SECRET_ACCESS_KEY;
   const mediaBucket = process.env.S3_BUCKET_MEDIA;
   const originalsBucket = process.env.S3_BUCKET_ORIGINALS || undefined;
   const forcePathStyle = parseBool(
@@ -51,27 +75,14 @@ const create = (): Storage => {
   );
 
   if (!endpoint) throw new Error('[storage] S3_ENDPOINT is required');
-  if (!accessKeyId) throw new Error('[storage] S3_ACCESS_KEY_ID is required');
-  if (!secretAccessKey) {
-    throw new Error('[storage] S3_SECRET_ACCESS_KEY is required');
-  }
   if (!mediaBucket) {
     throw new Error('[storage] S3_BUCKET_MEDIA is required');
   }
 
-  const client = new S3Client({
-    endpoint,
-    region,
-    credentials: { accessKeyId, secretAccessKey },
-    forcePathStyle,
-    requestChecksumCalculation: 'WHEN_REQUIRED',
-    responseChecksumValidation: 'WHEN_REQUIRED',
-  });
-
   console.log(
     `[storage] endpoint=${endpoint} media=${mediaBucket} originals=${originalsBucket ?? '(unset)'} pathStyle=${forcePathStyle}`,
   );
-  return { client, mediaBucket, originalsBucket };
+  return { endpoint, region, forcePathStyle, mediaBucket, originalsBucket };
 };
 
 const useStorage = () => {
@@ -79,15 +90,42 @@ const useStorage = () => {
   return cached;
 };
 
-const resolve = (kind: BucketKind) => {
+const useClient = (kind: BucketKind) => {
+  const existing = clients.get(kind);
+  if (existing) return existing;
+
+  const storage = useStorage();
+  const keys = CREDENTIAL_KEYS[kind];
+  const accessKeyId = process.env[keys.accessKeyId];
+  const secretAccessKey = process.env[keys.secretAccessKey];
+
+  if (!accessKeyId)
+    throw new Error(`[storage] ${keys.accessKeyId} is required`);
+  if (!secretAccessKey) {
+    throw new Error(`[storage] ${keys.secretAccessKey} is required`);
+  }
+
+  const client = new S3Client({
+    endpoint: storage.endpoint,
+    region: storage.region,
+    credentials: { accessKeyId, secretAccessKey },
+    forcePathStyle: storage.forcePathStyle,
+    requestChecksumCalculation: 'WHEN_REQUIRED',
+    responseChecksumValidation: 'WHEN_REQUIRED',
+  });
+  clients.set(kind, client);
+  return client;
+};
+
+const resolve = (kind: BucketKind): BucketAccess => {
   const storage = useStorage();
   if (kind === 'media') {
-    return { client: storage.client, bucket: storage.mediaBucket };
+    return { client: useClient('media'), bucket: storage.mediaBucket };
   }
   if (!storage.originalsBucket) {
     throw new Error('[storage] S3_BUCKET_ORIGINALS is required for originals');
   }
-  return { client: storage.client, bucket: storage.originalsBucket };
+  return { client: useClient('originals'), bucket: storage.originalsBucket };
 };
 
 export const hasOriginalsBucket = () =>

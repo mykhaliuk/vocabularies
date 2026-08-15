@@ -32,11 +32,18 @@ const baseURL = `http://localhost:${PORT}`;
 // key/secret/bucket strings say outright that they authorize nothing.
 const STORAGE_PLACEHOLDER_ENV = {
   S3_ENDPOINT: process.env.S3_ENDPOINT ?? 'http://s3.invalid',
-  S3_ACCESS_KEY_ID:
-    process.env.S3_ACCESS_KEY_ID ?? 'authed-suite-no-minio-placeholder-key',
-  S3_SECRET_ACCESS_KEY:
-    process.env.S3_SECRET_ACCESS_KEY ??
-    'authed-suite-no-minio-placeholder-secret',
+  S3_MEDIA_ACCESS_KEY_ID:
+    process.env.S3_MEDIA_ACCESS_KEY_ID ??
+    'authed-suite-no-minio-placeholder-media-key',
+  S3_MEDIA_SECRET_ACCESS_KEY:
+    process.env.S3_MEDIA_SECRET_ACCESS_KEY ??
+    'authed-suite-no-minio-placeholder-media-secret',
+  S3_ORIGINALS_ACCESS_KEY_ID:
+    process.env.S3_ORIGINALS_ACCESS_KEY_ID ??
+    'authed-suite-no-minio-placeholder-originals-key',
+  S3_ORIGINALS_SECRET_ACCESS_KEY:
+    process.env.S3_ORIGINALS_SECRET_ACCESS_KEY ??
+    'authed-suite-no-minio-placeholder-originals-secret',
   S3_BUCKET_MEDIA:
     process.env.S3_BUCKET_MEDIA ?? 'authed-suite-placeholder-media-bucket',
   S3_BUCKET_ORIGINALS:

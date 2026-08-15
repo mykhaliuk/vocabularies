@@ -282,8 +282,11 @@ export default defineNuxtConfig({
     databaseUrlUnpooled: process.env.DATABASE_URL_UNPOOLED ?? '',
     s3Endpoint: process.env.S3_ENDPOINT ?? '',
     s3Region: process.env.S3_REGION ?? 'auto',
-    s3AccessKeyId: process.env.S3_ACCESS_KEY_ID ?? '',
-    s3SecretAccessKey: process.env.S3_SECRET_ACCESS_KEY ?? '',
+    s3MediaAccessKeyId: process.env.S3_MEDIA_ACCESS_KEY_ID ?? '',
+    s3MediaSecretAccessKey: process.env.S3_MEDIA_SECRET_ACCESS_KEY ?? '',
+    s3OriginalsAccessKeyId: process.env.S3_ORIGINALS_ACCESS_KEY_ID ?? '',
+    s3OriginalsSecretAccessKey:
+      process.env.S3_ORIGINALS_SECRET_ACCESS_KEY ?? '',
     s3ForcePathStyle: process.env.S3_FORCE_PATH_STYLE === 'true',
     resendApiKey: process.env.RESEND_API_KEY ?? '',
     emailFrom: process.env.EMAIL_FROM ?? '',
