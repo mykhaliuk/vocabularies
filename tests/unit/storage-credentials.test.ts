@@ -1,45 +1,86 @@
+import { tmpdir } from 'node:os';
 import { describe, expect, test } from 'bun:test';
 
-// Presigning is a local HMAC — it signs against the endpoint and never dials
-// it — so these assert credential selection without a reachable bucket.
-process.env.S3_ENDPOINT ??= 'http://s3.invalid';
-process.env.S3_BUCKET_MEDIA ??= 'unit-test-media';
-process.env.S3_BUCKET_ORIGINALS ??= 'unit-test-originals';
-process.env.S3_FORCE_PATH_STYLE ??= 'true';
-process.env.S3_MEDIA_ACCESS_KEY_ID = 'media-key';
-process.env.S3_MEDIA_SECRET_ACCESS_KEY = 'media-secret';
+// storage.ts caches one client per bucket kind, so which credential a call
+// signs with depends on what has already been built in the process. Any
+// assertion about that has to own its process — in-file env juggling only
+// proves anything when no other test file imported storage.ts first, which
+// is a property of the runner's module registry, not of the code.
+const BASE_ENV = {
+  S3_ENDPOINT: 'http://s3.invalid',
+  S3_BUCKET_MEDIA: 'unit-test-media',
+  S3_BUCKET_ORIGINALS: 'unit-test-originals',
+  S3_FORCE_PATH_STYLE: 'true',
+  S3_MEDIA_ACCESS_KEY_ID: 'media-key',
+  S3_MEDIA_SECRET_ACCESS_KEY: 'media-secret',
+  S3_ORIGINALS_ACCESS_KEY_ID: 'originals-key',
+  S3_ORIGINALS_SECRET_ACCESS_KEY: 'originals-secret',
+};
 
-const { presignPut } = await import('../../server/utils/storage');
+// Prints the access-key id a presigned URL was signed with, or the error.
+// The module is imported by absolute path because the probe deliberately
+// runs outside the repo: bun auto-loads .env/.env.local from the working
+// directory, which would put the real credentials back into an env this
+// test exists to take them out of.
+const SCRIPT = `
+const { presignPut } = await import(process.env.PROBE_MODULE);
+try {
+  const url = await presignPut('probe', 'text/plain', {
+    kind: process.env.PROBE_KIND,
+  });
+  const credential = new URL(url).searchParams.get('X-Amz-Credential');
+  console.log('SIGNED:' + credential.split('/')[0]);
+} catch (error) {
+  console.log('THREW:' + error.message);
+}
+`;
 
-const signingKey = (url: string) =>
-  new URL(url).searchParams.get('X-Amz-Credential')?.split('/')[0];
+const STORAGE_MODULE = new URL('../../server/utils/storage.ts', import.meta.url)
+  .pathname;
 
-const putOriginals = () =>
-  presignPut('probe', 'text/plain', { kind: 'originals' });
+const sign = (kind: 'media' | 'originals', omit: string[] = []) => {
+  const env: Record<string, string> = {
+    ...BASE_ENV,
+    PROBE_KIND: kind,
+    PROBE_MODULE: STORAGE_MODULE,
+  };
+  for (const key of omit) delete env[key];
+  const result = Bun.spawnSync(['bun', '-e', SCRIPT], {
+    cwd: tmpdir(),
+    env: { ...env, PATH: process.env.PATH ?? '' },
+  });
+  const line = result.stdout
+    .toString()
+    .split('\n')
+    .find((entry) => entry.startsWith('SIGNED:') || entry.startsWith('THREW:'));
+  if (!line) throw new Error(`probe produced no verdict: ${result.stderr}`);
+  return line;
+};
 
-// Order matters: a client is cached per bucket kind on first use, so the
-// missing-credential cases have to run before anything builds the originals
-// client. The media pair stays set throughout — that is the point, a media
-// credential must never stand in for the originals one.
 describe('per-bucket credentials', () => {
+  test('each bucket signs with its own key', () => {
+    expect(sign('media')).toBe('SIGNED:media-key');
+    expect(sign('originals')).toBe('SIGNED:originals-key');
+  });
+
   test('a missing originals key throws instead of using the media one', () => {
-    expect(putOriginals()).rejects.toThrow('S3_ORIGINALS_ACCESS_KEY_ID');
+    expect(sign('originals', ['S3_ORIGINALS_ACCESS_KEY_ID'])).toBe(
+      'THREW:[storage] S3_ORIGINALS_ACCESS_KEY_ID is required',
+    );
   });
 
   test('a missing originals secret throws too', () => {
-    process.env.S3_ORIGINALS_ACCESS_KEY_ID = 'originals-key';
-    expect(putOriginals()).rejects.toThrow('S3_ORIGINALS_SECRET_ACCESS_KEY');
+    expect(sign('originals', ['S3_ORIGINALS_SECRET_ACCESS_KEY'])).toBe(
+      'THREW:[storage] S3_ORIGINALS_SECRET_ACCESS_KEY is required',
+    );
   });
 
-  test('media signs while originals is still unconfigured', async () => {
-    const url = await presignPut('probe', 'text/plain', { kind: 'media' });
-    expect(signingKey(url)).toBe('media-key');
-  });
-
-  test('each bucket signs with its own key', async () => {
-    process.env.S3_ORIGINALS_SECRET_ACCESS_KEY = 'originals-secret';
-    expect(signingKey(await putOriginals())).toBe('originals-key');
-    const media = await presignPut('probe', 'text/plain', { kind: 'media' });
-    expect(signingKey(media)).toBe('media-key');
+  test('media keeps working while originals is unconfigured', () => {
+    expect(
+      sign('media', [
+        'S3_ORIGINALS_ACCESS_KEY_ID',
+        'S3_ORIGINALS_SECRET_ACCESS_KEY',
+      ]),
+    ).toBe('SIGNED:media-key');
   });
 });
