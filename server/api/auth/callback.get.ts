@@ -15,7 +15,7 @@ import {
 import { renderConfirmPage } from '~/server/utils/confirm-page';
 import { useDb } from '~/server/utils/db';
 import { useCallbackIpRatelimit } from '~/server/utils/ratelimit';
-import { reportRatelimitFailOpen } from '~/server/utils/ratelimit-alert';
+import { reportRatelimitFailure } from '~/server/utils/ratelimit-alert';
 import { noStoreRedirect } from '~/server/utils/redirect';
 import { resolveRequestLocale } from '~/server/utils/request-locale';
 import { CONFIRM_TTL_MINUTES, CONFIRM_TTL_MS } from '~/shared/magic-link';
@@ -42,7 +42,7 @@ export default defineEventHandler(async (event) => {
       }
     } catch (error) {
       console.error('[auth.callback] ratelimit failure (failing open)', error);
-      reportRatelimitFailOpen('auth-callback', error);
+      reportRatelimitFailure('auth-callback', error);
     }
   }
 

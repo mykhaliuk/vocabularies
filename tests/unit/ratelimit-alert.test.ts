@@ -1,5 +1,9 @@
 import { describe, expect, test } from 'bun:test';
-import { createReportGate } from '../../server/utils/ratelimit-alert';
+import {
+  createReportGate,
+  isRatelimitConfigError,
+  ratelimitConfigError,
+} from '../../server/utils/ratelimit-alert';
 
 const INTERVAL_MS = 5 * 60 * 1000;
 
@@ -33,5 +37,30 @@ describe('createReportGate', () => {
     gate('probe', 1000);
     gate('probe', 1000 + INTERVAL_MS - 1);
     expect(gate('probe', 1000 + INTERVAL_MS)).toBe(true);
+  });
+});
+
+describe('config-error classification', () => {
+  test('a limiter that was never built is recognised', () => {
+    expect(isRatelimitConfigError(ratelimitConfigError('production'))).toBe(
+      true,
+    );
+  });
+
+  test('the message names the stage that required a limiter', () => {
+    expect(ratelimitConfigError('dev').message).toContain('APP_ENV=dev');
+  });
+
+  test('an Upstash outage is not a config error', () => {
+    expect(isRatelimitConfigError(new Error('fetch failed'))).toBe(false);
+  });
+
+  test('a lookalike code on a non-Error is not a config error', () => {
+    expect(isRatelimitConfigError({ code: 'ERATELIMIT_CONFIG' })).toBe(false);
+  });
+
+  test('undefined and null are not config errors', () => {
+    expect(isRatelimitConfigError(undefined)).toBe(false);
+    expect(isRatelimitConfigError(null)).toBe(false);
   });
 });

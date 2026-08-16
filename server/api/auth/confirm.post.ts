@@ -13,7 +13,7 @@ import {
 } from '~/server/utils/auth';
 import { useDb } from '~/server/utils/db';
 import { useAuthConfirmRatelimit } from '~/server/utils/ratelimit';
-import { reportRatelimitFailOpen } from '~/server/utils/ratelimit-alert';
+import { reportRatelimitFailure } from '~/server/utils/ratelimit-alert';
 import {
   CONFIRM_CODE_PATTERN,
   CONFIRM_MAX_ATTEMPTS,
@@ -61,7 +61,7 @@ export default defineEventHandler(async (event) => {
       }
     } catch (error) {
       console.error('[auth.confirm] ratelimit failure (failing open)', error);
-      reportRatelimitFailOpen('auth-confirm', error);
+      reportRatelimitFailure('auth-confirm', error);
     }
   }
 

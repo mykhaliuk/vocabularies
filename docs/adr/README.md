@@ -68,3 +68,7 @@ Format: `NNNN-short-slug.md`, template in [0000-template.md](0000-template.md).
   the shape of the environment rather than a branch name or a flag: a
   production build with no database, or a half-set URL pair, fails instead of
   shipping un-migrated code on a green build
+- [ADR-0018](0018-ratelimit-gate.md) — a rate limiter that was never built is
+  a build failure, not a fail-open: a configured stage without Upstash refuses
+  to build, and at runtime the construction error is classified apart from an
+  outage so VKB-78's alert keeps its meaning
