@@ -1,4 +1,5 @@
 import { tmpdir } from 'node:os';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, test } from 'bun:test';
 
 // storage.ts caches one client per bucket kind, so which credential a call
@@ -35,8 +36,9 @@ try {
 }
 `;
 
-const STORAGE_MODULE = new URL('../../server/utils/storage.ts', import.meta.url)
-  .pathname;
+const STORAGE_MODULE = fileURLToPath(
+  new URL('../../server/utils/storage.ts', import.meta.url),
+);
 
 const sign = (kind: 'media' | 'originals', omit: string[] = []) => {
   const env: Record<string, string> = {

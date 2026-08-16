@@ -64,3 +64,7 @@ Format: `NNNN-short-slug.md`, template in [0000-template.md](0000-template.md).
   edit leaves the word untouched: the save uploads first and commits the row
   last, cancel closes only for that commit, and the discard copy switches
   once a clip is past the point of recall
+- [ADR-0017](0017-migration-gate.md) — the deploy-time migration gate reads
+  the shape of the environment rather than a branch name or a flag: a
+  production build with no database, or a half-set URL pair, fails instead of
+  shipping un-migrated code on a green build
