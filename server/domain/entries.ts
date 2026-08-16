@@ -1,4 +1,4 @@
-import { and, desc, eq, isNotNull, sql } from 'drizzle-orm';
+import { and, desc, eq, isNotNull, ne, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { entries } from '~/db/schema/entries';
 import { media } from '~/db/schema/media';
@@ -187,14 +187,34 @@ export const attachEntryMedia = async (
   const minted = await mintUploadSlot(user, mediaInput, {
     pendingEntryId: entryId,
   });
+  // Aiming a new upload at an entry supersedes whatever was aimed there
+  // before, so the older rows stop pointing at it. Without this, two pending
+  // rows race and `claimPendingEntry` resolves them in transcode-completion
+  // order — last READY wins, not last picked, so swapping a long clip for a
+  // short one gives the long one back when it finishes (VKB-159, ADR-0009).
+  //
+  // After the mint, excluding the row just minted, rather than before it: a
+  // presign failure must not leave the user with nothing aimed at the entry
+  // when they still had a perfectly good upload in flight.
+  await cancelUploadsAimedAt(user.id, entryId, { except: minted.row.id });
   return { media: minted.row, upload: minted.slot };
 };
 
-const cancelUploadsAimedAt = (ownerId: string, entryId: string) =>
+const cancelUploadsAimedAt = (
+  ownerId: string,
+  entryId: string,
+  options: { except?: string } = {},
+) =>
   useDb()
     .update(media)
     .set({ pendingEntryId: null, updatedAt: new Date() })
-    .where(and(eq(media.pendingEntryId, entryId), eq(media.ownerId, ownerId)));
+    .where(
+      and(
+        eq(media.pendingEntryId, entryId),
+        eq(media.ownerId, ownerId),
+        ...(options.except ? [ne(media.id, options.except)] : []),
+      ),
+    );
 
 export const removeEntryMedia = async (
   ownerId: string,

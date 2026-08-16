@@ -79,7 +79,19 @@ test.describe('entry media (authed)', () => {
     expect(listed[0]?.media?.mediaId).toBe(kept);
   });
 
-  test('aiming twice at one entry is allowed and still changes nothing', async ({
+  // Named for what it actually pins. Until VKB-159 this test was called
+  // "aiming twice at one entry is allowed and still changes nothing", which
+  // stopped being true — minting now detaches the aims it supersedes — while
+  // the assertions kept passing, because they only ever looked at the bound
+  // row. A test that goes red asks to be rewritten; one that keeps passing
+  // while describing behaviour the code no longer has does not.
+  //
+  // What is NOT covered here, and cannot be: whether the detach works. This
+  // suite runs without MinIO, so `confirm` (a HeadObject on the originals
+  // bucket) always fails and no pending row reaches `ready` — the ordering
+  // this guards is unreachable. VKB-115 + VKB-143 are the prerequisites; the
+  // detach itself was verified by hand against a real bucket (ADR-0009).
+  test('an unconfirmed aim stays invisible to reads', async ({
     authedPage,
   }) => {
     const entryId = await createEntry(authedPage, {
@@ -92,6 +104,8 @@ test.describe('entry media (authed)', () => {
     const second = await attachMedia(authedPage, entryId);
     expect(second.upload.mediaId).not.toBe(first.upload.mediaId);
 
+    // The incumbent is untouched by either aim: retirement happens at the
+    // `ready` transition, never at mint.
     expect((await readEntry(authedPage, entryId)).media?.mediaId).toBe(kept);
   });
 
