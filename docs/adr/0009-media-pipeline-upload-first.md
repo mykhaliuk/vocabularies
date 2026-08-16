@@ -163,9 +163,19 @@ exactly the losing case.
 minted). At most one live aim per entry, so the order of `ready` stops
 deciding which take the user keeps.
 
-The detach runs **after** the mint, excluding the new row, rather than
-before it: a presign failure must not clear a perfectly good upload that is
-still in flight. A superseded row keeps its bytes and finishes its job — it
+The detach runs **after** the mint rather than before it: a presign failure
+must not clear a perfectly good upload that is still in flight.
+
+It clears every aim **older than** the new row — ordered by `(created_at, id)`
+— rather than "everything except it". That distinction is not stylistic. Two
+attaches racing on one entry would each clear the other's row, and the entry
+would end up with **no** aim at all: the user loses both takes instead of
+getting the wrong one, which is worse than the bug being fixed. A total order
+makes every interleaving converge on the same survivor, the newest aim, with
+no lock. The `id` tiebreak carries its weight — `created_at` is a transaction
+timestamp and two rows can share it. Reproduced both ways against local
+Postgres by widening the mint→detach window: "except it" leaves the entry
+empty, the ordered form leaves exactly one aim standing. A superseded row keeps its bytes and finishes its job — it
 simply claims nothing, which is the shape an abandoned upload already has,
 and consistent with "originals are kept forever".
 

@@ -184,8 +184,9 @@ describe('attachEntryMedia', () => {
     expect(detach?.values).toMatchObject({ pendingEntryId: null });
     expect(detach?.targets).toContain(ENTRY_ID);
     expect(detach?.targets).toContain(OWNER_ID);
-    // The row the insert returned is excluded by id — without that, the new
-    // aim clears itself and the entry ends up with nothing pointed at it.
+    // Bounded by the minted row, not by "everything except it": two concurrent
+    // attaches that each cleared the others would clear each other and leave
+    // the entry with no aim at all.
     expect(detach?.targets).toContain(NEW_MEDIA_ID);
   });
 

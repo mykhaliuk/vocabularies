@@ -1,4 +1,4 @@
-import { and, desc, eq, isNotNull, ne, sql } from 'drizzle-orm';
+import { and, desc, eq, isNotNull, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { entries } from '~/db/schema/entries';
 import { media } from '~/db/schema/media';
@@ -193,17 +193,25 @@ export const attachEntryMedia = async (
   // order — last READY wins, not last picked, so swapping a long clip for a
   // short one gives the long one back when it finishes (VKB-159, ADR-0009).
   //
-  // After the mint, excluding the row just minted, rather than before it: a
-  // presign failure must not leave the user with nothing aimed at the entry
-  // when they still had a perfectly good upload in flight.
-  await cancelUploadsAimedAt(user.id, entryId, { except: minted.row.id });
+  // After the mint rather than before it: a presign failure must not leave
+  // the user with nothing aimed at the entry when they still had a perfectly
+  // good upload in flight.
+  await cancelUploadsAimedAt(user.id, entryId, { olderThan: minted.row });
   return { media: minted.row, upload: minted.slot };
 };
 
+// `olderThan` clears every aim that precedes the given row, NOT "everything
+// except it". The distinction is the concurrent case: two attaches on one
+// entry that each cleared "the others" would clear each other's row and
+// leave the entry with nothing aimed at it at all — worse than the bug this
+// fixes, since the user loses both takes rather than the wrong one. Ordering
+// by (createdAt, id) is a total order, so every interleaving converges on the
+// same survivor: the newest aim. The id tiebreak matters — createdAt is a
+// transaction timestamp and two rows can share it.
 const cancelUploadsAimedAt = (
   ownerId: string,
   entryId: string,
-  options: { except?: string } = {},
+  options: { olderThan?: MediaRow } = {},
 ) =>
   useDb()
     .update(media)
@@ -212,7 +220,11 @@ const cancelUploadsAimedAt = (
       and(
         eq(media.pendingEntryId, entryId),
         eq(media.ownerId, ownerId),
-        ...(options.except ? [ne(media.id, options.except)] : []),
+        ...(options.olderThan
+          ? [
+              sql`(${media.createdAt}, ${media.id}) < (${options.olderThan.createdAt}::timestamptz, ${options.olderThan.id})`,
+            ]
+          : []),
       ),
     );
 
