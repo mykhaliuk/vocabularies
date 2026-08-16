@@ -1,4 +1,4 @@
-import { reportRatelimitFailOpen } from '~/server/utils/ratelimit-alert';
+import { reportRatelimitFailure } from '~/server/utils/ratelimit-alert';
 import { useEmailRatelimit, useIpRatelimit } from '~/server/utils/ratelimit';
 
 export interface MagicLinkRatelimitVerdict {
@@ -35,7 +35,7 @@ export const checkMagicLinkRateLimits = async (
       emailError,
       ipError,
     });
-    reportRatelimitFailOpen('magic-link', emailError ?? ipError);
+    reportRatelimitFailure('magic-link', emailError ?? ipError);
     return { allowed: true, reset: 0 };
   }
 

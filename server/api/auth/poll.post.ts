@@ -4,7 +4,7 @@ import { signinClaims } from '~/db/schema/signin-claims';
 import { hashToken } from '~/server/utils/auth';
 import { useDb } from '~/server/utils/db';
 import { useAuthPollRatelimit } from '~/server/utils/ratelimit';
-import { reportRatelimitFailOpen } from '~/server/utils/ratelimit-alert';
+import { reportRatelimitFailure } from '~/server/utils/ratelimit-alert';
 import { CONFIRM_MAX_ATTEMPTS, POLL_KEY_PATTERN } from '~/shared/magic-link';
 
 // Cross-jar sign-in poll (VKB-70). An installed standalone PWA cannot receive
@@ -47,7 +47,7 @@ export default defineEventHandler(async (event) => {
       }
     } catch (error) {
       console.error('[auth.poll] ratelimit failure (failing open)', error);
-      reportRatelimitFailOpen('auth-poll', error);
+      reportRatelimitFailure('auth-poll', error);
     }
   }
 

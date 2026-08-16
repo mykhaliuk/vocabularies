@@ -1,6 +1,9 @@
 import { Ratelimit } from '@upstash/ratelimit';
 import { Redis } from '@upstash/redis';
-import { reportRatelimitFailOpen } from '~/server/utils/ratelimit-alert';
+import {
+  ratelimitConfigError,
+  reportRatelimitFailure,
+} from '~/server/utils/ratelimit-alert';
 
 const WINDOW = '5 m';
 const MAX = 5;
@@ -54,11 +57,7 @@ const createLimiter = (
   const redis = getRedis();
 
   if (!redis) {
-    if (stage !== 'local') {
-      throw new Error(
-        `[ratelimit] UPSTASH_REDIS_REST_URL/_TOKEN required when APP_ENV=${stage}`,
-      );
-    }
+    if (stage !== 'local') throw ratelimitConfigError(stage);
     console.log(`[ratelimit] driver=null bucket=${bucket}:${suffix} (local)`);
     return nullLimiter;
   }
@@ -140,7 +139,7 @@ export const checkMediaUploadRateLimit = async (userId: string) => {
     console.error('[ratelimit] media-upload check failed — failing open', {
       error,
     });
-    reportRatelimitFailOpen('media-upload', error);
+    reportRatelimitFailure('media-upload', error);
     return true;
   }
 };
