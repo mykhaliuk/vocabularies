@@ -5,7 +5,7 @@ import {
   FONT_SUBSETS,
   parseFontFaces,
   resolveFamilyFaces,
-} from '../../fonts.config';
+} from '../../fonts.config.js';
 
 const ROOT = resolve(import.meta.dirname, '../..');
 

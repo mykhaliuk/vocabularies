@@ -66,7 +66,9 @@ needs the network.
 ## Consequences
 
 `bun run build:offline` builds with outbound HTTP blocked
-(`scripts/no-network.mjs` turns any external fetch into an error). That is the
+(`scripts/no-network.mjs` refuses external requests on both paths — `fetch` and
+`node:http`/`node:https`, since undici's fetch does not go through the latter
+and a fetch-only guard would miss a dependency using it). That is the
 acceptance criterion demonstrated instead of inferred, and it is reusable
 beyond fonts — it is a concrete step toward VKB-123's "no public internet is a
 checked property, not a convention".

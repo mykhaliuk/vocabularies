@@ -46,12 +46,25 @@ for (const family of FONT_FAMILIES) {
           'run `bun run fonts:vendor`',
       );
     }
-    for (const weight of family.weights) {
-      if (!coversWeight(face.weight, weight)) {
-        failures.push(
-          `WEIGHT   ${family.name} — ${face.file} renders ${face.weight}, ` +
-            `which does not cover ${weight}`,
-        );
+  }
+
+  // Per (style, subset), not per face: a static family splits its weights
+  // across files, so demanding that every file cover every weight would fail
+  // a request that is in fact fully served. A variable family answers with
+  // one file per group either way.
+  for (const style of family.styles) {
+    for (const subset of family.subsets) {
+      const group = faces.filter(
+        (face) => face.style === style && face.subset === subset,
+      );
+      for (const weight of family.weights) {
+        const covered = group.some((face) => coversWeight(face.weight, weight));
+        if (!covered) {
+          failures.push(
+            `WEIGHT   ${family.name} — nothing renders ${weight} ${style} ` +
+              `${subset}; offered: ${group.map((f) => f.weight).join(', ')}`,
+          );
+        }
       }
     }
   }
