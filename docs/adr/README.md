@@ -72,3 +72,7 @@ Format: `NNNN-short-slug.md`, template in [0000-template.md](0000-template.md).
   a build failure, not a fail-open: a configured stage without Upstash refuses
   to build, and at runtime the construction error is classified apart from an
   outage so VKB-78's alert keeps its meaning
+- [ADR-0019](0019-fonts-from-node-modules.md) — fonts resolve from the
+  installed fontsource packages through a provider we own, with every built-in
+  provider disabled by name; `build:offline` proves the build needs no network
+  instead of inferring it from a build that happened to have one

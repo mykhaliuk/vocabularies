@@ -8,6 +8,8 @@
         "@aws-sdk/client-s3": "^3.700.0",
         "@aws-sdk/s3-request-presigner": "^3.700.0",
         "@ffmpeg-installer/ffmpeg": "^1.1.0",
+        "@fontsource-variable/caveat": "^5.3.0",
+        "@fontsource-variable/rubik": "^5.3.0",
         "@neondatabase/serverless": "^0.10.0",
         "@nuxtjs/i18n": "10.4.0",
         "@sentry/nuxt": "^9.0.0",
@@ -424,6 +426,10 @@
     "@ffmpeg-installer/win32-ia32": ["@ffmpeg-installer/win32-ia32@4.1.0", "", { "os": "win32", "cpu": "ia32" }, "sha512-FV2D7RlaZv/lrtdhaQ4oETwoFUsUjlUiasiZLDxhEUPdNDWcH1OU9K1xTvqz+OXLdsmYelUDuBS/zkMOTtlUAw=="],
 
     "@ffmpeg-installer/win32-x64": ["@ffmpeg-installer/win32-x64@4.1.0", "", { "os": "win32", "cpu": "x64" }, "sha512-Drt5u2vzDnIONf4ZEkKtFlbvwj6rI3kxw1Ck9fpudmtgaZIHD4ucsWB2lCZBXRxJgXR+2IMSti+4rtM4C4rXgg=="],
+
+    "@fontsource-variable/caveat": ["@fontsource-variable/caveat@5.3.0", "", {}, "sha512-Q3mjghoYIlXgwqBPJKZ4q6f3zu921Gq7UU76r9Z+NAmhapHfX130GIFpOCYf8vt2SIcgCi9RHDT7anfJKg/kiA=="],
+
+    "@fontsource-variable/rubik": ["@fontsource-variable/rubik@5.3.0", "", {}, "sha512-yQUf8qle24MJYA+EuauyF+cqjjN6I715nGjitt3sGmwZA0XfA4fWJcLq1C/diREZl4Qzn1E80nLMc0ipC/a4Lg=="],
 
     "@humanfs/core": ["@humanfs/core@0.19.2", "", { "dependencies": { "@humanfs/types": "^0.15.0" } }, "sha512-UhXNm+CFMWcbChXywFwkmhqjs3PRCmcSa/hfBgLIb7oQ5HNb1wS0icWsGtSAUNgefHeI+eBrA8I1fxmbHsGdvA=="],
 

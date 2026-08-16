@@ -48,3 +48,8 @@ bun-debug.log*
 !.claude/
 .claude/worktrees/
 .claude/settings.local.json
+
+# Fonts vendored out of node_modules on postinstall (VKB-124, ADR-0019).
+# Generated from the pinned @fontsource-variable packages, so the lockfile is
+# the record — committing the binaries would be a second one that can drift.
+public/fonts/

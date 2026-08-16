@@ -1,389 +1,86 @@
 #!/usr/bin/env node
-// @ts-nocheck — JS CLI script run by node; it only enters vue-tsc's checked
-// graph via the tests/unit/fonts-check.test.ts import, and runtime behavior
-// there is pinned by that spec, not by static types.
-/* fonts-check — the webfont request in nuxt.config.js must be one the
-   provider can actually answer (VKB-157).
+/* fonts-check — every face the request asks for must be one the installed
+   package actually ships, and must be vendored into public/.
 
-   A provider does not complain about a subset a family has never shipped: it
-   sends nothing, and the glyphs fall back to a system face per character, in
-   every locale, with no error anywhere.
+   A source does not complain about a subset a family has never shipped: it
+   serves nothing, and the glyphs fall back to a system face per character, in
+   every locale, with no error anywhere (VKB-157). That is still the failure
+   being guarded against; since VKB-124 the authority is the package on disk
+   rather than Google's metadata index, so this check no longer needs the
+   network to answer — see docs/adr/0019-fonts-from-node-modules.md.
 */
-
-import { readFileSync } from 'node:fs';
-import { resolve, join } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { existsSync } from 'node:fs';
+import { join, resolve } from 'node:path';
+import {
+  FONT_FAMILIES,
+  PUBLIC_FONT_DIR,
+  resolveFamilyFaces,
+} from '../fonts.config.js';
 
 const ROOT = resolve(import.meta.dirname, '..');
-const CONFIG = join(ROOT, 'nuxt.config.js');
 
-const METADATA_URL = 'https://fonts.google.com/metadata/fonts';
-const FETCH_TIMEOUT_MS = 20_000;
-const FETCH_ATTEMPTS = 3;
-const RETRY_DELAY_MS = 1000;
+const failures = [];
 
-// fontless `defaultValues` — what a face inherits when neither the family nor
-// `fonts.defaults` names it. Mirrored rather than imported so the check states
-// the request it is verifying. The asymmetry to know: an upstream default
-// REMOVED shows up as a failure here, one ADDED silently under-requests and
-// passes.
-const MODULE_DEFAULTS = {
-  weights: [400],
-  styles: ['normal', 'italic'],
-  subsets: [
-    'cyrillic-ext',
-    'cyrillic',
-    'greek-ext',
-    'greek',
-    'vietnamese',
-    'latin-ext',
-    'latin',
-  ],
+// A variable face declares `font-weight: 300 900`; a static one a single
+// number. Either way the requested weights have to land inside what the file
+// can render, or the browser synthesises the difference.
+const coversWeight = (declared, weight) => {
+  const bounds = declared.split(/\s+/).map(Number);
+  if (bounds.length === 1) return bounds[0] === weight;
+  return weight >= bounds[0] && weight <= bounds[1];
 };
 
-// Google serves a `menu` subset for its own font picker; it is never a
-// coverage claim about a script.
-const NON_SCRIPT_SUBSETS = new Set(['menu']);
-
-const fail = (message) => {
-  console.error(`fonts-check: ${message}`);
-  process.exit(1);
-};
-
-// Regex alone cannot find the end of a nested array of objects.
-const sliceBlock = (source, openIndex) => {
-  const open = source[openIndex];
-  const close = open === '{' ? '}' : ']';
-  let depth = 0;
-  let quote = '';
-  for (let i = openIndex; i < source.length; i++) {
-    const char = source[i];
-    if (quote !== '') {
-      if (char === '\\') i++;
-      else if (char === quote) quote = '';
-      continue;
-    }
-    if (char === "'" || char === '"' || char === '`') {
-      quote = char;
-      continue;
-    }
-    if (char === open) depth++;
-    else if (char === close) {
-      depth--;
-      if (depth === 0) return source.slice(openIndex, i + 1);
-    }
-  }
-  return null;
-};
-
-const blockAfter = (source, label) => {
-  const at = source.indexOf(label);
-  if (at === -1) return null;
-  return sliceBlock(source, at + label.length - 1);
-};
-
-// Scanned rather than regexed: the glob in `ignore: ['**/.claude/**']` reads
-// as a block-comment open and close, so a regex pattern eats half the config.
-const stripComments = (source) => {
-  let out = '';
-  let quote = '';
-  for (let i = 0; i < source.length; i++) {
-    const char = source[i];
-    if (quote !== '') {
-      out += char;
-      if (char === '\\') out += source[++i] ?? '';
-      else if (char === quote) quote = '';
-      continue;
-    }
-    if (char === "'" || char === '"' || char === '`') {
-      quote = char;
-      out += char;
-      continue;
-    }
-    if (char === '/' && source[i + 1] === '/') {
-      while (i < source.length && source[i] !== '\n') i++;
-      out += '\n';
-      continue;
-    }
-    if (char === '/' && source[i + 1] === '*') {
-      const end = source.indexOf('*/', i + 2);
-      i = end === -1 ? source.length : end + 1;
-      continue;
-    }
-    out += char;
-  }
-  return out;
-};
-
-const declares = (block, key) =>
-  new RegExp(`(^|[\\s{,])${key}\\s*:`).test(block);
-
-// An array holding only quoted strings, integers and separators. A spread or
-// an identifier inside one is invisible to the readers below, which would
-// verify the literals and stay silent about the rest.
-const LITERALS_ONLY = /^\[[\s,]*(?:(?:'[^']*'|\d+)[\s,]*)*\]$/;
-
-// `null` means "absent, inherit the default". A key that IS declared but is
-// not a readable literal — hoisted into a const, spread in — must never reach
-// that path: it would inherit weight 400, which nearly every family ships,
-// and print a green line for a request nobody verified.
-const readList = (block, key, parse) => {
-  const list = blockAfter(block, `${key}: [`);
-  if (list === null) {
-    if (declares(block, key)) {
-      fail(
-        `\`${key}\` is declared in nuxt.config.js but is not an inline array ` +
-          'literal, so this check cannot read what is being requested',
-      );
-    }
-    return null;
-  }
-  if (!LITERALS_ONLY.test(list)) {
-    fail(
-      `\`${key}: ${list}\` in nuxt.config.js holds something this check ` +
-        'cannot read; only quoted strings and integers are verifiable',
-    );
-  }
-  const values = parse(list);
-  if (values.length === 0) {
-    fail(`\`${key}: []\` in nuxt.config.js leaves nothing to verify`);
-  }
-  return values;
-};
-
-const readStrings = (block, key) =>
-  readList(block, key, (list) =>
-    Array.from(list.matchAll(/'([^']*)'/g), (match) => match[1]),
-  );
-
-const readNumbers = (block, key) =>
-  readList(block, key, (list) =>
-    Array.from(list.matchAll(/\d+/g), (match) => Number(match[0])),
-  );
-
-const readString = (block, key) => {
-  const match = block.match(new RegExp(`${key}:\\s*'([^']*)'`));
-  return match === null ? null : match[1];
-};
-
-// `null` when the key is declared but is not a literal. The trailing
-// lookahead is load-bearing: without it `trueInProduction` matches its own
-// prefix and reads as `true`, the one misreading that turns a check OFF.
-export const readBoolean = (block, key) => {
-  const literal = new RegExp(
-    `(^|[\\s{,])${key}\\s*:\\s*(true|false)\\s*(?=[,}])`,
-  ).exec(block);
-  if (literal !== null) return literal[2] === 'true';
-  return declares(block, key) ? null : false;
-};
-
-// An entry is live iff it is global, or it is the first with its name.
-// CSS-driven resolution picks one override with
-// `families.find(f => f.name === …)`; global entries are instead emitted by
-// their own pass over the whole list (@nuxt/fonts module.mjs,
-// `nuxt-fonts-global.css`), and a global override makes the CSS-driven path
-// bail out entirely. So a global entry is always live AND still occupies the
-// name for everyone after it. `global` therefore only decides anything at a
-// repeated name, which is the only place an unreadable one is worth failing.
-export const findDeadDuplicate = (families) => {
-  const seen = new Set();
-  for (const family of families) {
-    if (family.name === null) continue;
-    if (seen.has(family.name) && family.isGlobal !== true) {
-      return { name: family.name, isUnreadable: family.isGlobal === null };
-    }
-    seen.add(family.name);
-  }
-  return null;
-};
-
-export const describeDeadDuplicate = (dead) =>
-  dead.isUnreadable
-    ? `\`global\` on the repeated \`${dead.name}\` entry is not a literal ` +
-      'true/false, so this check cannot tell whether it is dead config'
-    : `\`fonts.families\` lists \`${dead.name}\` more than once; only the ` +
-      'first entry is ever consulted, so the rest are dead config';
-
-const parseConfig = () => {
-  const source = stripComments(readFileSync(CONFIG, 'utf8'));
-
-  const fonts = blockAfter(source, 'fonts: {');
-  if (fonts === null) fail(`no \`fonts\` block in ${CONFIG}`);
-
-  // Omitting `fonts.defaults` is a legitimate config meaning "inherit
-  // everything"; declaring it as something unreadable is not.
-  const declared = blockAfter(fonts, 'defaults: {');
-  if (declared === null && declares(fonts, 'defaults')) {
-    fail('`fonts.defaults` is declared but is not an inline object literal');
-  }
-  const defaultsBlock = declared ?? '{}';
-  const defaults = {
-    weights: readNumbers(defaultsBlock, 'weights') ?? MODULE_DEFAULTS.weights,
-    styles: readStrings(defaultsBlock, 'styles') ?? MODULE_DEFAULTS.styles,
-    subsets: readStrings(defaultsBlock, 'subsets') ?? MODULE_DEFAULTS.subsets,
-  };
-
-  const familiesBlock = blockAfter(fonts, 'families: [');
-  if (familiesBlock === null)
-    fail('no `fonts.families` list in nuxt.config.js');
-
-  const families = [];
-  let cursor = 0;
-  let between = '';
-  for (let at = familiesBlock.indexOf('{'); at !== -1; ) {
-    const entry = sliceBlock(familiesBlock, at);
-    if (entry === null) break;
-    between += familiesBlock.slice(cursor, at);
-    cursor = at + entry.length;
-    families.push({
-      name: readString(entry, 'name'),
-      provider: readString(entry, 'provider'),
-      isGlobal: readBoolean(entry, 'global'),
-      weights: readNumbers(entry, 'weights') ?? defaults.weights,
-      styles: readStrings(entry, 'styles') ?? defaults.styles,
-      subsets: readStrings(entry, 'subsets') ?? defaults.subsets,
-    });
-    at = familiesBlock.indexOf('{', cursor);
-  }
-  between += familiesBlock.slice(cursor);
-
-  // Whatever sits around the object literals must be brackets, commas and
-  // whitespace. A spread or a factory call there is a family this check would
-  // otherwise skip without a word.
-  if (/[^[\]\s,]/.test(between)) {
-    fail(
-      '`fonts.families` holds an entry that is not an inline object literal, ' +
-        'so this check cannot see every family being requested',
-    );
+for (const family of FONT_FAMILIES) {
+  let faces;
+  try {
+    faces = resolveFamilyFaces(family, ROOT);
+  } catch (error) {
+    failures.push(`COVERAGE ${family.name} — ${error.message}`);
+    continue;
   }
 
-  if (families.length === 0)
-    fail('`fonts.families` is empty in nuxt.config.js');
-
-  const dead = findDeadDuplicate(families);
-  if (dead !== null) fail(describeDeadDuplicate(dead));
-
-  return families;
-};
-
-const sleep = (ms) => new Promise((done) => setTimeout(done, ms));
-
-const fetchCatalog = async () => {
-  let lastError = null;
-  for (let attempt = 1; attempt <= FETCH_ATTEMPTS; attempt++) {
-    try {
-      const response = await fetch(METADATA_URL, {
-        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-      });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const { familyMetadataList } = await response.json();
-      const catalog = new Map();
-      for (const family of familyMetadataList)
-        catalog.set(family.family, family);
-      return catalog;
-    } catch (error) {
-      lastError = error;
-      if (attempt < FETCH_ATTEMPTS) await sleep(RETRY_DELAY_MS * attempt);
-    }
-  }
-  fail(
-    `could not read the Google Fonts metadata index (${METADATA_URL}): ` +
-      `${lastError.message}. The request is unverified, so this is a ` +
-      'failure rather than a pass.',
-  );
-};
-
-const offersWeight = (meta, weight, isItalic) => {
-  const key = isItalic ? `${weight}i` : String(weight);
-  if (Object.hasOwn(meta.fonts, key)) return true;
-
-  const axis = (meta.axes ?? []).find((entry) => entry.tag === 'wght');
-  if (axis === undefined || weight < axis.min || weight > axis.max)
-    return false;
-
-  const styled = Object.keys(meta.fonts).some((name) =>
-    isItalic ? name.endsWith('i') : !name.endsWith('i'),
-  );
-  return styled;
-};
-
-export const checkFamily = (family, catalog, failures) => {
-  if (family.name === null) {
-    failures.push('UNNAMED  a `families` entry has no `name`');
-    return;
-  }
-  if (family.provider !== 'google') {
-    failures.push(
-      `PROVIDER ${family.name} — provider ${family.provider ?? '(none)'} is ` +
-        'unknown to this check; teach it how to ask that provider',
-    );
-    return;
-  }
-
-  const meta = catalog.get(family.name);
-  if (meta === undefined) {
-    failures.push(`UNKNOWN  ${family.name} — no such family on Google Fonts`);
-    return;
-  }
-
-  const offered = new Set(
-    meta.subsets.filter((name) => !NON_SCRIPT_SUBSETS.has(name)),
-  );
-  for (const subset of family.subsets) {
-    if (!offered.has(subset)) {
+  for (const face of faces) {
+    if (!existsSync(join(ROOT, PUBLIC_FONT_DIR, face.file))) {
       failures.push(
-        `SUBSET   ${family.name} — no \`${subset}\` subset; offered: ` +
-          Array.from(offered).sort().join(', '),
+        `MISSING  ${family.name} — ${face.file} is not in ${PUBLIC_FONT_DIR}; ` +
+          'run `bun run fonts:vendor`',
       );
     }
   }
 
+  // Per (style, subset), not per face: a static family splits its weights
+  // across files, so demanding that every file cover every weight would fail
+  // a request that is in fact fully served. A variable family answers with
+  // one file per group either way.
   for (const style of family.styles) {
-    if (style !== 'normal' && style !== 'italic') {
-      failures.push(
-        `STYLE    ${family.name} — style \`${style}\` is unknown to this ` +
-          'check, which would otherwise report it as covered',
+    for (const subset of family.subsets) {
+      const group = faces.filter(
+        (face) => face.style === style && face.subset === subset,
       );
-      continue;
-    }
-    const isItalic = style === 'italic';
-    for (const weight of family.weights) {
-      if (!offersWeight(meta, weight, isItalic)) {
-        failures.push(
-          `WEIGHT   ${family.name} — no ${weight} ${style}; offered: ` +
-            Object.keys(meta.fonts).join(', '),
-        );
+      for (const weight of family.weights) {
+        const covered = group.some((face) => coversWeight(face.weight, weight));
+        if (!covered) {
+          failures.push(
+            `WEIGHT   ${family.name} — nothing renders ${weight} ${style} ` +
+              `${subset}; offered: ${group.map((f) => f.weight).join(', ')}`,
+          );
+        }
       }
     }
   }
-};
+}
 
-const main = async () => {
-  const families = parseConfig();
-  const catalog = await fetchCatalog();
+if (failures.length > 0) {
+  console.error(`\nfonts-check: ${failures.length} coverage failure(s):`);
+  for (const line of failures) console.error('  ' + line);
+  process.exit(1);
+}
 
-  const failures = [];
-  for (const family of families) checkFamily(family, catalog, failures);
-
-  if (failures.length > 0) {
-    console.error(`\nfonts-check: ${failures.length} coverage failure(s):`);
-    for (const line of failures) console.error('  ' + line);
-    process.exit(1);
-  }
-
-  for (const family of families) {
-    console.log(
-      `fonts-check: ${family.name} ${family.styles.join('/')} ` +
-        `${family.weights.join(',')} · ${family.subsets.join(', ')} ✓`,
-    );
-  }
-  console.log('fonts-check: every configured face is one the provider ships ✓');
-};
-
-/* Importing the module for its pure helpers (unit tests) must not reach the
-   network — only running it directly, `node scripts/fonts-check.js`, does. */
-const isEntryPoint =
-  process.argv[1] !== undefined &&
-  import.meta.url === pathToFileURL(process.argv[1]).href;
-
-if (isEntryPoint) await main();
+for (const family of FONT_FAMILIES) {
+  console.log(
+    `fonts-check: ${family.name} ${family.styles.join('/')} ` +
+      `${family.weights.join(',')} · ${family.subsets.join(', ')} ` +
+      `· ${family.package} ✓`,
+  );
+}
+console.log('fonts-check: every configured face is one the package ships ✓');
