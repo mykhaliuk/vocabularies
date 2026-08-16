@@ -1,14 +1,16 @@
 import { chmodSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, test } from 'bun:test';
 
 // The gate's whole job is its exit code, so the probe runs the real script as
 // the build would and reads that code. It runs outside the repo because the
 // decision is made from the environment, and a stray .env in the working
 // directory would be part of it.
-const SCRIPT = new URL('../../scripts/migrate-deploy.js', import.meta.url)
-  .pathname;
+const SCRIPT = fileURLToPath(
+  new URL('../../scripts/migrate-deploy.js', import.meta.url),
+);
 
 // `drizzle-kit migrate` is on PATH in a real build and would need a database.
 // A stub stands in, so "did the gate decide to migrate?" is observable without
