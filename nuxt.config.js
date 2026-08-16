@@ -1,3 +1,4 @@
+import { FONT_FAMILIES, FONT_SUBSETS } from './fonts.config.js';
 import {
   landingPrerenderRules,
   landingVercelRoutes,
@@ -53,42 +54,41 @@ export default defineNuxtConfig({
     },
   },
   fonts: {
-    // Self-host the Google fonts at build: no render-blocking cross-origin
-    // request, woff2 served same-origin + preloaded, fallback metrics injected
-    // to keep CLS at zero. Replaces the old <link> to fonts.googleapis.com.
-    // latin + cyrillic: `latin` carries the en/fr accents and typographic
-    // punctuation, `cyrillic` every Ukrainian letter — needed in all three
-    // locales, because unicode-range picks a face per character, not per
-    // locale. A subset the family does not ship is served as nothing, in
-    // silence; `bun run fonts:check` is the only thing that catches it.
-    defaults: { subsets: ['latin', 'cyrillic'] },
-    families: [
-      // ONE entry per family, and it has to be: the module picks an override
-      // with `families.find(f => f.name === fontFamily)`, so a second entry
-      // for the same name is silently dead. A `weights` x `styles` pair for
-      // Rubik's italic sat here until VKB-157 and never loaded a face.
-      //
-      // That makes the entry a cross product — italic spans 400-800 even
-      // though only the gloss and `em` use it — and it costs nothing: Rubik
-      // is variable, so the provider collapses the weights to a `400..800`
-      // range and serves one file per subset per style either way.
-      //
-      // Caveat: `styles` must stay explicit. Omitting it inherits the module
-      // default ['normal', 'italic'] and asks for an italic Caveat that has
-      // never existed.
-      {
-        name: 'Rubik',
-        provider: 'google',
-        weights: [400, 500, 600, 700, 800],
-        styles: ['normal', 'italic'],
-      },
-      {
-        name: 'Caveat',
-        provider: 'google',
-        weights: [500, 600],
-        styles: ['normal'],
-      },
-    ],
+    // Resolved from the installed fontsource packages, never the network
+    // (VKB-124, ADR-0019). The module still self-hosts, preloads and injects
+    // fallback metrics exactly as before — only the source of the face data
+    // changed.
+    //
+    // Every built-in provider is switched off by name. This is not tidiness:
+    // unifont initialises each one at build, and `googleicons`, `bunny` and
+    // `fontshare` each open with a catalogue request to a third party we have
+    // never asked for anything.
+    providers: {
+      vendored: './providers/fontsource.js',
+      google: false,
+      googleicons: false,
+      bunny: false,
+      fontshare: false,
+      fontsource: false,
+      npm: false,
+      adobe: false,
+    },
+    // Self-host the fonts at build: no render-blocking cross-origin request,
+    // woff2 served same-origin + preloaded, fallback metrics injected to keep
+    // CLS at zero. Replaces the old <link> to fonts.googleapis.com.
+    //
+    // The request itself lives in fonts.config.js, because the provider, the
+    // vendoring step and `bun run fonts:check` all have to read the same one:
+    // a subset named in one place and not another is served as nothing, in
+    // silence. `styles` stays explicit per family there — inheriting the
+    // module default asks for an italic Caveat that has never existed.
+    defaults: { subsets: FONT_SUBSETS },
+    families: FONT_FAMILIES.map((family) => ({
+      name: family.name,
+      provider: 'vendored',
+      weights: family.weights,
+      styles: family.styles,
+    })),
   },
   css: [
     '~/assets/css/tokens.css',
