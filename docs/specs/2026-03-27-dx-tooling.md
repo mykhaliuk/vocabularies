@@ -4,6 +4,13 @@
 
 All modes run the Nuxt dev server locally. The difference is which backends they connect to.
 
+> **Historical record.** The table below is the original 2026-03-27 decision
+> and is left as written. `start:preprod` and the `preprod` stage were retired
+> on 2026-08-17 (VKB-169): a stage that only ever ran from a laptop is not a
+> pre-production environment, and the name claimed a deployment that never
+> existed. Two modes remain, `local` and `dev`; see README for the current
+> table and VKB-172 for where a real staging deployment would come from.
+
 | Script          | DB              | Storage      | Auth           | Rate Limiting   | Purpose                |
 | --------------- | --------------- | ------------ | -------------- | --------------- | ---------------------- |
 | `start:local`   | Docker Postgres | Docker MinIO | bypassed       | disabled        | API testing, offline   |

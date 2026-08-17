@@ -9,7 +9,7 @@ export type MediaJob = (key: string, userId: string) => Promise<unknown>;
 // Async trigger for media processing (ADR-0009; VKB-80).
 //
 // - QStash configured → enqueue an HTTP job on a per-stage named queue
-//   (QSTASH_QUEUE_NAME: `vocabu-stage` for dev/preprod, `vocabu` for prod)
+//   (QSTASH_QUEUE_NAME: `vocabu-stage` for dev, `vocabu` for prod)
 //   that calls /api/media/process with retries + DLQ; the serverless
 //   request that confirmed the upload returns immediately. Tokens and
 //   signing keys are account-level in QStash, so the named queue is what

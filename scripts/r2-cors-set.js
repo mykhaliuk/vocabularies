@@ -31,7 +31,7 @@ if (!endpoint || !accessKeyId || !secretAccessKey || !mediaBucket || !appUrl) {
 
 if (!stage || stage === 'local') {
   console.error(
-    '[r2-cors-set] refusing: APP_ENV must be a cloud stage (dev|preprod), got',
+    '[r2-cors-set] refusing: APP_ENV must be a cloud stage (dev), got',
     stage ?? '<unset>',
   );
   process.exit(2);
