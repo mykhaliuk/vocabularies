@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { DOMAIN_ERROR_CODES, DomainError } from '../../server/domain/errors';
 import { toHttpError } from '../../server/utils/http-errors';
 import { isEntryMomentConflict } from '../../server/utils/pg-errors';
@@ -42,12 +42,29 @@ describe('isEntryMomentConflict', () => {
   });
 });
 
-// `createError` is a Nitro auto-import; outside the server runtime it has to
-// be supplied. Kept to the shape the mapping actually reads back.
-(globalThis as { createError?: unknown }).createError = (input: unknown) =>
-  Object.assign(new Error('http'), input);
-
 describe('transport mapping', () => {
+  // `createError` is a Nitro auto-import; outside the server runtime it has to
+  // be supplied. Scoped and restored rather than assigned once at module load:
+  // bun shares process globals across test files, so a stub left standing
+  // makes some other file's behaviour depend on whether this one ran first.
+  // Not hypothetical here — tests/unit/storage-credentials.test.ts exists in
+  // its current subprocess-per-probe shape because of exactly that.
+  const globals = globalThis as { createError?: unknown };
+  let previous: unknown;
+  let hadPrevious = false;
+
+  beforeEach(() => {
+    hadPrevious = 'createError' in globals;
+    previous = globals.createError;
+    globals.createError = (input: unknown) =>
+      Object.assign(new Error('http'), input);
+  });
+
+  afterEach(() => {
+    if (hadPrevious) globals.createError = previous;
+    else globals.createError = undefined;
+  });
+
   test('the conflict becomes a 409 carrying its code', () => {
     const mapped = toHttpError(
       new DomainError(DOMAIN_ERROR_CODES.entryMomentConflict, 'already taken'),
@@ -63,5 +80,17 @@ describe('transport mapping', () => {
   test('a raw Postgres error is NOT mapped', () => {
     const raw = pgConflict();
     expect(toHttpError(raw)).toBe(raw);
+  });
+});
+
+// Runs after the block above, so it sees what that block left behind. This is
+// what makes the restore real rather than intended: drop the afterEach and
+// this fails, instead of nothing failing anywhere until some unrelated file
+// starts depending on run order.
+describe('the stub does not outlive its block', () => {
+  test('createError is not left standing on globalThis', () => {
+    expect(
+      (globalThis as { createError?: unknown }).createError,
+    ).toBeUndefined();
   });
 });
