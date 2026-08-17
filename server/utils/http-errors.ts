@@ -7,6 +7,7 @@ const STATUS_BY_CODE: Record<string, number> = {
   [DOMAIN_ERROR_CODES.speakerNotFound]: 404,
   [DOMAIN_ERROR_CODES.mediaNotFound]: 404,
   [DOMAIN_ERROR_CODES.storageUnavailable]: 503,
+  [DOMAIN_ERROR_CODES.entryMomentConflict]: 409,
 };
 
 // Transport-side mapping of domain errors to HTTP. Unknown errors pass

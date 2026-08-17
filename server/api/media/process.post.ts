@@ -2,6 +2,7 @@
 // never the client.
 import { Receiver } from '@upstash/qstash';
 import { z } from 'zod';
+import { DOMAIN_ERROR_CODES, DomainError } from '~/server/domain/errors';
 import { processUploadedMedia } from '~/server/domain/media';
 import { MediaRejection } from '~/server/utils/media-process';
 
@@ -94,6 +95,18 @@ export default defineEventHandler(async (event) => {
     if (error instanceof MediaRejection) {
       console.warn('[media.process] rejected', { key, error: error.message });
       return { ok: false, status: 'failed', error: error.message };
+    }
+    // Same reasoning as the rejection above, different cause: the entry
+    // already holds a moment, so no number of retries makes this bind
+    // succeed. 200 for the same reason too — QStash retries on any non-2xx,
+    // so answering 409 here would keep the delivery alive rather than end
+    // it, which is the failure this fixes (VKB-137).
+    if (
+      error instanceof DomainError &&
+      error.code === DOMAIN_ERROR_CODES.entryMomentConflict
+    ) {
+      console.warn('[media.process] entry already claimed', { key });
+      return { ok: false, status: 'conflict', error: error.code };
     }
     throw error;
   }
