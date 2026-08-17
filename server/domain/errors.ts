@@ -17,4 +17,5 @@ export const DOMAIN_ERROR_CODES = Object.freeze({
   speakerNotFound: 'SPEAKER_NOT_FOUND',
   mediaNotFound: 'MEDIA_NOT_FOUND',
   storageUnavailable: 'STORAGE_UNAVAILABLE',
+  entryMomentConflict: 'ENTRY_MOMENT_CONFLICT',
 });

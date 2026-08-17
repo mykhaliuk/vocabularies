@@ -12,6 +12,7 @@ import { enqueueMediaProcessing } from '~/server/utils/media-queue';
 import { presignPut } from '~/server/utils/storage';
 import { useDb } from '~/server/utils/db';
 import { loadEntitlements } from './entitlements';
+import { isEntryMomentConflict } from '~/server/utils/pg-errors';
 import { DOMAIN_ERROR_CODES, DomainError } from './errors';
 import type { InferSelectModel } from 'drizzle-orm';
 import type { AuthUser } from '~/server/utils/auth';
@@ -218,11 +219,27 @@ const claimPendingEntry = async (
           ne(media.id, mediaId),
         ),
       );
-    const bound = await tx
-      .update(media)
-      .set({ entryId, pendingEntryId: null, updatedAt: new Date() })
-      .where(and(eq(media.id, mediaId), eq(media.ownerId, ownerId)))
-      .returning({ id: media.id });
+    let bound;
+    try {
+      bound = await tx
+        .update(media)
+        .set({ entryId, pendingEntryId: null, updatedAt: new Date() })
+        .where(and(eq(media.id, mediaId), eq(media.ownerId, ownerId)))
+        .returning({ id: media.id });
+    } catch (error) {
+      // The entry lock above is what normally makes this unreachable: two
+      // claims serialise, and the second deletes the first's row before
+      // binding. If the invariant fires anyway, the outcome is PERMANENT —
+      // the entry already has its moment — so it must be named rather than
+      // escaping as a bare 500 that QStash would retry forever (VKB-137).
+      if (isEntryMomentConflict(error)) {
+        throw new DomainError(
+          DOMAIN_ERROR_CODES.entryMomentConflict,
+          'entry already has a moment',
+        );
+      }
+      throw error;
+    }
     if (bound.length === 0) {
       throw new Error('[domain.media] pending claim bound no row');
     }
