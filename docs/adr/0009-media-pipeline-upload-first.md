@@ -144,9 +144,46 @@ are kept forever": the retired row goes, its R2 objects stay.
 
 `pending_entry_id` is `ON DELETE SET NULL`, not `cascade` — if the entry
 is deleted mid-upload the swap is moot, but the media row is not the
-entry's to take with it. It is deliberately unconstrained: any number of
-uploads may be aimed at one entry, and only the one that reaches `ready`
-takes it. `removeEntryMedia` clears pending pointers, since nothing else
+entry's to take with it.
+
+### Amended 2026-08-16 (VKB-159): only the newest aim survives
+
+The paragraph above used to end "any number of uploads may be aimed at one
+entry, and only the one that reaches `ready` takes it". That was a bug
+written down as a rule. Claiming happens in transcode-completion order, so
+two live aims resolve as **last-ready-wins, not last-picked-wins**: swap a
+long clip for a short one, the short one lands first, and the long one
+finishes afterwards and deletes it. The user gets back the take they
+abandoned. Not a tight race either — transcode duration scales with the
+file, so "the replacement is shorter" is both a common reason to swap and
+exactly the losing case.
+
+**Aiming a new upload at an entry now detaches the ones it supersedes**
+(`attachEntryMedia` → `cancelUploadsAimedAt`, excluding the row just
+minted). At most one live aim per entry, so the order of `ready` stops
+deciding which take the user keeps.
+
+The detach runs **after** the mint rather than before it: a presign failure
+must not clear a perfectly good upload that is still in flight.
+
+It clears every aim **older than** the new row — ordered by `(created_at, id)`
+— rather than "everything except it". That distinction is not stylistic. Two
+attaches racing on one entry would each clear the other's row, and the entry
+would end up with **no** aim at all: the user loses both takes instead of
+getting the wrong one, which is worse than the bug being fixed. A total order
+makes every interleaving converge on the same survivor, the newest aim, with
+no lock. The `id` tiebreak carries its weight — `created_at` is a transaction
+timestamp and two rows can share it. Reproduced both ways against local
+Postgres by widening the mint→detach window: "except it" leaves the entry
+empty, the ordered form leaves exactly one aim standing. A superseded row keeps its bytes and finishes its job — it
+simply claims nothing, which is the shape an abandoned upload already has,
+and consistent with "originals are kept forever".
+
+Coverage, stated plainly: the authed suite runs without MinIO, so `confirm`
+(a `HeadObject` on the originals bucket) cannot succeed there and no pending
+row can reach `ready`. The detach is therefore **not observable in CI** and
+was verified by hand against a real bucket. VKB-115 (MinIO in CI) and
+VKB-143 are what would make it checkable. `removeEntryMedia` clears pending pointers, since nothing else
 expires them and an abandoned replace would otherwise restore a moment
 the user had explicitly removed.
 

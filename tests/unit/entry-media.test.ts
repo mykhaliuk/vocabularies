@@ -150,15 +150,16 @@ beforeEach(() => {
 });
 
 describe('attachEntryMedia', () => {
-  test('records the destination and writes nothing else', async () => {
+  test('records the destination and retires the aims it supersedes', async () => {
     fake = createFakeDb([
       entryRow(oldMedia),
       [mediaRow({ pendingEntryId: ENTRY_ID })],
+      [],
     ]);
 
     const attached = await attachEntryMedia(user, ENTRY_ID, input);
 
-    expect(ops()).toEqual(['select', 'insert']);
+    expect(ops()).toEqual(['select', 'insert', 'update']);
     expect(fake.calls[1]?.values).toMatchObject({
       entryId: null,
       pendingEntryId: ENTRY_ID,
@@ -167,15 +168,38 @@ describe('attachEntryMedia', () => {
     expect(fake.calls[1]?.values?.id).toBe(attached.upload.mediaId);
   });
 
-  test('an entry with no moment takes the same two statements', async () => {
+  // The incumbent is untouched — retirement still happens at `ready`. Only
+  // other PENDING aims are cleared, which is what stops two of them racing
+  // (VKB-159).
+  test('the detach clears pending aims without touching the bound row', async () => {
+    fake = createFakeDb([
+      entryRow(oldMedia),
+      [mediaRow({ pendingEntryId: ENTRY_ID })],
+      [],
+    ]);
+
+    await attachEntryMedia(user, ENTRY_ID, input);
+    const detach = fake.calls[2];
+
+    expect(detach?.values).toMatchObject({ pendingEntryId: null });
+    expect(detach?.targets).toContain(ENTRY_ID);
+    expect(detach?.targets).toContain(OWNER_ID);
+    // Bounded by the minted row, not by "everything except it": two concurrent
+    // attaches that each cleared the others would clear each other and leave
+    // the entry with no aim at all.
+    expect(detach?.targets).toContain(NEW_MEDIA_ID);
+  });
+
+  test('an entry with no moment takes the same statements', async () => {
     fake = createFakeDb([
       entryRow(null),
       [mediaRow({ pendingEntryId: ENTRY_ID })],
+      [],
     ]);
 
     await attachEntryMedia(user, ENTRY_ID, input);
 
-    expect(ops()).toEqual(['select', 'insert']);
+    expect(ops()).toEqual(['select', 'insert', 'update']);
   });
 
   test('an unknown or unowned entry never mints a slot', async () => {
