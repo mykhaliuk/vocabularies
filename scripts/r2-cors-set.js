@@ -29,9 +29,13 @@ if (!endpoint || !accessKeyId || !secretAccessKey || !mediaBucket || !appUrl) {
   process.exit(2);
 }
 
-if (!stage || stage === 'local') {
+// Allowlist: this runs with account-wide admin credentials, so an
+// unrecognised stage must not reach R2.
+const CLOUD_STAGES = ['dev', 'production'];
+
+if (!CLOUD_STAGES.includes(stage)) {
   console.error(
-    '[r2-cors-set] refusing: APP_ENV must be a cloud stage (dev), got',
+    `[r2-cors-set] refusing: APP_ENV must be one of ${CLOUD_STAGES.join(', ')}, got`,
     stage ?? '<unset>',
   );
   process.exit(2);

@@ -31,7 +31,7 @@ Application code is TypeScript. Standalone `scripts/*.js` stay plain JS — they
 
 ## Environments
 
-Two stages, each with its own `.env.<stage>` (gitignored). Copy `.env.example` to scaffold a new one.
+Two stages are runnable from a checkout, each with its own `.env.<stage>` (gitignored). Copy `.env.example` to scaffold one. `production` is a stage too — see `docs/GLOSSARY.md` — but it is deploy-only: there is deliberately no `.env.production` to run it from a laptop.
 
 | Stage   | DB                | Storage               | Auth email                        | Rate limit | Sentry   |
 | ------- | ----------------- | --------------------- | --------------------------------- | ---------- | -------- |

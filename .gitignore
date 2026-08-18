@@ -25,10 +25,7 @@ yarn-error.log*
 pnpm-debug.log*
 bun-debug.log*
 
-# environment variables — a pattern rather than a list of stages. The list
-# had to be edited every time a stage appeared or went away, and the moment a
-# retired stage's line was removed its leftover local file (full of cloud
-# credentials) became committable. Only the template is tracked.
+# environment variables — a pattern, so a new or retired stage needs no edit
 .env
 .env.*
 !.env.example
