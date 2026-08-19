@@ -26,7 +26,7 @@ import { relative, resolve, join, dirname } from 'node:path';
 // files (.env.example) are already present in every checkout, so they are not
 // listed here. node_modules/.nuxt/.output are intentionally excluded — they are
 // per-worktree build state, not shared config.
-const RUNTIME_FILES = ['.env', '.env.local', '.env.dev', '.env.production'];
+const RUNTIME_FILES = ['.env', '.env.local', '.env.dev'];
 
 const git = (args, cwd) =>
   execFileSync('git', args, { cwd, encoding: 'utf8' }).trim();
