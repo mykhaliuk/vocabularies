@@ -13,6 +13,7 @@
     ".output",
     "dist",
     ".claude/rules",
+    ".claude/commands/opsx",
     "db/migrations",
     "bun.lockb",
     "package-lock.json",

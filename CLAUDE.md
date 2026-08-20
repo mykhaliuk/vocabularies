@@ -183,6 +183,59 @@ drifts from the code.
 - **Regenerate and commit** whenever the diff moves an API call, a route,
   a domain operation or a column.
 
+### Per-change planning — OpenSpec (ADR-0020)
+
+`openspec/` holds change-level planning: what a change intends, before the
+diff exists. The CLI ships as a pinned devDependency, so `bun run spec:check`
+works without a global install.
+
+- **Artifacts** live in `openspec/changes/<change-name>/`: `proposal.md`
+  (why, what changes, non-goals), optional `design.md` (decisions and
+  trade-offs), `tasks.md` (the checklist), and delta specs under
+  `specs/<capability>/spec.md`. Create the folder with `openspec new change
+<name>`; the `/opsx:*` slash commands drive the same flow.
+- **Accepted specs** live in `openspec/specs/<capability>/spec.md` and answer
+  **what the system is supposed to do** — the one thing no other artifact
+  here records. They accrete: a capability gets a spec the first time a
+  change touches it. Never backfill in bulk.
+- **Archive inside the feature PR** (`openspec archive`), so `specs/` advances
+  atomically with the merge and a merged change cannot leave its spec behind.
+
+**When a change folder is required** — the test is whether the ticket's
+premise could be wrong, because that is what the proposal step catches:
+
+- **Required** when the ticket adds or changes product behaviour, or when you
+  cannot state the acceptance criteria without reading code first.
+- **Not required** for a dependency bump, a formatting pass, a docs edit, or a
+  mechanical refactor whose acceptance is "behaviour is identical".
+- A tooling or docs change that legitimately has no behaviour sets
+  `skip_specs: true` in `.openspec.yaml`. Never invent a requirement to
+  satisfy validation.
+
+**How it sits against the artifacts that already exist** — each answers a
+different question, and the overlap is zero by construction:
+
+| Artifact                   | Question                  | Written                         |
+| -------------------------- | ------------------------- | ------------------------------- |
+| `openspec/specs/`          | what it must do           | by hand, as changes land        |
+| `docs/capability-graph.md` | what it does today        | generated                       |
+| `docs/adr/`                | why we chose this         | by hand, dated, never rewritten |
+| `docs/GLOSSARY.md`         | what we call it           | by hand                         |
+| Linear                     | what to do, and its state | by hand                         |
+
+A decision that is hard to reverse, surprising, or a trade-off is an **ADR**
+in the same PR; `design.md` references it instead of restating it. The Linear
+issue stays one paragraph plus a link to the change folder — the proposal is
+the source of truth for scope.
+
+**Enforced** by `bun run spec:check`, which fails on a malformed or zero-delta
+change, and on an archived change whose `tasks.md` still has an open box — so
+the checklist is a gate rather than decorative prose. `bun run spec:status`
+lists active changes. Like every other check here, the coupling is the check,
+not the convention — but note its limit: validation sees only the changes that
+exist, so it cannot catch a change that should have had a folder and did not.
+That one is held by the threshold above.
+
 ## Project management — Linear
 
 Work is tracked in Linear: team **Vocabu team** (prefix `VKB`), project
@@ -266,10 +319,15 @@ silently skipping it.
   capture before/after screenshots and actually look at them. Check both
   themes when styles are involved. A UI change without a rendered check is
   not done.
+- **Plan before the diff:** if the ticket meets the threshold above, write the
+  change folder first and let the proposal settle scope. Two Phase 1 tickets
+  (VKB-113, VKB-137) were implemented from premises that turned out to be
+  wrong once the code was read — that is the cost this step exists to avoid.
 - **Checks before shipping:** `bun run lint`, `bun run fmt:check`,
-  `bun run ds:check` (plus `proto:check` when design files are touched), and
-  `bun run test:e2e` when the change affects covered flows. CI enforces these,
-  but run them yourself first.
+  `bun run ds:check` (plus `proto:check` when design files are touched),
+  `bun run spec:check` when a change folder exists, and `bun run test:e2e`
+  when the change affects covered flows. CI enforces these, but run them
+  yourself first.
 - **Known sandbox limits:** flows requiring live Postgres or real email
   (magic-link login, `/me`) cannot be fully exercised in agent sandboxes.
   State explicitly in the PR what was verified and what needs a local check.

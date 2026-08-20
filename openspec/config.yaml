@@ -1,0 +1,54 @@
+schema: spec-driven
+githubCopilot:
+  cloudAgent: false
+
+context: |
+  Vocabu — mobile-first PWA for a personal dictionary of the memorable ways
+  people talk. Stack: Nuxt 4 (Vue 3), Drizzle/Postgres, bun as package manager
+  and CI runner, oxlint + oxfmt. Node >= 24.
+
+  Mandatory rulebook: .claude/rules/*.md (no TS enums, no DTO layer, plain
+  objects and stable shapes, English-only in-source artifacts, Conventional
+  Commits). CLAUDE.md carries the agent execution contract.
+
+  Server layering (ADR-0010): transport (server/api|routes|middleware|plugins)
+  never touches the db; every db access is a named domain operation in
+  server/domain; resources live in server/utils behind lazy use*() singletons.
+  Enforced by `bun run layering:check`.
+
+  Design system: tokens only via var(); source of truth is
+  docs/design/design-system/project/_ds_manifest.json; `bun run ds:check`
+  must stay green. Capability graph (ADR-0013): docs/capability-graph.md is
+  generated — check it when scoping; regenerate when routes/operations move.
+
+  Tracking: Linear, team prefix VKB. One issue = one change = one branch =
+  one PR into dev. Branches `<type>/vkb-<n>-<short-desc>`; PR descriptions
+  include "Closes VKB-<n>". Decisions log: docs/adr/; vocabulary:
+  docs/GLOSSARY.md.
+
+rules:
+  proposal:
+    - Reference the Linear ticket (VKB-<n>) in the first line; if no ticket
+      exists yet, say "no ticket yet" explicitly — creating one is part of
+      kickoff, not an afterthought
+    - Keep the Linear issue short (one paragraph + link to this change
+      folder); the proposal is the source of truth for scope
+    - Always include a "Non-goals" section
+  design:
+    - A hard-to-reverse, surprising, or trade-off decision lands as an ADR in
+      docs/adr/ in the same PR; reference the ADR here instead of restating it
+    - Argue against existing ADRs when reversing one, not from scratch
+  tasks:
+    - Extractions from already-shipped code ship first as their own PR,
+      before the feature tasks that motivated them (see CLAUDE.md)
+    - A UI task on an authed screen includes its e2e spec in e2e/authed/
+
+operations:
+  apply:
+    guidance:
+      - Run the same checks CI runs before declaring a task done (lint,
+        fmt:check, typecheck, ds:check, affected e2e) — never a subset
+  archive:
+    guidance:
+      - Archive inside the feature PR (solo project, protected dev branch);
+        specs/ advances atomically with the merge

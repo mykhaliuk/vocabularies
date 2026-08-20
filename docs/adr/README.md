@@ -76,3 +76,7 @@ Format: `NNNN-short-slug.md`, template in [0000-template.md](0000-template.md).
   installed fontsource packages through a provider we own, with every built-in
   provider disabled by name; `build:offline` proves the build needs no network
   instead of inferring it from a build that happened to have one
+- [ADR-0020](0020-spec-driven-changes.md) — change-level planning lives in
+  committed OpenSpec artifacts, and `openspec/specs/` answers the one question
+  no existing artifact does — what the system must do; specs accrete as changes
+  touch capabilities rather than being backfilled in a documentation sprint
