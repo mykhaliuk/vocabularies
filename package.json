@@ -35,6 +35,8 @@
     "layering:check": "node scripts/layering-check.js",
     "graph:build": "node scripts/capability-graph.js build",
     "graph:check": "node scripts/capability-graph.js check",
+    "spec:check": "openspec validate --all --strict --no-interactive && openspec validate --archived --no-interactive",
+    "spec:status": "openspec list",
     "proto:check": "node scripts/proto-check.js",
     "proto:pull": "node scripts/proto-pull.js",
     "proto:update": "node scripts/proto-pull.js && node scripts/proto-check.js",
@@ -73,6 +75,7 @@
     "zod": "^3.23.0"
   },
   "devDependencies": {
+    "@fission-ai/openspec": "1.9.0",
     "@nuxt/fonts": "^0.14.0",
     "@playwright/test": "^1.60.0",
     "@types/bun": "^1.3.14",
