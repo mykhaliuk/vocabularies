@@ -39,6 +39,9 @@ jobs:
       - name: Capability graph freshness
         run: bun run graph:check
 
+      - name: Change artifacts
+        run: bun run spec:check
+
       - name: Lint
         run: bun run lint
 
