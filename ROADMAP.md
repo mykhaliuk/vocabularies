@@ -2,30 +2,30 @@
 
 Smoke-test scaffold (v0). Each milestone is independently verifiable and tagged in git as `m<N>`.
 
-| #   | Milestone                       | Status     | Tag   | Verification                                                                                          |
-| --- | ------------------------------- | ---------- | ----- | ----------------------------------------------------------------------------------------------------- |
-| M1  | Skeleton + tooling              | ✅ done    | `m1`  | `bun run start:local` → `/` shows "hi there"                                                          |
-| M2  | Local infra + health endpoint   | ✅ done    | `m2`  | `/api/health` → `{db:ok, storage:ok, redis:skipped}`                                                  |
-| M3  | Drizzle schema + migrations     | ✅ done    | `m3`  | 3 tables + unique index on `lower(email)` after `db:migrate`                                          |
-| M4  | Magic-link auth E2E             | ✅ done    | `m4`  | login → `/me` → logout works locally; expired link 401                                                |
-| M5  | Avatar upload                   | ✅ done    | `m5`  | upload PNG → reload `/me` → avatar renders                                                            |
-| M6  | Sentry + debug error            | ✅ done    | `m6`  | dev: error in Sentry tagged `environment:dev`, no PII                                                 |
-| M7  | Rate limit on magic-link        | ✅ done    | `m7`  | dev: 6 rapid POSTs → 6th = 429                                                                        |
-| M8  | PWA                             | ✅ done    | `m8`  | offline page renders airplane-mode; `/me` not cached                                                  |
-| M9  | Multi-env runner + DB dump      | ✅ done    | `m9`  | health passes for all 3 envs; `db:dump:dev` populates local                                           |
-| M10 | i18n core (En/Fr/Uk) + switcher | ✅ done    | `m10` | device locale `fr` → app loads in French; switch to Uk in settings → persists across reload           |
-| M11 | Localized landing (per-locale)  | ✅ done    | `m11` | `/`, `/fr`, `/uk` prerender to static HTML; mobile Lighthouse still 95+/100/100/100                   |
-| M12 | Media pipeline spike            | ✅ done    | `m12` | 20s 4K60 iPhone .mov: presigned PUT → async ffmpeg → 720p + poster → plays; ADR on transcode location |
-| M13 | Entries + media schema & API    | ✅ done    | `m13` | `db:migrate` creates `entries`+`media`; API lifecycle create → upload → processing → ready            |
-| M14 | App shell (chrome)              | ✅ done    | `m14` | BottomNav/TopBar tabs render in both themes; `ds:check` green                                         |
-| M15 | Feed (read path)                | ✅ done    | `m15` | seeded entries render with media playback; empty state; `processing` placeholder                      |
-| M16 | Compose (write path)            | ✅ done    | `m16` | phone: compose → upload 20s video → feed shows processing → ready → plays                             |
-| M17 | Word detail + entry actions     | ✅ done    | `m17` | card → detail → edit story/speaker, replace media, correct saidAt, delete; `graph:check` green        |
-| M18 | Your people + Settings-lite     | ⏳ planned | `m18` | speaker rename/remove with snapshot policy; «Your people» screen; minimal `/settings`                 |
-| M19 | Collections + Saved tab         | ⏳ planned | `m19` | collections entity + backfill; compose chips; Saved tab tiles                                         |
-| M20 | Profile (retire `/me`)          | ⏳ planned | `m20` | profile screen with counts/people/collections; all six `/me` callers moved                            |
-| M21 | Memory loop (on-this-day)       | ⏳ planned | `m21` | on-this-day band in the feed, backed by an index on (owner, month/day of said_at)                     |
-| M22 | Release readiness → v1          | ⏳ planned | `m22` | prod/preprod unfreeze; QA Prod column swept; preprod runs all 0007+ migrations                        |
+| #   | Milestone                       | Status     | Tag   | Verification                                                                                           |
+| --- | ------------------------------- | ---------- | ----- | ------------------------------------------------------------------------------------------------------ |
+| M1  | Skeleton + tooling              | ✅ done    | `m1`  | `bun run start:local` → `/` shows "hi there"                                                           |
+| M2  | Local infra + health endpoint   | ✅ done    | `m2`  | `/api/health` → `{db:ok, storage:ok, redis:skipped}`                                                   |
+| M3  | Drizzle schema + migrations     | ✅ done    | `m3`  | 3 tables + unique index on `lower(email)` after `db:migrate`                                           |
+| M4  | Magic-link auth E2E             | ✅ done    | `m4`  | login → `/me` → logout works locally; expired link 401                                                 |
+| M5  | Avatar upload                   | ✅ done    | `m5`  | upload PNG → reload `/me` → avatar renders                                                             |
+| M6  | Sentry + debug error            | ✅ done    | `m6`  | dev: error in Sentry tagged `environment:dev`, no PII                                                  |
+| M7  | Rate limit on magic-link        | ✅ done    | `m7`  | dev: 6 rapid POSTs → 6th = 429                                                                         |
+| M8  | PWA                             | ✅ done    | `m8`  | offline page renders airplane-mode; `/me` not cached                                                   |
+| M9  | Multi-env runner + DB dump      | ✅ done    | `m9`  | health passes for all 3 envs; `db:dump:dev` populates local                                            |
+| M10 | i18n core (En/Fr/Uk) + switcher | ✅ done    | `m10` | device locale `fr` → app loads in French; switch to Uk in settings → persists across reload            |
+| M11 | Localized landing (per-locale)  | ✅ done    | `m11` | `/`, `/fr`, `/uk` prerender to static HTML; mobile Lighthouse still 95+/100/100/100                    |
+| M12 | Media pipeline spike            | ✅ done    | `m12` | 20s 4K60 iPhone .mov: presigned PUT → async ffmpeg → 720p + poster → plays; ADR on transcode location  |
+| M13 | Entries + media schema & API    | ✅ done    | `m13` | `db:migrate` creates `entries`+`media`; API lifecycle create → upload → processing → ready             |
+| M14 | App shell (chrome)              | ✅ done    | `m14` | BottomNav/TopBar tabs render in both themes; `ds:check` green                                          |
+| M15 | Feed (read path)                | ✅ done    | `m15` | seeded entries render with media playback; empty state; `processing` placeholder                       |
+| M16 | Compose (write path)            | ✅ done    | `m16` | phone: compose → upload 20s video → feed shows processing → ready → plays                              |
+| M17 | Word detail + entry actions     | ✅ done    | `m17` | card → detail → edit story/speaker, replace media, correct saidAt, delete; `graph:check` green         |
+| M18 | Your people + Settings-lite     | ⏳ planned | `m18` | speaker rename/remove with snapshot policy; «Your people» screen; minimal `/settings`                  |
+| M19 | Collections + Saved tab         | ⏳ planned | `m19` | collections entity + backfill; compose chips; Saved tab tiles                                          |
+| M20 | Profile (retire `/me`)          | ⏳ planned | `m20` | profile screen with counts/people/collections; all six `/me` callers moved                             |
+| M21 | Memory loop (on-this-day)       | ⏳ planned | `m21` | on-this-day band in the feed, backed by an index on (owner, month/day of said_at)                      |
+| M22 | Release readiness → v1          | ⏳ planned | `m22` | prod unfreeze (topology: VKB-172); QA Prod swept; migrations rehearsed on a branch cut from production |
 
 ## Internationalization (M10–M11)
 

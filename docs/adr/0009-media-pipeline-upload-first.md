@@ -197,6 +197,13 @@ the user had explicitly removed.
   instance naming — selected via `QSTASH_QUEUE_NAME`. Locally the job
   still runs in-process. Swapping transports would touch only
   `media-queue.ts`.
+
+  _Amended 2026-08-17 (VKB-169):_ the `preprod` stage was retired, so
+  `vocabu-stage` now serves `dev` alone. The queue and the Redis instance are
+  unchanged — only one of the two stages sharing them is gone, and the name
+  outlived its reason. Renaming it to `vocabu-dev` is a follow-up, not part of
+  the retirement.
+
 - Audio canonical format chosen as AAC/M4A for universal playback (iOS
   Safari cannot play Opus-in-WebM); revisit only if size ever matters.
 - Real-device playback checks (iOS Safari standalone, Android Chrome) run

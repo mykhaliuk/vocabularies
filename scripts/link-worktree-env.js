@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Symlink gitignored runtime-config files from the primary git worktree into
 // the current one. Agent worktrees live under .claude/worktrees/* and are fresh
-// checkouts, but the env files (.env.local/.env.dev/.env.preprod) are gitignored
+// checkouts, but the env files (.env.local/.env.dev) are gitignored
 // and therefore absent — so `bun run start:*` fails there. This links them back.
 //
 // Idempotent and safe to run anywhere: a no-op in the primary worktree, skips
@@ -26,13 +26,7 @@ import { relative, resolve, join, dirname } from 'node:path';
 // files (.env.example) are already present in every checkout, so they are not
 // listed here. node_modules/.nuxt/.output are intentionally excluded — they are
 // per-worktree build state, not shared config.
-const RUNTIME_FILES = [
-  '.env',
-  '.env.local',
-  '.env.dev',
-  '.env.preprod',
-  '.env.production',
-];
+const RUNTIME_FILES = ['.env', '.env.local', '.env.dev'];
 
 const git = (args, cwd) =>
   execFileSync('git', args, { cwd, encoding: 'utf8' }).trim();

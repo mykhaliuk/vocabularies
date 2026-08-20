@@ -25,12 +25,10 @@ yarn-error.log*
 pnpm-debug.log*
 bun-debug.log*
 
-# environment variables
+# environment variables — a pattern, so a new or retired stage needs no edit
 .env
-.env.local
-.env.dev
-.env.preprod
-.env.production
+.env.*
+!.env.example
 
 # macOS-specific files
 .DS_Store

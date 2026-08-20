@@ -62,8 +62,11 @@ crystallizes during planning, add it here in the same PR.
 
 ## Platform
 
-- **stage** — one of the three runtime environments: `local`, `dev`,
-  `preprod`. A stage is selected per command, not per checkout.
+- **stage** — one of the runtime environments a command can target: `local`,
+  `dev`, and `production`. A stage is selected per command, not per checkout.
+  There is no staging tier: `preprod` was retired in VKB-169 because it named
+  a deployment that never existed, and VKB-172 holds the question of where a
+  real one would come from.
 - **transport** — the request-facing skin of the server (`server/api`,
   `server/routes`, `server/middleware`, `server/plugins`): guards,
   validation, calling the domain, shaping responses. Never touches the

@@ -12,7 +12,6 @@
     "infra:down": "docker compose down",
     "infra:reset": "docker compose down -v",
     "start:dev": "node scripts/with-env.js dev nuxt dev",
-    "start:preprod": "node scripts/with-env.js preprod nuxt dev",
     "build": "nuxt build",
     "vercel-build": "node scripts/ratelimit-gate.js && node scripts/migrate-deploy.js && nuxt build",
     "preview": "nuxt preview",
@@ -46,10 +45,8 @@
     "db:generate": "node scripts/with-env.js local drizzle-kit generate",
     "db:migrate": "node scripts/with-env.js local drizzle-kit migrate",
     "db:migrate:dev": "node scripts/with-env.js dev drizzle-kit migrate",
-    "db:migrate:preprod": "node scripts/with-env.js preprod drizzle-kit migrate",
     "db:dump:dev": "node scripts/with-env.js dev node scripts/db-dump-dev.js",
     "r2:cors:dev": "node scripts/with-env.js dev node scripts/r2-cors-set.js",
-    "r2:cors:preprod": "node scripts/with-env.js preprod node scripts/r2-cors-set.js",
     "rules:sync": "node scripts/sync-rules.js"
   },
   "dependencies": {

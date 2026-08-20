@@ -31,13 +31,12 @@ Application code is TypeScript. Standalone `scripts/*.js` stay plain JS — they
 
 ## Environments
 
-Three stages, each with its own `.env.<stage>` (gitignored). Copy `.env.example` to scaffold a new one.
+Two stages are runnable from a checkout, each with its own `.env.<stage>` (gitignored). Copy `.env.example` to scaffold one. `production` is a stage too — see `docs/GLOSSARY.md` — but it is deploy-only: there is deliberately no `.env.production` to run it from a laptop.
 
-| Stage     | DB                    | Storage                   | Auth email                        | Rate limit | Sentry   |
-| --------- | --------------------- | ------------------------- | --------------------------------- | ---------- | -------- |
-| `local`   | Docker Postgres       | Docker MinIO              | bypassed (link logged to console) | disabled   | disabled |
-| `dev`     | Neon `dev` branch     | R2 `vocabu-media-dev`     | Resend sandbox sender             | enabled    | enabled  |
-| `preprod` | Neon `preprod` branch | R2 `vocabu-media-preprod` | Resend `auth@vocabu.myka.me`      | enabled    | enabled  |
+| Stage   | DB                | Storage               | Auth email                        | Rate limit | Sentry   |
+| ------- | ----------------- | --------------------- | --------------------------------- | ---------- | -------- |
+| `local` | Docker Postgres   | Docker MinIO          | bypassed (link logged to console) | disabled   | disabled |
+| `dev`   | Neon `dev` branch | R2 `vocabu-media-dev` | Resend sandbox sender             | enabled    | enabled  |
 
 ## Quick start (local)
 
@@ -52,34 +51,33 @@ To run against a cloud stage instead:
 
 ```sh
 bun run start:dev          # local nuxt → dev cloud (Neon dev, R2 dev, etc.)
-bun run start:preprod      # local nuxt → preprod cloud
 ```
 
 ## Scripts
 
-| Script                                      | What it does                                  |
-| ------------------------------------------- | --------------------------------------------- |
-| `bun run start:local` / `:dev` / `:preprod` | Run nuxt dev with the matching `.env.<stage>` |
-| `bun run infra:up`                          | Start Docker Postgres + MinIO + create bucket |
-| `bun run infra:down`                        | Stop Docker stack (data preserved)            |
-| `bun run infra:reset`                       | Stop and wipe volumes                         |
-| `bun run build`                             | Build for production                          |
-| `bun run preview`                           | Preview production build                      |
-| `bun run lint`                              | OxLint                                        |
-| `bun run fmt` / `fmt:check`                 | Oxfmt                                         |
-| `bun run typecheck`                         | `nuxt typecheck` (`vue-tsc -b --noEmit`)      |
-| `bun run typecheck:e2e`                     | Typecheck Playwright specs + configs          |
-| `bun run ds:check`                          | Design system sync                            |
-| `bun run proto:check`                       | Prototype vs design system drift              |
-| `bun run i18n:check`                        | i18n key parity                               |
-| `bun run layering:check`                    | Server layering rules                         |
-| `bun run graph:check`                       | Capability graph freshness                    |
-| `bun run test:unit`                         | Unit tests (`bun test tests/unit`)            |
-| `bun run test:e2e`                          | Playwright E2E smoke tests                    |
-| `bun run test:e2e:authed`                   | Authed E2E (boots Docker + migrates)          |
-| `bun run db:generate`                       | Generate Drizzle migrations from schema       |
-| `bun run db:migrate` / `:dev` / `:preprod`  | Apply migrations to the chosen stage          |
-| `bun run db:dump:dev`                       | Dump dev DB schema + data into local Postgres |
+| Script                         | What it does                                  |
+| ------------------------------ | --------------------------------------------- |
+| `bun run start:local` / `:dev` | Run nuxt dev with the matching `.env.<stage>` |
+| `bun run infra:up`             | Start Docker Postgres + MinIO + create bucket |
+| `bun run infra:down`           | Stop Docker stack (data preserved)            |
+| `bun run infra:reset`          | Stop and wipe volumes                         |
+| `bun run build`                | Build for production                          |
+| `bun run preview`              | Preview production build                      |
+| `bun run lint`                 | OxLint                                        |
+| `bun run fmt` / `fmt:check`    | Oxfmt                                         |
+| `bun run typecheck`            | `nuxt typecheck` (`vue-tsc -b --noEmit`)      |
+| `bun run typecheck:e2e`        | Typecheck Playwright specs + configs          |
+| `bun run ds:check`             | Design system sync                            |
+| `bun run proto:check`          | Prototype vs design system drift              |
+| `bun run i18n:check`           | i18n key parity                               |
+| `bun run layering:check`       | Server layering rules                         |
+| `bun run graph:check`          | Capability graph freshness                    |
+| `bun run test:unit`            | Unit tests (`bun test tests/unit`)            |
+| `bun run test:e2e`             | Playwright E2E smoke tests                    |
+| `bun run test:e2e:authed`      | Authed E2E (boots Docker + migrates)          |
+| `bun run db:generate`          | Generate Drizzle migrations from schema       |
+| `bun run db:migrate` / `:dev`  | Apply migrations to the chosen stage          |
+| `bun run db:dump:dev`          | Dump dev DB schema + data into local Postgres |
 
 All stage-scoped scripts go through `scripts/with-env.js`, which loads `.env.<stage>` into `process.env` before spawning the inner command.
 
