@@ -1,11 +1,9 @@
-import { and, eq, gt, isNotNull, isNull, lt } from 'drizzle-orm';
 import { z } from 'zod';
-import { signinClaims } from '~/db/schema/signin-claims';
+import { findArmedClaim } from '~/server/domain/auth';
 import { hashToken } from '~/server/utils/auth';
-import { useDb } from '~/server/utils/db';
 import { useAuthPollRatelimit } from '~/server/utils/ratelimit';
 import { reportRatelimitFailure } from '~/server/utils/ratelimit-alert';
-import { CONFIRM_MAX_ATTEMPTS, POLL_KEY_PATTERN } from '~/shared/magic-link';
+import { POLL_KEY_PATTERN } from '~/shared/magic-link';
 
 // Cross-jar sign-in poll (VKB-70). An installed standalone PWA cannot receive
 // the session cookie from the emailed link (it opens in Safari, a separate
@@ -61,26 +59,6 @@ export default defineEventHandler(async (event) => {
     });
   }
 
-  const pollKeyHash = hashToken(raw.pollKey);
-  const db = useDb();
-  const now = new Date();
-
-  // Armed-and-confirmable = clicked (user_id + code set), unclaimed, within the
-  // confirm window, and not locked by the attempt cap. Anything else is pending.
-  const [armed] = await db
-    .select({ id: signinClaims.id })
-    .from(signinClaims)
-    .where(
-      and(
-        eq(signinClaims.pollKeyHash, pollKeyHash),
-        isNotNull(signinClaims.userId),
-        isNotNull(signinClaims.confirmCodeHash),
-        isNull(signinClaims.claimedAt),
-        gt(signinClaims.confirmExpiresAt, now),
-        lt(signinClaims.confirmAttempts, CONFIRM_MAX_ATTEMPTS),
-      ),
-    )
-    .limit(1);
-
+  const armed = await findArmedClaim(hashToken(raw.pollKey), new Date());
   return armed ? CONFIRM : PENDING;
 });
