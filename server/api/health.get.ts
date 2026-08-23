@@ -1,5 +1,4 @@
-import { sql } from 'drizzle-orm';
-import { useDb } from '~/server/utils/db';
+import { checkDbHealth } from '~/server/domain/health';
 import { runCheck, sanitize } from '~/server/utils/health-check';
 import { NULL_PONG_VALUE, useRedis } from '~/server/utils/redis';
 import { hasOriginalsBucket, headBucket } from '~/server/utils/storage';
@@ -9,11 +8,7 @@ export default defineEventHandler(async (event) => {
   const includeMessage = env === 'local';
 
   const [db, storage, redis] = await Promise.all([
-    runCheck('db', async () => {
-      const conn = useDb();
-      await conn.execute(sql`select 1`);
-      return 'ok';
-    }),
+    checkDbHealth(),
     runCheck('storage', async () => {
       await headBucket('media');
       if (hasOriginalsBucket()) {
