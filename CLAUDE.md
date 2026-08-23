@@ -286,15 +286,25 @@ human's own commits keep their normal identity.
   the GitHub noreply address is the only allowed form.
 - Push / gh: run with `GH_TOKEN=$(security find-generic-password -s vocabu-agent-pat -w)`
   so pushes and `gh pr create` act as the bot.
-- **Fetch too — agents have no SSH.** `git@github.com` resolves to the owner's
-  1Password agent, which requires a Touch ID approval no headless process can
-  give; the failure is `Permission denied (publickey)`, and the silent version
-  is a stale `origin/*` that makes a pushed branch look unpushed. Read over
-  HTTPS with the same Keychain token:
+- **Fetch too — over HTTPS, for attribution, not because SSH is missing.**
+  Read with the same Keychain token so every action on the remote is the
+  bot's:
   `GH_TOKEN=$(security find-generic-password -s vocabu-agent-pat -w) git -c credential.helper='!gh auth git-credential' -c url.https://github.com/.insteadOf=git@github.com: fetch --all --prune`
   The flags live only inside that call, so the clone keeps its SSH remote for
-  the owner. Never rewrite the remote and never hand an agent the owner's SSH
-  key — the bot PAT is its own identity, which is the point.
+  the owner. Never rewrite the remote. Skipping this gives a stale `origin/*`
+  that makes a pushed branch look unpushed — the silent failure, worse than
+  the loud one.
+- **What the owner's SSH actually does, measured 2026-08-20 (VKB-177).**
+  `ssh -T -o BatchMode=yes git@github.com` authenticates as `mykhaliuk` from
+  a local agent session with no prompt: `github.com` uses `~/.ssh/id_ed25519`
+  through the system agent, and 1Password is the `IdentityAgent` for other
+  hosts only. So it is available locally, and it is the escape hatch for the
+  one thing the bot PAT cannot do — push a branch touching
+  `.github/workflows/`, which needs a `workflow` scope the PAT lacks. Use it
+  only on the owner's explicit per-case say-so, and keep the commits authored
+  and signed by `claude-agent-myka`: authorship stays honest, only the push
+  differs. A headless executor has neither identity — see the Actions note
+  below, which is where "no SSH" is true.
 - PRs opened by the bot request review from `mykhaliuk` — real review
   requests work because author ≠ reviewer.
 - In GitHub Actions (`@claude` mention flow, `.github/workflows/claude.yml`)
