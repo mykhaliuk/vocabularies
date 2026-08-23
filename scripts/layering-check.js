@@ -39,8 +39,6 @@ const LEGACY_ALLOWLIST = new Set([
   'server/api/auth/magic-link.post.ts',
   'server/api/auth/poll.post.ts',
   'server/api/health.get.ts',
-  'server/api/me/avatar/confirm.post.ts',
-  'server/api/me/index.patch.ts',
 ]);
 
 // Any of these in a transport file is a db touch. Specifiers are matched

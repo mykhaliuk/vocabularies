@@ -1,7 +1,5 @@
-import { eq } from 'drizzle-orm';
-import { users } from '~/db/schema/users';
+import { updateDisplayName } from '~/server/domain/profile';
 import { requireUser, toPublicUser } from '~/server/utils/auth';
-import { useDb } from '~/server/utils/db';
 import { DisplayNameBody } from '~/server/utils/display-name';
 
 export default defineEventHandler(async (event) => {
@@ -10,12 +8,7 @@ export default defineEventHandler(async (event) => {
     DisplayNameBody.parse(data),
   );
 
-  const db = useDb();
-  const [updated] = await db
-    .update(users)
-    .set({ displayName: patch.displayName })
-    .where(eq(users.id, user.id))
-    .returning();
+  const updated = await updateDisplayName(user.id, patch.displayName);
 
   if (!updated) {
     throw createError({
