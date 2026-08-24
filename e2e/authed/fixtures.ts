@@ -28,7 +28,7 @@ export const uniqueEmail = (prefix = 'authed') =>
 const isMissing = (error: unknown) =>
   (error as NodeJS.ErrnoException).code === 'ENOENT';
 
-const serverLogSize = async () => {
+export const serverLogSize = async () => {
   try {
     const { size } = await stat(SERVER_LOG_PATH);
     return size;
@@ -62,7 +62,7 @@ const readServerLogFrom = async (offset: number) => {
 };
 
 // Matches the console emailer's line: `... magic-link to=<email> ... link=  <url>`
-const findMagicLink = async (email: string, offset: number) => {
+export const findMagicLink = async (email: string, offset: number) => {
   const marker = `to=${email}`;
   const deadline = Date.now() + LINK_TIMEOUT_MS;
   while (Date.now() < deadline) {
