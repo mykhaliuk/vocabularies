@@ -9,10 +9,10 @@ import { SERVER_LOG_PATH } from './e2e/authed/server-log';
 // the smoke suite must keep running with no infra, unconditionally, and
 // sharing a config would mean sharing its webServer.
 //
-// Port 3100 keeps this server off 3000, where a dev server or the smoke suite
-// would already be listening. That is a port courtesy, not isolation: both
-// suites build into the same `.output`, so they must still be run one at a
-// time locally. In CI they are separate jobs on separate runners.
+// Port 3100 keeps this server off 3000 (dev server, e2e/local) and 3200 (the
+// smoke suite). That is a port courtesy, not isolation: both suites build
+// into the same `.output`, so they must still be run one at a time locally.
+// In CI they are separate jobs on separate runners.
 const PORT = 3100;
 const baseURL = `http://localhost:${PORT}`;
 
