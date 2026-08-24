@@ -18,18 +18,17 @@ const baseURL = `http://localhost:${PORT}`;
 
 // Presigning (server/utils/storage.ts) is a local HMAC signature over these
 // values — it signs against S3_ENDPOINT, it never dials it — so minting an
-// upload slot needs no reachable bucket. The authed suite deliberately runs
-// with no MinIO (see e2e/authed/README.md): a spec that creates an entry
-// with media never PUTs the signed URL or confirms the upload, so the media
-// row stays 'processing' forever — exactly the state
-// e2e/authed/entry-detail.spec.ts asserts against. Real upload + playback
-// against a live bucket is e2e/local's job (VKB-115), never this suite's.
+// upload slot needs no reachable bucket, and most of the suite stays
+// bucket-free. Since VKB-115 the CI job DOES set real S3_* env (a MinIO
+// container), so the storage-walking specs (avatar-confirm's round-trip,
+// media-ready) run for real there and skip only where no bucket exists.
 //
-// Every placeholder defers to a real value first, so a local run against
-// MinIO (.env.local) is unaffected — these only take over when nothing is
-// set, i.e. in CI. Names and host are deliberately non-functional: `.invalid`
-// is the RFC 2606 reserved TLD for addresses that must not resolve, and the
-// key/secret/bucket strings say outright that they authorize nothing.
+// Every placeholder defers to a real value first, so both CI and a local run
+// against MinIO (.env.local) are unaffected — these only take over when
+// nothing is set, keeping the rest of the suite runnable with no infra.
+// Names and host are deliberately non-functional: `.invalid` is the RFC 2606
+// reserved TLD for addresses that must not resolve, and the key/secret/bucket
+// strings say outright that they authorize nothing.
 const STORAGE_PLACEHOLDER_ENV = {
   S3_ENDPOINT: process.env.S3_ENDPOINT ?? 'http://s3.invalid',
   S3_MEDIA_ACCESS_KEY_ID:
