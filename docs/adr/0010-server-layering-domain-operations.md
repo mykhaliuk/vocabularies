@@ -78,3 +78,14 @@ shrinks, and new files are never added to it.
 - **Do nothing until it hurts** — VKB-64 is the moment it starts hurting;
   retrofitting layering after entitlements ship costs more than landing
   the contract one PR earlier.
+
+## Follow-up (2026-08-24, VKB-85 closed by VKB-90)
+
+The migration this ADR planned is complete. The eight grandfathered
+routes moved into domain operations (VKB-86, VKB-87, VKB-88, VKB-89),
+`requireUser` resolves sessions through the `resolveSession` domain
+operation so `server/utils/` carries no db access, and the emptied
+`LEGACY_ALLOWLIST` machinery was deleted from `scripts/layering-check.js`
+— the guard now fails unconditionally on any db reference in transport.
+The allowlist and transitive-gap wording above describes the state at
+decision time and is kept as the record of it.

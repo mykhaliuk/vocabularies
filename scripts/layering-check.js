@@ -5,16 +5,12 @@
    server/middleware, server/plugins) never touches the db: no useDb()
    calls, no db/schema imports, no drizzle-orm imports — static or dynamic,
    whatever the alias (~/, ~~/, @/, relative). Every db access lives in a
-   domain operation (server/domain) instead.
+   domain operation (server/domain) instead. Unconditional since VKB-90:
+   the pre-ADR allowlist shrank to zero and its machinery is gone.
 
    Known limit: the guard is lexical. Transitive access through an infra
-   helper (e.g. requireUser) is invisible here; that boundary is held by
-   review and by ADR-0010's migration plan, not by this script.
-
-   Routes written before the decision are grandfathered in
-   LEGACY_ALLOWLIST. The list only shrinks: an entry that is clean or
-   deleted fails the check until the line is removed, and new files are
-   never added.
+   helper is invisible here; since VKB-87 server/utils carries no db
+   access, so that gap is closed by construction, and review keeps it so.
 */
 
 import { readFileSync, readdirSync } from 'node:fs';
@@ -30,10 +26,6 @@ const TRANSPORT_ROOTS = [
 // Mirrors Nitro's handler glob (js, mjs, cjs, ts, mts, cts, tsx, jsx).
 const CODE_EXTENSION_RE = /\.(?:m|c)?(?:j|t)sx?$/;
 
-// Grandfathered pre-ADR-0010 routes. Shrink-only: remove a line when the
-// file's db access moves into a domain operation. Never add to this list.
-const LEGACY_ALLOWLIST = new Set();
-
 // Any of these in a transport file is a db touch. Specifiers are matched
 // as quoted substrings so every alias spelling and dynamic import() is
 // caught; useDb is also matched as a bare call because Nitro auto-imports
@@ -46,8 +38,6 @@ const DB_PATTERNS = [
   { label: 'db util import', re: /['"][^'"]*\butils\/db['"]/ },
 ];
 
-// Posix-style relative keys on every platform so LEGACY_ALLOWLIST
-// comparisons never depend on the host separator.
 const walk = (relDir, acc) => {
   let entries;
   try {
@@ -91,33 +81,11 @@ const main = () => {
   files.sort();
 
   const failures = [];
-  const seen = new Set();
-  let grandfathered = 0;
-
   for (const relFile of files) {
-    seen.add(relFile);
-    const hits = findHits(relFile);
-    const allowlisted = LEGACY_ALLOWLIST.has(relFile);
-    if (hits.length > 0 && !allowlisted) {
-      for (const hit of hits) {
-        failures.push(
-          `VIOLATION  ${relFile}:${hit.line} — ${hit.label}; ` +
-            'move the db access into a domain operation (ADR-0010)',
-        );
-      }
-    } else if (hits.length === 0 && allowlisted) {
+    for (const hit of findHits(relFile)) {
       failures.push(
-        `REDUNDANT  allowlist entry ${relFile} — now clean, remove the line`,
-      );
-    } else if (allowlisted) {
-      grandfathered++;
-    }
-  }
-
-  for (const relFile of LEGACY_ALLOWLIST) {
-    if (!seen.has(relFile)) {
-      failures.push(
-        `STALE      allowlist entry ${relFile} — file gone, remove the line`,
+        `VIOLATION  ${relFile}:${hit.line} — ${hit.label}; ` +
+          'move the db access into a domain operation (ADR-0010)',
       );
     }
   }
@@ -128,10 +96,7 @@ const main = () => {
     process.exit(1);
   }
 
-  console.log(
-    `layering-check: ${files.length - grandfathered} transport file(s) ` +
-      `clean, ${grandfathered} grandfathered ✓`,
-  );
+  console.log(`layering-check: ${files.length} transport file(s) clean ✓`);
 };
 
 main();
