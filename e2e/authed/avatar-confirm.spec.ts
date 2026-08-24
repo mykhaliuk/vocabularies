@@ -30,7 +30,7 @@ test('a malformed body and a foreign key are both rejected', async ({
     data: { key: `avatars/${randomUUID()}/sneaky.png` },
   });
   expect(foreign.status()).toBe(400);
-  expect(foreign.statusText()).toBe('invalid avatar key');
+  expect((await foreign.json()).statusMessage).toBe('invalid avatar key');
 });
 
 test('a confirmed upload marks the profile as having an avatar', async ({
@@ -68,5 +68,5 @@ test('a confirmed upload marks the profile as having an avatar', async ({
     data: { key: ghostKey },
   });
   expect(ghost.status()).toBe(400);
-  expect(ghost.statusText()).toBe('avatar object not found');
+  expect((await ghost.json()).statusMessage).toBe('avatar object not found');
 });
