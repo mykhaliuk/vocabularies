@@ -27,7 +27,7 @@ None — every route has a caller and every call resolves.
 | `PATCH /api/entries/:id` | `components/compose/Sheet.vue`<br>`pages/entries/[id].vue` | `entries.updateOwnEntry` |
 | `DELETE /api/entries/:id/media` | `components/compose/Sheet.vue` | `entries.removeEntryMedia` |
 | `POST /api/entries/:id/media` | `composables/useMediaUpload.ts` | `entries.attachEntryMedia` |
-| `GET /api/health` | `pages/offline.vue` | _inline_ |
+| `GET /api/health` | `pages/offline.vue` | `health.checkDbHealth` |
 | `GET /api/me` | `composables/useEntitlements.ts`<br>`composables/useSession.ts`<br>`middleware/auth.ts`<br>`pages/me.vue` | _inline_ |
 | `PATCH /api/me` | `pages/me.vue` | `profile.updateDisplayName` |
 | `POST /api/me/avatar` | `pages/me.vue` | _inline_ |
@@ -101,6 +101,7 @@ placeholder awaiting its ticket.
 | --- | --- | --- | --- | --- |
 | `server/domain/entitlements.ts` | domain | `loadEntitlements` | `users` | — |
 | `server/domain/entries.ts` | domain | `attachEntryMedia`<br>`createEntry`<br>`deleteOwnEntry`<br>`getFeedPage`<br>`getOwnEntry`<br>`removeEntryMedia`<br>`updateOwnEntry` | `entries`, `media`, `speakers` | `media.mintUploadSlot`<br>`speakers.getOwnSpeaker` |
+| `server/domain/health.ts` | domain | `checkDbHealth` | — | — |
 | `server/domain/media.ts` | domain | `confirmMediaUpload`<br>`getOwnMedia`<br>`mintUploadSlot`<br>`processUploadedMedia` | `entries`, `media` | `entitlements.loadEntitlements` |
 | `server/domain/profile.ts` | domain | `confirmAvatarUpload`<br>`updateDisplayName` | `users` | — |
 | `server/domain/speakers.ts` | domain | `createSpeaker`<br>`getOwnSpeaker`<br>`listSpeakers` | `entries`, `speakers` | — |
@@ -195,6 +196,7 @@ flowchart LR
     o_entries_getOwnEntry["entries.getOwnEntry"]
     o_entries_removeEntryMedia["entries.removeEntryMedia"]
     o_entries_updateOwnEntry["entries.updateOwnEntry"]
+    o_health_checkDbHealth["health.checkDbHealth"]
     o_media_confirmMediaUpload["media.confirmMediaUpload"]
     o_media_getOwnMedia["media.getOwnMedia"]
     o_media_mintUploadSlot["media.mintUploadSlot"]
@@ -251,6 +253,7 @@ flowchart LR
   c_composables_useMediaUpload_ts --> r_POST__api_entries__id_media
   r_POST__api_entries__id_media --> o_entries_attachEntryMedia
   c_pages_offline_vue --> r_GET__api_health
+  r_GET__api_health --> o_health_checkDbHealth
   c_composables_useEntitlements_ts --> r_GET__api_me
   c_composables_useSession_ts --> r_GET__api_me
   c_middleware_auth_ts --> r_GET__api_me
