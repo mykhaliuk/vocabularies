@@ -1,9 +1,7 @@
-import { eq } from 'drizzle-orm';
 import { z } from 'zod';
-import { users } from '~/db/schema/users';
+import { confirmAvatarUpload } from '~/server/domain/profile';
 import { requireUser, toPublicUser } from '~/server/utils/auth';
 import { contentTypeFromKey, parseAvatarKey } from '~/server/utils/avatar-key';
-import { useDb } from '~/server/utils/db';
 import { headObject, isNotFoundError } from '~/server/utils/storage';
 
 const Body = z.object({
@@ -51,12 +49,7 @@ export default defineEventHandler(async (event) => {
     });
   }
 
-  const db = useDb();
-  const [updated] = await db
-    .update(users)
-    .set({ avatarKey: key })
-    .where(eq(users.id, user.id))
-    .returning();
+  const updated = await confirmAvatarUpload(user.id, key);
 
   if (!updated) {
     throw createError({
