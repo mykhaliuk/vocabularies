@@ -157,6 +157,19 @@ export const openCompose = async (page: Page) => {
   return sheet;
 };
 
+// Vue hydrates on top of server-rendered markup, so a card exists — visible,
+// clickable by every actionability check — before its @click listener is
+// attached. Any spec whose assertions depend on client-side behaviour (a
+// click that must NOT navigate, a client-side route change) has to establish
+// hydration first, or it passes for the wrong reason. Opening and closing
+// the compose sheet is the repo's usual probe: its effect is visible and it
+// is safe to re-click.
+export const settleHydration = async (page: Page) => {
+  const sheet = await openCompose(page);
+  await page.getByRole('button', { name: /^cancel$/i }).click();
+  await expect(sheet).toBeHidden();
+};
+
 interface AuthedFixtures {
   authedPage: Page;
 }
