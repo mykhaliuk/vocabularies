@@ -115,9 +115,27 @@ jobs:
       DATABASE_URL: postgresql://vocabu:vocabu@localhost:5432/vocabu
       DATABASE_URL_UNPOOLED: postgresql://vocabu:vocabu@localhost:5432/vocabu
       JWT_SECRET: ci-only-throwaway-jwt-secret-never-used-in-a-deployed-env
+      # A real bucket for the media path (VKB-115): the values mirror what
+      # docker-compose's minio-init provisions, so CI and a local run speak to
+      # the same MinIO layout. These credentials only exist inside the runner.
+      S3_ENDPOINT: http://localhost:9100
+      S3_FORCE_PATH_STYLE: 'true'
+      S3_BUCKET_MEDIA: vocabu-media-local
+      S3_BUCKET_ORIGINALS: vocabu-originals-local
+      S3_MEDIA_ACCESS_KEY_ID: vocabu-media-local
+      S3_MEDIA_SECRET_ACCESS_KEY: vocabu-media-local-secret
+      S3_ORIGINALS_ACCESS_KEY_ID: vocabu-originals-local
+      S3_ORIGINALS_SECRET_ACCESS_KEY: vocabu-originals-local-secret
 
     steps:
       - uses: actions/checkout@v4
+
+      # MinIO is not a service container because its image needs a command
+      # (`server /data`), which services cannot pass. Reusing docker-compose
+      # keeps one provisioning source: minio-init creates the buckets and the
+      # per-bucket users the env above names.
+      - name: Start MinIO
+        run: docker compose up -d --wait minio && docker compose run --rm minio-init
 
       - uses: oven-sh/setup-bun@v2
         with:

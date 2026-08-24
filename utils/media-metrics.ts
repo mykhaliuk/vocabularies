@@ -1,10 +1,10 @@
 // Every metric that differs between the feed row (`inline`) and the word
 // detail page (`big`), in one frozen table that both players read.
 //
-// It lives out here rather than in the stylesheets because a `ready` player
-// needs MinIO and a transcoded file before it renders at all, so no CI test
-// ever mounts one: a unit test on this table is the only thing standing
-// between the feed's shipped numbers and a silent regression. `inline` is
+// It lives out here rather than in the stylesheets so the table is pinnable:
+// tests/unit/media-metrics.test.ts pins the numbers, and
+// e2e/authed/media-ready.spec.ts (VKB-115) mounts a `ready` player against
+// CI's MinIO and asserts the rendered players consume them. `inline` is
 // what ships in the feed today and must not move; `big` is the word-detail
 // variant (word-detail-spec.html §Anatomy step 4).
 

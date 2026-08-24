@@ -6,11 +6,10 @@ import {
   videoStyleVars,
 } from '../../utils/media-metrics';
 
-// The one defence the media players have. A `ready` player needs MinIO and a
-// transcoded file before it renders, so no CI test ever mounts one: without
-// these numbers pinned here, handing the feed row the detail page's metrics
-// is a change nothing goes red for. `inline` is what ships on `dev` today —
-// every value below was read off that branch, not off the spec.
+// Pins the table itself; e2e/authed/media-ready.spec.ts (VKB-115) pins that
+// the rendered players consume it, against CI's MinIO. `inline` is what
+// ships on `dev` today — every value below was read off that branch, not
+// off the spec.
 describe('AUDIO_METRICS', () => {
   test('inline keeps the feed row exactly as it ships', () => {
     expect(AUDIO_METRICS.inline).toEqual({

@@ -2,8 +2,9 @@ import { expect, signIn, test } from './fixtures';
 import type { Page } from '@playwright/test';
 
 // The swap itself has NO automated coverage, here or in unit tests — it runs
-// at `ready`, past anything this suite can reach without a bucket. Pinned by
-// hand against Postgres; VKB-143 tracks closing the gap. See ADR-0009.
+// at `ready`, and none of these specs confirms an upload (media-ready.spec.ts
+// walks that path since VKB-115). Pinned by hand against Postgres; VKB-143
+// tracks closing the gap. See ADR-0009.
 
 const AUDIO = { contentType: 'audio/mp4', sizeBytes: 40_000 };
 
@@ -86,10 +87,10 @@ test.describe('entry media (authed)', () => {
   // row. A test that goes red asks to be rewritten; one that keeps passing
   // while describing behaviour the code no longer has does not.
   //
-  // What is NOT covered here, and cannot be: whether the detach works. This
-  // suite runs without MinIO, so `confirm` (a HeadObject on the originals
-  // bucket) always fails and no pending row reaches `ready` — the ordering
-  // this guards is unreachable. VKB-115 + VKB-143 are the prerequisites; the
+  // What is NOT covered here: whether the detach works. These specs never
+  // confirm an upload, so no pending row reaches `ready` and the ordering
+  // this guards stays unreachable — VKB-115 gave CI a bucket (media-ready
+  // walks it), but driving a replacement to `ready` is VKB-143's spec; the
   // detach itself was verified by hand against a real bucket (ADR-0009).
   test('an unconfirmed aim stays invisible to reads', async ({
     authedPage,
