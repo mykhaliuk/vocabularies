@@ -5,8 +5,22 @@ import { defineConfig, devices } from '@playwright/test';
 // 404) render without DB/Redis/email, so CI needs no infra, and this suite
 // stays that way on purpose. Anything needing a session goes to the authed
 // suite instead: playwright.authed.config.ts (VKB-101).
-const PORT = 3000;
+//
+// Port 3200 keeps the suite off 3000 (dev server, e2e/local) and 3100 (authed
+// suite), and reuse is off by default (VKB-146): a run that adopts whatever
+// already listens reports on that server, not on the branch. Iterating on
+// specs against a preview you already built is the one sanctioned exception —
+// opt in with E2E_REUSE_SERVER=1, and the run says so out loud.
+const PORT = 3200;
 const baseURL = `http://localhost:${PORT}`;
+
+const reuseServer = process.env.E2E_REUSE_SERVER === '1';
+if (reuseServer) {
+  console.warn(
+    `[e2e] E2E_REUSE_SERVER=1 — adopting any server already on ${baseURL}; ` +
+      'this run does NOT build the branch.',
+  );
+}
 
 export default defineConfig({
   testDir: './e2e',
@@ -32,7 +46,8 @@ export default defineConfig({
     command:
       'node node_modules/.bin/nuxt build && node node_modules/.bin/nuxt preview',
     url: baseURL,
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: reuseServer,
     timeout: 180_000,
+    env: { APP_URL: baseURL, NITRO_PORT: String(PORT), PORT: String(PORT) },
   },
 });
