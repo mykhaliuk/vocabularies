@@ -515,7 +515,13 @@ const buildGraph = async () => {
     );
     const isDomain = relFile.startsWith(`${DOMAIN_ROOT}/`);
     const operations = isDomain ? operationsIn(relFile) : [];
-    if (used.length === 0 && operations.length === 0) continue;
+    // An infra module belongs in the graph when it touches entities OR calls
+    // domain operations (e.g. requireUser → auth.resolveSession) — without
+    // the latter, such a call would leave the operation looking uncalled.
+    const uses = collectDomainOperations(text, relFile);
+    if (used.length === 0 && operations.length === 0 && uses.length === 0) {
+      continue;
+    }
     modules.push({
       name: relFile
         .slice(relFile.indexOf('/') + 1)
@@ -524,7 +530,7 @@ const buildGraph = async () => {
       layer: isDomain ? 'domain' : 'infra',
       file: relFile,
       operations: operations.sort(),
-      uses: collectDomainOperations(text, relFile),
+      uses,
       entities: used.sort(),
     });
   }

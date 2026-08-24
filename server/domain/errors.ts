@@ -18,4 +18,7 @@ export const DOMAIN_ERROR_CODES = Object.freeze({
   mediaNotFound: 'MEDIA_NOT_FOUND',
   storageUnavailable: 'STORAGE_UNAVAILABLE',
   entryMomentConflict: 'ENTRY_MOMENT_CONFLICT',
+  sessionNotFound: 'SESSION_NOT_FOUND',
+  sessionExpired: 'SESSION_EXPIRED',
+  userNotFound: 'USER_NOT_FOUND',
 });
