@@ -73,6 +73,20 @@ function useDifferentEmail() {
   nextTick(() => inputRef.value?.focus());
 }
 
+// Password managers can fill the field without an `input` event, leaving
+// v-model stale: the submit button stays disabled, and a disabled default
+// button suppresses the browser's implicit Enter submission entirely. Sync
+// from the DOM on change and handle Enter explicitly so a filled field
+// always submits.
+function syncEmail(event: Event) {
+  email.value = (event.target as HTMLInputElement).value;
+}
+
+async function submitOnEnter(event: KeyboardEvent) {
+  syncEmail(event);
+  await submit();
+}
+
 async function resend() {
   if (submitting.value) return;
   errorMessage.value = '';
@@ -114,6 +128,8 @@ async function resend() {
             autocomplete="email"
             placeholder="you@email.com"
             :readonly="submitting"
+            @change="syncEmail"
+            @keydown.enter.prevent="submitOnEnter"
           />
 
           <VButton

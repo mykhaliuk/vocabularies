@@ -56,6 +56,20 @@ const {
 } = useMagicLink();
 const { mode: themeMode, setMode: setThemeMode } = useTheme();
 
+// Password managers can fill the field without an `input` event, leaving
+// v-model stale: the submit button stays disabled, and a disabled default
+// button suppresses the browser's implicit Enter submission entirely. Sync
+// from the DOM on change and handle Enter explicitly so a filled field
+// always submits.
+function syncEmail(event: Event) {
+  email.value = (event.target as HTMLInputElement).value;
+}
+
+async function submitOnEnter(event: KeyboardEvent) {
+  syncEmail(event);
+  await submit();
+}
+
 useSeoMeta({
   title: props.copy.seo.title,
   description: props.copy.seo.description,
@@ -274,6 +288,8 @@ onMounted(() => {
                     :placeholder="copy.hero.emailPlaceholder"
                     :aria-label="copy.hero.emailAria"
                     :readonly="submitting"
+                    @change="syncEmail"
+                    @keydown.enter.prevent="submitOnEnter"
                   />
                   <VButton
                     class="capture__submit"
