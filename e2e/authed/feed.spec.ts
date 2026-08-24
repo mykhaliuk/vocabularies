@@ -1,23 +1,4 @@
-import { clickUntil, expect, test } from './fixtures';
-import type { Page } from '@playwright/test';
-
-// Vue hydrates on top of server-rendered markup, so a card exists — visible,
-// clickable by every actionability check — before its @click listener is
-// attached. Any spec whose assertions depend on client-side behaviour (a
-// click that must NOT navigate, a client-side route change) has to establish
-// hydration first, or it passes for the wrong reason. The compose FAB is the
-// repo's usual probe: its effect is visible and it is safe to re-click.
-// (Duplicated from entry-detail.spec.ts on purpose — hoisting it into
-// fixtures.ts is an extraction from shipped code, which ships in its own PR
-// per the agent contract; VKB-148 tracks the move.)
-const settleHydration = async (page: Page) => {
-  const sheet = page.locator('.compose--open');
-  await clickUntil(page.getByRole('button', { name: /new word/i }), () =>
-    expect(sheet).toBeVisible({ timeout: 1000 }),
-  );
-  await page.getByRole('button', { name: /^cancel$/i }).click();
-  await expect(sheet).toBeHidden();
-};
+import { clickUntil, expect, settleHydration, test } from './fixtures';
 
 // First authed spec (VKB-101) — it doubles as the proof that the harness
 // works: sign-in, an authed screen rendering server data, a hydrated
