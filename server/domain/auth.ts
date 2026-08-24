@@ -3,12 +3,12 @@ import { magicLinkTokens } from '~/db/schema/magic-link-tokens';
 import { sessions } from '~/db/schema/sessions';
 import { signinClaims } from '~/db/schema/signin-claims';
 import { users } from '~/db/schema/users';
-import { signSession } from '~/server/utils/auth';
 import { useDb } from '~/server/utils/db';
+import { entitlementsOf } from '~/server/utils/entitlements';
+import { signSession } from '~/server/utils/session-jwt';
 import { CONFIRM_MAX_ATTEMPTS } from '~/shared/magic-link';
-import type { InferSelectModel } from 'drizzle-orm';
-
-export type UserRow = InferSelectModel<typeof users>;
+import { DOMAIN_ERROR_CODES, DomainError } from './errors';
+import type { AuthUser } from '~/server/utils/auth';
 
 export interface SigninTokenInput {
   email: string;
@@ -249,8 +249,14 @@ export const claimAndMintSession = async (input: ClaimConfirmInput) => {
       .returning({ id: sessions.id });
     if (!session) throw new Error('failed to mint session');
 
+    // Projected, not the full row: entitlement columns stay behind their one
+    // door (ADR-0012) instead of riding out to transport callers.
     const [user] = await tx
-      .select()
+      .select({
+        email: users.email,
+        displayName: users.displayName,
+        avatarKey: users.avatarKey,
+      })
       .from(users)
       .where(eq(users.id, claimed.userId))
       .limit(1);
@@ -293,4 +299,49 @@ export const findArmedClaim = async (pollKeyHash: Buffer, now: Date) => {
     )
     .limit(1);
   return Boolean(armed);
+};
+
+// Session + user lookup for the transport guard. The `users` row dies here:
+// what leaves is identity plus resolved rights, so the tier is unreachable
+// downstream by construction (ADR-0012).
+export const resolveSession = async (sessionId: string) => {
+  const db = useDb();
+
+  const [session] = await db
+    .select()
+    .from(sessions)
+    .where(eq(sessions.id, sessionId))
+    .limit(1);
+
+  if (!session) {
+    throw new DomainError(DOMAIN_ERROR_CODES.sessionNotFound);
+  }
+  if (session.expiresAt.getTime() < Date.now()) {
+    throw new DomainError(DOMAIN_ERROR_CODES.sessionExpired);
+  }
+
+  const [row] = await db
+    .select()
+    .from(users)
+    .where(eq(users.id, session.userId))
+    .limit(1);
+
+  if (!row) {
+    throw new DomainError(DOMAIN_ERROR_CODES.userNotFound);
+  }
+
+  const user: AuthUser = {
+    id: row.id,
+    email: row.email,
+    displayName: row.displayName,
+    avatarKey: row.avatarKey,
+    entitlements: entitlementsOf(row),
+  };
+
+  return { user, session };
+};
+
+export const endSession = async (sessionId: string) => {
+  const db = useDb();
+  await db.delete(sessions).where(eq(sessions.id, sessionId));
 };

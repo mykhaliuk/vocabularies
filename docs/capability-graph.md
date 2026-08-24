@@ -7,7 +7,9 @@ runs `bun run graph:check` to keep it honest.
 
 ## Findings
 
-None — every route has a caller and every call resolves.
+| Kind | Where | Detail |
+| --- | --- | --- |
+| UNCALLED OPERATION | `server/domain/auth.ts` | auth.resolveSession is reached by no route, sibling domain module or infra helper |
 
 ## Wiring
 
@@ -15,7 +17,7 @@ None — every route has a caller and every call resolves.
 | --- | --- | --- |
 | `GET /api/auth/callback` | _none — reached by browser navigation from the emailed magic link, never by a client fetch._ | `auth.armClaimConfirmation`<br>`auth.consumeSigninToken`<br>`auth.createSessionForEmail` |
 | `POST /api/auth/confirm` | `composables/useSigninPoll.ts` | `auth.claimAndMintSession`<br>`auth.consumeConfirmAttempt` |
-| `POST /api/auth/logout` | `pages/me.vue` | _direct db (ADR-0010 legacy):_ `sessions` |
+| `POST /api/auth/logout` | `pages/me.vue` | `auth.endSession` |
 | `POST /api/auth/magic-link` | `composables/useMagicLink.ts` | `auth.mintSigninToken` |
 | `POST /api/auth/poll` | `composables/useSigninPoll.ts` | `auth.findArmedClaim` |
 | `GET /api/cron/ratelimit-probe` | _none — invoked by Vercel Cron (vercel.json), never by a client_ | _inline_ |
@@ -99,13 +101,12 @@ placeholder awaiting its ticket.
 
 | Module | Layer | Operations | Entities | Calls |
 | --- | --- | --- | --- | --- |
-| `server/domain/auth.ts` | domain | `armClaimConfirmation`<br>`claimAndMintSession`<br>`consumeConfirmAttempt`<br>`consumeSigninToken`<br>`createSessionForEmail`<br>`findArmedClaim`<br>`mintSigninToken` | `magicLinkTokens`, `sessions`, `signinClaims`, `users` | — |
+| `server/domain/auth.ts` | domain | `armClaimConfirmation`<br>`claimAndMintSession`<br>`consumeConfirmAttempt`<br>`consumeSigninToken`<br>`createSessionForEmail`<br>`endSession`<br>`findArmedClaim`<br>`mintSigninToken`<br>`resolveSession` | `magicLinkTokens`, `sessions`, `signinClaims`, `users` | — |
 | `server/domain/entitlements.ts` | domain | `loadEntitlements` | `users` | — |
 | `server/domain/entries.ts` | domain | `attachEntryMedia`<br>`createEntry`<br>`deleteOwnEntry`<br>`getFeedPage`<br>`getOwnEntry`<br>`removeEntryMedia`<br>`updateOwnEntry` | `entries`, `media`, `speakers` | `media.mintUploadSlot`<br>`speakers.getOwnSpeaker` |
 | `server/domain/health.ts` | domain | `checkDbHealth` | — | — |
 | `server/domain/media.ts` | domain | `confirmMediaUpload`<br>`getOwnMedia`<br>`mintUploadSlot`<br>`processUploadedMedia` | `entries`, `media` | `entitlements.loadEntitlements` |
 | `server/domain/speakers.ts` | domain | `createSpeaker`<br>`getOwnSpeaker`<br>`listSpeakers` | `entries`, `speakers` | — |
-| `server/utils/auth.ts` | infra | — | `sessions`, `users` | — |
 
 ## Entities
 
@@ -193,8 +194,10 @@ flowchart LR
     o_auth_consumeConfirmAttempt["auth.consumeConfirmAttempt"]
     o_auth_consumeSigninToken["auth.consumeSigninToken"]
     o_auth_createSessionForEmail["auth.createSessionForEmail"]
+    o_auth_endSession["auth.endSession"]
     o_auth_findArmedClaim["auth.findArmedClaim"]
     o_auth_mintSigninToken["auth.mintSigninToken"]
+    o_auth_resolveSession["auth.resolveSession"]
     o_entitlements_loadEntitlements["entitlements.loadEntitlements"]
     o_entries_attachEntryMedia["entries.attachEntryMedia"]
     o_entries_createEntry["entries.createEntry"]
@@ -213,7 +216,6 @@ flowchart LR
     o_speakers_listSpeakers["speakers.listSpeakers"]
   end
   subgraph infra
-    i_auth["server/utils/auth.ts"]
   end
   subgraph data
     e_entries[("entries")]
@@ -231,7 +233,7 @@ flowchart LR
   r_POST__api_auth_confirm --> o_auth_claimAndMintSession
   r_POST__api_auth_confirm --> o_auth_consumeConfirmAttempt
   c_pages_me_vue --> r_POST__api_auth_logout
-  r_POST__api_auth_logout -.-> e_sessions
+  r_POST__api_auth_logout --> o_auth_endSession
   c_composables_useMagicLink_ts --> r_POST__api_auth_magic_link
   r_POST__api_auth_magic_link --> o_auth_mintSigninToken
   c_composables_useSigninPoll_ts --> r_POST__api_auth_poll
@@ -283,29 +285,37 @@ flowchart LR
   o_auth_consumeConfirmAttempt --> e_magicLinkTokens
   o_auth_consumeSigninToken --> e_magicLinkTokens
   o_auth_createSessionForEmail --> e_magicLinkTokens
+  o_auth_endSession --> e_magicLinkTokens
   o_auth_findArmedClaim --> e_magicLinkTokens
   o_auth_mintSigninToken --> e_magicLinkTokens
+  o_auth_resolveSession --> e_magicLinkTokens
   o_auth_armClaimConfirmation --> e_sessions
   o_auth_claimAndMintSession --> e_sessions
   o_auth_consumeConfirmAttempt --> e_sessions
   o_auth_consumeSigninToken --> e_sessions
   o_auth_createSessionForEmail --> e_sessions
+  o_auth_endSession --> e_sessions
   o_auth_findArmedClaim --> e_sessions
   o_auth_mintSigninToken --> e_sessions
+  o_auth_resolveSession --> e_sessions
   o_auth_armClaimConfirmation --> e_signinClaims
   o_auth_claimAndMintSession --> e_signinClaims
   o_auth_consumeConfirmAttempt --> e_signinClaims
   o_auth_consumeSigninToken --> e_signinClaims
   o_auth_createSessionForEmail --> e_signinClaims
+  o_auth_endSession --> e_signinClaims
   o_auth_findArmedClaim --> e_signinClaims
   o_auth_mintSigninToken --> e_signinClaims
+  o_auth_resolveSession --> e_signinClaims
   o_auth_armClaimConfirmation --> e_users
   o_auth_claimAndMintSession --> e_users
   o_auth_consumeConfirmAttempt --> e_users
   o_auth_consumeSigninToken --> e_users
   o_auth_createSessionForEmail --> e_users
+  o_auth_endSession --> e_users
   o_auth_findArmedClaim --> e_users
   o_auth_mintSigninToken --> e_users
+  o_auth_resolveSession --> e_users
   o_entitlements_loadEntitlements --> e_users
   o_entries_attachEntryMedia --> e_entries
   o_entries_createEntry --> e_entries
@@ -342,6 +352,4 @@ flowchart LR
   o_speakers_createSpeaker --> e_speakers
   o_speakers_getOwnSpeaker --> e_speakers
   o_speakers_listSpeakers --> e_speakers
-  i_auth --> e_sessions
-  i_auth --> e_users
 ```
