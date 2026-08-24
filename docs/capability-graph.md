@@ -29,10 +29,10 @@ None — every route has a caller and every call resolves.
 | `POST /api/entries/:id/media` | `composables/useMediaUpload.ts` | `entries.attachEntryMedia` |
 | `GET /api/health` | `pages/offline.vue` | `health.checkDbHealth` |
 | `GET /api/me` | `composables/useEntitlements.ts`<br>`composables/useSession.ts`<br>`middleware/auth.ts`<br>`pages/me.vue` | _inline_ |
-| `PATCH /api/me` | `pages/me.vue` | _direct db (ADR-0010 legacy):_ `users` |
+| `PATCH /api/me` | `pages/me.vue` | `profile.updateDisplayName` |
 | `POST /api/me/avatar` | `pages/me.vue` | _inline_ |
 | `GET /api/me/avatar-url` | `pages/me.vue` | _inline_ |
-| `POST /api/me/avatar/confirm` | `pages/me.vue` | _direct db (ADR-0010 legacy):_ `users` |
+| `POST /api/me/avatar/confirm` | `pages/me.vue` | `profile.confirmAvatarUpload` |
 | `POST /api/media/confirm` | `composables/useMediaUpload.ts`<br>`pages/dev/media-spike.vue` | `media.confirmMediaUpload` |
 | `POST /api/media/process` | _none — QStash worker callback; the caller is the queue, never the client._ | `media.processUploadedMedia` |
 | `GET /api/media/status` | `pages/dev/media-spike.vue` | `media.getOwnMedia` |
@@ -104,6 +104,7 @@ placeholder awaiting its ticket.
 | `server/domain/entries.ts` | domain | `attachEntryMedia`<br>`createEntry`<br>`deleteOwnEntry`<br>`getFeedPage`<br>`getOwnEntry`<br>`removeEntryMedia`<br>`updateOwnEntry` | `entries`, `media`, `speakers` | `media.mintUploadSlot`<br>`speakers.getOwnSpeaker` |
 | `server/domain/health.ts` | domain | `checkDbHealth` | — | — |
 | `server/domain/media.ts` | domain | `confirmMediaUpload`<br>`getOwnMedia`<br>`mintUploadSlot`<br>`processUploadedMedia` | `entries`, `media` | `entitlements.loadEntitlements` |
+| `server/domain/profile.ts` | domain | `confirmAvatarUpload`<br>`updateDisplayName` | `users` | — |
 | `server/domain/speakers.ts` | domain | `createSpeaker`<br>`getOwnSpeaker`<br>`listSpeakers` | `entries`, `speakers` | — |
 | `server/utils/auth.ts` | infra | — | `sessions`, `users` | — |
 
@@ -208,6 +209,8 @@ flowchart LR
     o_media_getOwnMedia["media.getOwnMedia"]
     o_media_mintUploadSlot["media.mintUploadSlot"]
     o_media_processUploadedMedia["media.processUploadedMedia"]
+    o_profile_confirmAvatarUpload["profile.confirmAvatarUpload"]
+    o_profile_updateDisplayName["profile.updateDisplayName"]
     o_speakers_createSpeaker["speakers.createSpeaker"]
     o_speakers_getOwnSpeaker["speakers.getOwnSpeaker"]
     o_speakers_listSpeakers["speakers.listSpeakers"]
@@ -261,11 +264,11 @@ flowchart LR
   c_middleware_auth_ts --> r_GET__api_me
   c_pages_me_vue --> r_GET__api_me
   c_pages_me_vue --> r_PATCH__api_me
-  r_PATCH__api_me -.-> e_users
+  r_PATCH__api_me --> o_profile_updateDisplayName
   c_pages_me_vue --> r_POST__api_me_avatar
   c_pages_me_vue --> r_GET__api_me_avatar_url
   c_pages_me_vue --> r_POST__api_me_avatar_confirm
-  r_POST__api_me_avatar_confirm -.-> e_users
+  r_POST__api_me_avatar_confirm --> o_profile_confirmAvatarUpload
   c_composables_useMediaUpload_ts --> r_POST__api_media_confirm
   c_pages_dev_media_spike_vue --> r_POST__api_media_confirm
   r_POST__api_media_confirm --> o_media_confirmMediaUpload
@@ -336,6 +339,8 @@ flowchart LR
   o_media_getOwnMedia --> e_media
   o_media_mintUploadSlot --> e_media
   o_media_processUploadedMedia --> e_media
+  o_profile_confirmAvatarUpload --> e_users
+  o_profile_updateDisplayName --> e_users
   o_speakers_createSpeaker --> e_entries
   o_speakers_getOwnSpeaker --> e_entries
   o_speakers_listSpeakers --> e_entries
