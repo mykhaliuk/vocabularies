@@ -1,4 +1,4 @@
-import { expect, openCompose, test } from './fixtures';
+import { clickUntil, expect, openCompose, test } from './fixtures';
 import type { Page } from '@playwright/test';
 
 // The dismiss half of VKB-154. The upload phases need MinIO and are covered by
@@ -12,6 +12,26 @@ const write = async (page: Page, word: string) => {
 
 const confirmSheet = (page: Page) => page.locator('.discard--open');
 
+// Every interaction below goes through clickUntil paired with the effect that
+// proves the click landed (VKB-158): under load a click can fire before the
+// handler is attached, and a bare .click() then does nothing at all.
+const cancelUntilAsked = (page: Page) =>
+  clickUntil(page.getByRole('button', { name: /^cancel$/i }), () =>
+    expect(confirmSheet(page)).toBeVisible({ timeout: 1000 }),
+  );
+
+const discardUntilClosed = (page: Page) =>
+  clickUntil(page.getByRole('button', { name: /^discard$/i }), () =>
+    expect(page.locator('.compose--open')).toBeHidden({ timeout: 1000 }),
+  );
+
+const keepUntilSaving = (page: Page) =>
+  clickUntil(page.getByRole('button', { name: /^keep$/i }), () =>
+    expect(page.getByRole('button', { name: /keeping/i })).toBeVisible({
+      timeout: 1000,
+    }),
+  );
+
 const countEntries = async (page: Page) => {
   const res = await page.request.get('/api/entries');
   const { entries } = (await res.json()) as { entries: unknown[] };
@@ -24,9 +44,11 @@ test.describe('dismissing the compose sheet (authed)', () => {
   }) => {
     const sheet = await openCompose(authedPage);
 
-    await authedPage.getByRole('button', { name: /^cancel$/i }).click();
+    await clickUntil(
+      authedPage.getByRole('button', { name: /^cancel$/i }),
+      () => expect(sheet).toBeHidden({ timeout: 1000 }),
+    );
 
-    await expect(sheet).toBeHidden();
     await expect(confirmSheet(authedPage)).toHaveCount(0);
   });
 
@@ -36,9 +58,8 @@ test.describe('dismissing the compose sheet (authed)', () => {
     const sheet = await openCompose(authedPage);
     await write(authedPage, 'bapple');
 
-    await authedPage.getByRole('button', { name: /^cancel$/i }).click();
+    await cancelUntilAsked(authedPage);
 
-    await expect(confirmSheet(authedPage)).toBeVisible();
     await expect(sheet).toBeVisible();
   });
 
@@ -47,11 +68,13 @@ test.describe('dismissing the compose sheet (authed)', () => {
   }) => {
     await openCompose(authedPage);
     await write(authedPage, 'bapple');
-    await authedPage.getByRole('button', { name: /^cancel$/i }).click();
+    await cancelUntilAsked(authedPage);
 
-    await authedPage.getByRole('button', { name: /keep editing/i }).click();
+    await clickUntil(
+      authedPage.getByRole('button', { name: /keep editing/i }),
+      () => expect(confirmSheet(authedPage)).toHaveCount(0, { timeout: 1000 }),
+    );
 
-    await expect(confirmSheet(authedPage)).toHaveCount(0);
     await expect(authedPage.locator('#compose-word')).toHaveValue('bapple');
     await expect(authedPage.locator('.compose--open')).toBeVisible();
   });
@@ -59,13 +82,12 @@ test.describe('dismissing the compose sheet (authed)', () => {
   test('discarding closes the sheet and keeps no word', async ({
     authedPage,
   }) => {
-    const sheet = await openCompose(authedPage);
+    await openCompose(authedPage);
     await write(authedPage, 'bapple');
-    await authedPage.getByRole('button', { name: /^cancel$/i }).click();
+    await cancelUntilAsked(authedPage);
 
-    await authedPage.getByRole('button', { name: /^discard$/i }).click();
+    await discardUntilClosed(authedPage);
 
-    await expect(sheet).toBeHidden();
     expect(await countEntries(authedPage)).toBe(0);
   });
 
@@ -108,12 +130,16 @@ test.describe('dismissing the compose sheet (authed)', () => {
     await authedPage.reload();
 
     const sheet = await openCompose(authedPage);
-    await authedPage.locator('.chips__chip', { hasText: 'Mira' }).click();
-    await expect(authedPage.locator('.chips__chip--active')).toBeVisible();
+    await clickUntil(
+      authedPage.locator('.chips__chip', { hasText: 'Mira' }),
+      () =>
+        expect(authedPage.locator('.chips__chip--active')).toBeVisible({
+          timeout: 1000,
+        }),
+    );
 
-    await authedPage.getByRole('button', { name: /^cancel$/i }).click();
+    await cancelUntilAsked(authedPage);
 
-    await expect(confirmSheet(authedPage)).toBeVisible();
     await expect(sheet).toBeVisible();
   });
 
@@ -122,11 +148,15 @@ test.describe('dismissing the compose sheet (authed)', () => {
   }) => {
     await openCompose(authedPage);
     await write(authedPage, 'bapple');
-    await authedPage.getByRole('button', { name: /^cancel$/i }).click();
 
-    await expect(
-      authedPage.getByRole('button', { name: /keep editing/i }),
-    ).toBeFocused();
+    await clickUntil(
+      authedPage.getByRole('button', { name: /^cancel$/i }),
+      () =>
+        expect(
+          authedPage.getByRole('button', { name: /keep editing/i }),
+        ).toBeFocused({ timeout: 1000 }),
+    );
+
     await expect(authedPage.locator('.compose__sheet')).toHaveAttribute(
       'inert',
       '',
@@ -161,14 +191,10 @@ test.describe('cancelling while the word is being created', () => {
 
     await openCompose(authedPage);
     await write(authedPage, 'bapple');
-    await authedPage.getByRole('button', { name: /^keep$/i }).click();
+    await keepUntilSaving(authedPage);
 
-    await expect(
-      authedPage.getByRole('button', { name: /keeping/i }),
-    ).toBeVisible();
-    await authedPage.getByRole('button', { name: /^cancel$/i }).click();
-    await authedPage.getByRole('button', { name: /^discard$/i }).click();
-    await expect(authedPage.locator('.compose--open')).toBeHidden();
+    await cancelUntilAsked(authedPage);
+    await discardUntilClosed(authedPage);
 
     expect(createdId).not.toBe('');
     await expect
@@ -200,9 +226,8 @@ test.describe('cancelling while the word is being created', () => {
 
     await openCompose(authedPage);
     await write(authedPage, 'landed-under-the-question');
-    await authedPage.getByRole('button', { name: /^keep$/i }).click();
-    await authedPage.getByRole('button', { name: /^cancel$/i }).click();
-    await expect(confirmSheet(authedPage)).toBeVisible();
+    await keepUntilSaving(authedPage);
+    await cancelUntilAsked(authedPage);
 
     // The keep completes here. It must not close the question, navigate, or
     // decide on the user's behalf.
@@ -210,8 +235,7 @@ test.describe('cancelling while the word is being created', () => {
     await expect(confirmSheet(authedPage)).toBeVisible();
     await expect(authedPage).toHaveURL(/\/feed$/);
 
-    await authedPage.getByRole('button', { name: /^discard$/i }).click();
-    await expect(authedPage.locator('.compose--open')).toBeHidden();
+    await discardUntilClosed(authedPage);
 
     expect(createdId).not.toBe('');
     await expect
