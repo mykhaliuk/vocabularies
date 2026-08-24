@@ -13,11 +13,11 @@ None — every route has a caller and every call resolves.
 
 | Route | Callers | Domain operations |
 | --- | --- | --- |
-| `GET /api/auth/callback` | _none — reached by browser navigation from the emailed magic link, never by a client fetch._ | _direct db (ADR-0010 legacy):_ `magicLinkTokens`, `sessions`, `signinClaims`, `users` |
-| `POST /api/auth/confirm` | `composables/useSigninPoll.ts` | _direct db (ADR-0010 legacy):_ `sessions`, `signinClaims`, `users` |
+| `GET /api/auth/callback` | _none — reached by browser navigation from the emailed magic link, never by a client fetch._ | `auth.armClaimConfirmation`<br>`auth.consumeSigninToken`<br>`auth.createSessionForEmail` |
+| `POST /api/auth/confirm` | `composables/useSigninPoll.ts` | `auth.claimAndMintSession`<br>`auth.consumeConfirmAttempt` |
 | `POST /api/auth/logout` | `pages/me.vue` | _direct db (ADR-0010 legacy):_ `sessions` |
-| `POST /api/auth/magic-link` | `composables/useMagicLink.ts` | _direct db (ADR-0010 legacy):_ `magicLinkTokens`, `signinClaims` |
-| `POST /api/auth/poll` | `composables/useSigninPoll.ts` | _direct db (ADR-0010 legacy):_ `signinClaims` |
+| `POST /api/auth/magic-link` | `composables/useMagicLink.ts` | `auth.mintSigninToken` |
+| `POST /api/auth/poll` | `composables/useSigninPoll.ts` | `auth.findArmedClaim` |
 | `GET /api/cron/ratelimit-probe` | _none — invoked by Vercel Cron (vercel.json), never by a client_ | _inline_ |
 | `GET /api/dev/error` | `pages/me.vue` | _inline_ |
 | `GET /api/entries` | `pages/feed.vue` | `entries.getFeedPage` |
@@ -99,6 +99,7 @@ placeholder awaiting its ticket.
 
 | Module | Layer | Operations | Entities | Calls |
 | --- | --- | --- | --- | --- |
+| `server/domain/auth.ts` | domain | `armClaimConfirmation`<br>`claimAndMintSession`<br>`consumeConfirmAttempt`<br>`consumeSigninToken`<br>`createSessionForEmail`<br>`findArmedClaim`<br>`mintSigninToken` | `magicLinkTokens`, `sessions`, `signinClaims`, `users` | — |
 | `server/domain/entitlements.ts` | domain | `loadEntitlements` | `users` | — |
 | `server/domain/entries.ts` | domain | `attachEntryMedia`<br>`createEntry`<br>`deleteOwnEntry`<br>`getFeedPage`<br>`getOwnEntry`<br>`removeEntryMedia`<br>`updateOwnEntry` | `entries`, `media`, `speakers` | `media.mintUploadSlot`<br>`speakers.getOwnSpeaker` |
 | `server/domain/health.ts` | domain | `checkDbHealth` | — | — |
@@ -188,6 +189,13 @@ flowchart LR
     r_POST__api_speakers["POST /api/speakers"]
   end
   subgraph domain
+    o_auth_armClaimConfirmation["auth.armClaimConfirmation"]
+    o_auth_claimAndMintSession["auth.claimAndMintSession"]
+    o_auth_consumeConfirmAttempt["auth.consumeConfirmAttempt"]
+    o_auth_consumeSigninToken["auth.consumeSigninToken"]
+    o_auth_createSessionForEmail["auth.createSessionForEmail"]
+    o_auth_findArmedClaim["auth.findArmedClaim"]
+    o_auth_mintSigninToken["auth.mintSigninToken"]
     o_entitlements_loadEntitlements["entitlements.loadEntitlements"]
     o_entries_attachEntryMedia["entries.attachEntryMedia"]
     o_entries_createEntry["entries.createEntry"]
@@ -219,21 +227,18 @@ flowchart LR
     e_speakers[("speakers")]
     e_users[("users")]
   end
-  r_GET__api_auth_callback -.-> e_magicLinkTokens
-  r_GET__api_auth_callback -.-> e_sessions
-  r_GET__api_auth_callback -.-> e_signinClaims
-  r_GET__api_auth_callback -.-> e_users
+  r_GET__api_auth_callback --> o_auth_armClaimConfirmation
+  r_GET__api_auth_callback --> o_auth_consumeSigninToken
+  r_GET__api_auth_callback --> o_auth_createSessionForEmail
   c_composables_useSigninPoll_ts --> r_POST__api_auth_confirm
-  r_POST__api_auth_confirm -.-> e_sessions
-  r_POST__api_auth_confirm -.-> e_signinClaims
-  r_POST__api_auth_confirm -.-> e_users
+  r_POST__api_auth_confirm --> o_auth_claimAndMintSession
+  r_POST__api_auth_confirm --> o_auth_consumeConfirmAttempt
   c_pages_me_vue --> r_POST__api_auth_logout
   r_POST__api_auth_logout -.-> e_sessions
   c_composables_useMagicLink_ts --> r_POST__api_auth_magic_link
-  r_POST__api_auth_magic_link -.-> e_magicLinkTokens
-  r_POST__api_auth_magic_link -.-> e_signinClaims
+  r_POST__api_auth_magic_link --> o_auth_mintSigninToken
   c_composables_useSigninPoll_ts --> r_POST__api_auth_poll
-  r_POST__api_auth_poll -.-> e_signinClaims
+  r_POST__api_auth_poll --> o_auth_findArmedClaim
   c_pages_me_vue --> r_GET__api_dev_error
   c_pages_feed_vue --> r_GET__api_entries
   r_GET__api_entries --> o_entries_getFeedPage
@@ -276,6 +281,34 @@ flowchart LR
   r_GET__api_speakers --> o_speakers_listSpeakers
   c_components_compose_SpeakerChips_vue --> r_POST__api_speakers
   r_POST__api_speakers --> o_speakers_createSpeaker
+  o_auth_armClaimConfirmation --> e_magicLinkTokens
+  o_auth_claimAndMintSession --> e_magicLinkTokens
+  o_auth_consumeConfirmAttempt --> e_magicLinkTokens
+  o_auth_consumeSigninToken --> e_magicLinkTokens
+  o_auth_createSessionForEmail --> e_magicLinkTokens
+  o_auth_findArmedClaim --> e_magicLinkTokens
+  o_auth_mintSigninToken --> e_magicLinkTokens
+  o_auth_armClaimConfirmation --> e_sessions
+  o_auth_claimAndMintSession --> e_sessions
+  o_auth_consumeConfirmAttempt --> e_sessions
+  o_auth_consumeSigninToken --> e_sessions
+  o_auth_createSessionForEmail --> e_sessions
+  o_auth_findArmedClaim --> e_sessions
+  o_auth_mintSigninToken --> e_sessions
+  o_auth_armClaimConfirmation --> e_signinClaims
+  o_auth_claimAndMintSession --> e_signinClaims
+  o_auth_consumeConfirmAttempt --> e_signinClaims
+  o_auth_consumeSigninToken --> e_signinClaims
+  o_auth_createSessionForEmail --> e_signinClaims
+  o_auth_findArmedClaim --> e_signinClaims
+  o_auth_mintSigninToken --> e_signinClaims
+  o_auth_armClaimConfirmation --> e_users
+  o_auth_claimAndMintSession --> e_users
+  o_auth_consumeConfirmAttempt --> e_users
+  o_auth_consumeSigninToken --> e_users
+  o_auth_createSessionForEmail --> e_users
+  o_auth_findArmedClaim --> e_users
+  o_auth_mintSigninToken --> e_users
   o_entitlements_loadEntitlements --> e_users
   o_entries_attachEntryMedia --> e_entries
   o_entries_createEntry --> e_entries

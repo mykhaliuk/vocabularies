@@ -33,11 +33,7 @@ const CODE_EXTENSION_RE = /\.(?:m|c)?(?:j|t)sx?$/;
 // Grandfathered pre-ADR-0010 routes. Shrink-only: remove a line when the
 // file's db access moves into a domain operation. Never add to this list.
 const LEGACY_ALLOWLIST = new Set([
-  'server/api/auth/callback.get.ts',
-  'server/api/auth/confirm.post.ts',
   'server/api/auth/logout.post.ts',
-  'server/api/auth/magic-link.post.ts',
-  'server/api/auth/poll.post.ts',
 ]);
 
 // Any of these in a transport file is a db touch. Specifiers are matched

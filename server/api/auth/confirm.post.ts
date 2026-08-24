@@ -1,17 +1,15 @@
-import { and, eq, gt, isNotNull, isNull, lt, sql } from 'drizzle-orm';
 import { z } from 'zod';
-import { sessions } from '~/db/schema/sessions';
-import { signinClaims } from '~/db/schema/signin-claims';
-import { users } from '~/db/schema/users';
+import {
+  claimAndMintSession,
+  consumeConfirmAttempt,
+} from '~/server/domain/auth';
 import {
   getSessionTtlMs,
   hashToken,
   safeEqualHashes,
   setSessionCookie,
-  signSession,
   toPublicUser,
 } from '~/server/utils/auth';
-import { useDb } from '~/server/utils/db';
 import { useAuthConfirmRatelimit } from '~/server/utils/ratelimit';
 import { reportRatelimitFailure } from '~/server/utils/ratelimit-alert';
 import {
@@ -77,34 +75,9 @@ export default defineEventHandler(async (event) => {
 
   const pollKeyHash = hashToken(raw.pollKey);
   const codeHash = hashToken(raw.code);
-  const db = useDb();
   const now = new Date();
 
-  // Atomically CONSUME one attempt and read the armed code hash — but only while
-  // the claim is unclaimed, armed, within its confirm window, and under the cap.
-  // The row lock this single UPDATE takes is the brute-force gate: at most
-  // CONFIRM_MAX_ATTEMPTS requests can ever obtain a hash to compare, no matter
-  // how many fire in parallel. A read-then-compare-then-increment (three pooled
-  // statements, no lock held across them) let N concurrent requests all read
-  // attempts=0 and test a code before any increment committed — the TOCTOU that
-  // made the 4-digit code brute-forceable.
-  const [attempt] = await db
-    .update(signinClaims)
-    .set({ confirmAttempts: sql`${signinClaims.confirmAttempts} + 1` })
-    .where(
-      and(
-        eq(signinClaims.pollKeyHash, pollKeyHash),
-        isNull(signinClaims.claimedAt),
-        isNotNull(signinClaims.userId),
-        isNotNull(signinClaims.confirmCodeHash),
-        gt(signinClaims.confirmExpiresAt, now),
-        lt(signinClaims.confirmAttempts, CONFIRM_MAX_ATTEMPTS),
-      ),
-    )
-    .returning({
-      confirmCodeHash: signinClaims.confirmCodeHash,
-      attempts: signinClaims.confirmAttempts,
-    });
+  const attempt = await consumeConfirmAttempt(pollKeyHash, now);
 
   // No row: unknown key / over cap / expired / already claimed — uniform, no
   // leak (a random-key prober only ever reaches here).
@@ -118,56 +91,18 @@ export default defineEventHandler(async (event) => {
     return attempt.attempts >= CONFIRM_MAX_ATTEMPTS ? EXPIRED : INVALID;
   }
 
-  // Correct code: claim exactly once + mint the session, atomically, signing
-  // inside the transaction so a signing failure rolls the claim back (mirrors
-  // the old poll mint). The guarded UPDATE re-checks the code hash so a
-  // concurrent re-arm (another link click mid-confirm) cannot let a stale code
-  // through, and re-checks claimed_at so the session issues exactly once. It
-  // does NOT re-check the attempt cap: this request already legitimately
-  // consumed an in-cap attempt and matched, so concurrent wrong guesses filling
-  // the cap must not retroactively deny it.
   const sessionExpiresAt = new Date(now.getTime() + getSessionTtlMs());
   const userAgent = getRequestHeader(event, 'user-agent') ?? null;
 
-  let issued: { jwt: string; user: typeof users.$inferSelect } | null;
+  let issued: Awaited<ReturnType<typeof claimAndMintSession>>;
   try {
-    issued = await db.transaction(async (tx) => {
-      const [claimed] = await tx
-        .update(signinClaims)
-        .set({ claimedAt: now })
-        .where(
-          and(
-            eq(signinClaims.pollKeyHash, pollKeyHash),
-            eq(signinClaims.confirmCodeHash, codeHash),
-            isNull(signinClaims.claimedAt),
-            isNotNull(signinClaims.userId),
-            gt(signinClaims.confirmExpiresAt, now),
-          ),
-        )
-        .returning({ userId: signinClaims.userId });
-
-      if (!claimed?.userId) return null;
-
-      const [session] = await tx
-        .insert(sessions)
-        .values({
-          userId: claimed.userId,
-          expiresAt: sessionExpiresAt,
-          userAgent,
-          ip,
-        })
-        .returning({ id: sessions.id });
-      if (!session) throw new Error('failed to mint session');
-
-      const [user] = await tx
-        .select()
-        .from(users)
-        .where(eq(users.id, claimed.userId))
-        .limit(1);
-      if (!user) throw new Error('claimed user missing');
-
-      const jwt = await signSession(session.id);
-      return { jwt, user };
+    issued = await claimAndMintSession({
+      pollKeyHash,
+      codeHash,
+      now,
+      sessionExpiresAt,
+      userAgent,
+      ip,
     });
   } catch (error) {
     console.error('[auth.confirm] claim/mint failed', error);
@@ -175,14 +110,6 @@ export default defineEventHandler(async (event) => {
   }
 
   if (!issued) return EXPIRED;
-
-  // Lazy sweep of expired sessions at the moment the table grows (ADR-0005).
-  // Fail-open: hygiene must never abort the sign-in it rides on.
-  try {
-    await db.delete(sessions).where(lt(sessions.expiresAt, now));
-  } catch (error) {
-    console.error('[auth.confirm] session sweep failure (failing open)', error);
-  }
 
   setSessionCookie(event, issued.jwt);
   return { status: 'ready' as const, user: toPublicUser(issued.user) };
