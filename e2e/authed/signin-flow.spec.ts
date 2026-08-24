@@ -128,6 +128,22 @@ test('the device flow issues a session only after the code round-trip', async ({
   expect(await claimed.json()).toEqual({ status: 'pending' });
 });
 
+// Password-manager autofill can set the field without an `input` event;
+// the pin types nothing and expects Enter alone to carry the submit.
+test('an autofilled email still submits on enter', async ({ page }) => {
+  await page.goto('/login');
+  await page.waitForLoadState('networkidle');
+  await page.evaluate(() => {
+    const input = document.querySelector('#email') as HTMLInputElement;
+    input.value = `autofill-${Date.now()}@example.com`;
+  });
+  const email = page.getByLabel(/your email/i);
+  await email.click();
+  await page.keyboard.press('Enter');
+
+  await expect(page.locator('.auth__panel--sent')).toBeVisible();
+});
+
 test('three wrong codes lock the claim for good', async ({ page, request }) => {
   const { pollKey, link } = await startDeviceFlow(page, request);
 
