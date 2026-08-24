@@ -1,4 +1,4 @@
-import { clickUntil, expect, test } from './fixtures';
+import { clickUntil, expect, settleHydration, test } from './fixtures';
 import type { Locator, Page } from '@playwright/test';
 
 const createEntry = async (page: Page, data: Record<string, unknown>) => {
@@ -19,17 +19,6 @@ const openMenu = async (page: Page) => {
     expect(menu).toBeVisible({ timeout: 1000 }),
   );
   return menu;
-};
-
-// Until this resolves, a feed link is a native document navigation rather than
-// the router's (e2e/authed/README.md on clickUntil).
-const settleHydration = async (page: Page) => {
-  const sheet = page.locator('.compose--open');
-  await clickUntil(page.getByRole('button', { name: /new word/i }), () =>
-    expect(sheet).toBeVisible({ timeout: 1000 }),
-  );
-  await page.getByRole('button', { name: /^cancel$/i }).click();
-  await expect(sheet).toBeHidden();
 };
 
 const openConfirm = async (page: Page) => {

@@ -1,4 +1,4 @@
-import { clickUntil, expect, test } from './fixtures';
+import { expect, settleHydration, test } from './fixtures';
 import type { Locator, Page } from '@playwright/test';
 
 // The word detail screen, read half (VKB-108). Everything here is seeded
@@ -30,21 +30,6 @@ const openedTheWord = (page: Page) =>
     .waitForURL(/\/entries\//, { timeout: NO_NAV_BUDGET_MS })
     .then(() => true)
     .catch(() => false);
-
-// Vue hydrates on top of server-rendered markup, so a card exists — visible,
-// clickable by every actionability check — before its @click listener is
-// attached. Any spec asserting that a click does NOT navigate has to
-// establish hydration first, or it passes for the wrong reason. The compose
-// FAB is the repo's usual probe: its effect is visible and it is safe to
-// re-click.
-const settleHydration = async (page: Page) => {
-  const sheet = page.locator('.compose--open');
-  await clickUntil(page.getByRole('button', { name: /new word/i }), () =>
-    expect(sheet).toBeVisible({ timeout: 1000 }),
-  );
-  await page.getByRole('button', { name: /^cancel$/i }).click();
-  await expect(sheet).toBeHidden();
-};
 
 const createEntry = async (page: Page, data: Record<string, unknown>) => {
   const created = await page.request.post('/api/entries', { data });
