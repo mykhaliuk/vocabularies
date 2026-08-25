@@ -17,7 +17,7 @@ const run = (source: string) => {
   return `${result.stdout.toString()}${result.stderr.toString()}`;
 };
 
-const REFUSED = /\[no-network\] the build reached out to/;
+const REFUSED = /\[no-network\] this process reached out to/;
 
 describe('no-network preload', () => {
   test('refuses fetch to a third party', () => {

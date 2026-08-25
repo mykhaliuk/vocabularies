@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { open, stat } from 'node:fs/promises';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { expect, test as base } from '@playwright/test';
+import { watchPublicInternet } from '../hermetic';
 import { SERVER_LOG_PATH } from './server-log';
 import type { Locator, Page } from '@playwright/test';
 
@@ -175,11 +176,15 @@ interface AuthedFixtures {
 }
 
 // `authedPage` is a page in Playwright's usual per-test context, already
-// signed in as a brand-new user and sitting on /feed.
+// signed in as a brand-new user and sitting on /feed. The context refuses
+// the public internet and the test fails naming any URL that tried
+// (VKB-123, e2e/hermetic.ts).
 export const test = base.extend<AuthedFixtures>({
   authedPage: async ({ page }, use) => {
+    const assertHermetic = watchPublicInternet(page.context());
     await signIn(page);
     await use(page);
+    assertHermetic();
   },
 });
 

@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 
 // VKB-20/21: per-locale prerendered landings (/, /fr, /uk) and the
 // Accept-Language entry redirect on `/` (server middleware in the Node

@@ -1,6 +1,8 @@
-// Preload that turns any outbound HTTP request into a build failure, so
-// "the build does not need the internet" is demonstrated rather than inferred
-// from a build that happened to have it. Used by `bun run build:offline`.
+// Preload that turns any outbound third-party HTTP request into a failure,
+// so "this process does not need the internet" is demonstrated rather than
+// inferred from a run that happened to have it. Used by
+// `bun run build:offline` and, since VKB-123, by scripts/e2e-server.js for
+// the app server the authed suite spawns.
 //
 // Both request paths are covered on purpose. undici's `fetch` does not go
 // through `node:http`, and a dependency reaching for `https.request` directly
@@ -16,8 +18,8 @@ const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '::1', '0.0.0.0']);
 
 const refuse = (target) => {
   throw new Error(
-    `[no-network] the build reached out to ${target} — it must resolve ` +
-      'everything from node_modules and the repo',
+    `[no-network] this process reached out to ${target} — it must resolve ` +
+      'everything locally (node_modules, the repo, loopback services)',
   );
 };
 
@@ -74,4 +76,4 @@ guard(http, 'get', 'http');
 guard(https, 'request', 'https');
 guard(https, 'get', 'https');
 
-console.log('[no-network] outbound HTTP is blocked for this build');
+console.log('[no-network] outbound HTTP is blocked for this process');

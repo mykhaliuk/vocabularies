@@ -44,4 +44,24 @@ export default async () => {
   } finally {
     await client.end();
   }
+
+  // Same gate for the bucket (VKB-123): when S3_ENDPOINT names a real
+  // endpoint, the storage-walking specs will PUT against it — an absent
+  // MinIO must be a clear startup error, not a 503 a hundred steps in. The
+  // `.invalid` placeholder means the suite runs storage-less on purpose.
+  const s3 = process.env.S3_ENDPOINT;
+  if (s3 && !s3.includes('.invalid')) {
+    try {
+      const health = await fetch(new URL('/minio/health/live', s3), {
+        signal: AbortSignal.timeout(5000),
+      });
+      if (!health.ok) throw new Error(`status ${health.status}`);
+    } catch (error) {
+      throw new Error(
+        `[authed] S3_ENDPOINT is set but no MinIO answers at ${s3} — start ` +
+          'it with `bun run infra:up`, or unset S3_* to run without storage ' +
+          `(storage specs then skip). Cause: ${(error as Error).message}`,
+      );
+    }
+  }
 };
