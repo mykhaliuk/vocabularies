@@ -45,10 +45,6 @@ export default async () => {
     await client.end();
   }
 
-  // Same gate for the bucket (VKB-123): when S3_ENDPOINT names a real
-  // endpoint, the storage-walking specs will PUT against it — an absent
-  // MinIO must be a clear startup error, not a 503 a hundred steps in. The
-  // `.invalid` placeholder means the suite runs storage-less on purpose.
   const s3 = process.env.S3_ENDPOINT;
   if (s3 && !s3.includes('.invalid')) {
     try {
