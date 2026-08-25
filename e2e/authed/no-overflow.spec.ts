@@ -1,10 +1,6 @@
 import { expect, test } from './fixtures';
 import type { Page } from '@playwright/test';
 
-// The structural guard VKB-114 asked for: no authed screen may scroll
-// horizontally, at either project's viewport. This is the assertion that
-// catches the VKB-108 class of defect (a forced 3000px column) that no
-// element-level spec ever looks at.
 const overflowPx = (page: Page) =>
   page.evaluate(() => {
     const el = document.documentElement;
@@ -18,11 +14,15 @@ test('no authed screen scrolls horizontally', async ({ authedPage }) => {
   expect(created.status()).toBe(201);
   const { entry } = (await created.json()) as { entry: { id: string } };
 
+  // Every authed screen: the four `middleware: 'auth'` pages, the account
+  // settings screen (guards itself via its own /login redirect), and the
+  // detail page for the entry created above.
   const screens = [
     '/feed',
     '/discover',
     '/profile',
     '/saved',
+    '/me',
     `/entries/${entry.id}`,
   ];
   for (const screen of screens) {
