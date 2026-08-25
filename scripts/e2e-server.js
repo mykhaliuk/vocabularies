@@ -38,7 +38,7 @@ const log = createWriteStream(logPath, { flags: 'w' });
 // keeps the build offline turns any outbound third-party request from the
 // app server into a loud failure. Loopback — Postgres, MinIO — stays open.
 const noNetwork = resolve(process.cwd(), 'scripts/no-network.mjs');
-const nodeOptions = [process.env.NODE_OPTIONS, `--import ${noNetwork}`]
+const nodeOptions = [process.env.NODE_OPTIONS, `--import=${noNetwork}`]
   .filter(Boolean)
   .join(' ');
 
