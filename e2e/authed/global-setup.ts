@@ -46,7 +46,16 @@ export default async () => {
   }
 
   const s3 = process.env.S3_ENDPOINT;
-  if (s3 && !s3.includes('.invalid')) {
+  // The placeholder is specifically the RFC 2606 reserved TLD, so check the
+  // parsed hostname — a substring match could hit a path or query instead.
+  const isPlaceholder = (endpoint: string) => {
+    try {
+      return new URL(endpoint).hostname.endsWith('.invalid');
+    } catch {
+      return false;
+    }
+  };
+  if (s3 && !isPlaceholder(s3)) {
     try {
       const health = await fetch(new URL('/minio/health/live', s3), {
         signal: AbortSignal.timeout(5000),
