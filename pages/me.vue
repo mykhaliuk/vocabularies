@@ -388,6 +388,12 @@ async function logout() {
 </template>
 
 <style scoped>
+/* The greeting and email line render the raw address; a long unbroken one
+   must wrap instead of widening the page past the phone viewport. */
+main {
+  overflow-wrap: anywhere;
+}
+
 .name-row {
   display: flex;
   gap: var(--space-2);
