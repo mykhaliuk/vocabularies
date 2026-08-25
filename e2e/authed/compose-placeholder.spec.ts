@@ -16,6 +16,34 @@ const HINT = {
   uk: 'напр. Appo — чи цілий вислів',
 };
 
+const LANG = { en: 'en-US', fr: 'fr-FR', uk: 'uk-UA' };
+
+// Applying the cookie is asynchronous inside the i18n plugin and has lost
+// its race under full-suite load (VKB-178): the page then sits on the
+// default locale for good, and every measurement below reads the English
+// string. The cookie itself is durable, so re-setting it and reloading gives
+// SSR a clean second read — retried until <html lang> proves the locale
+// took, which useLocaleHead keeps in sync with the active locale (app.vue).
+const ensureLocale = async (page: Page, locale: keyof typeof LANG) => {
+  const setCookie = () =>
+    page.context().addCookies([
+      {
+        name: 'vocabu-locale',
+        value: locale,
+        url: new URL(page.url()).origin,
+      },
+    ]);
+  await expect(async () => {
+    const lang = await page.locator('html').getAttribute('lang');
+    if (lang === LANG[locale]) return;
+    await setCookie();
+    await page.reload();
+    await expect(page.locator('html')).toHaveAttribute('lang', LANG[locale], {
+      timeout: 3000,
+    });
+  }).toPass({ timeout: 20_000 });
+};
+
 // Real layout, not canvas: a span carrying the pseudo-element's own resolved
 // font. The Cyrillic Rubik subset only downloads once a Cyrillic glyph renders,
 // which a canvas measurement would silently miss.
@@ -65,6 +93,7 @@ for (const locale of ['en', 'fr', 'uk'] as const) {
       },
     ]);
     await authedPage.goto('/feed');
+    await ensureLocale(authedPage, locale);
     await openSettledCompose(authedPage);
 
     const field = authedPage.locator('#compose-word');
