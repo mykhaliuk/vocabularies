@@ -140,7 +140,13 @@ test.describe('word detail (authed)', () => {
 
   test('selecting text on a card does not open the word', async ({
     authedPage,
+    isMobile,
   }) => {
+    // Drag-selection is a pointer affordance; touch emulation produces no
+    // selection from a mouse drag (phones select by long-press), so this
+    // guard is desktop's to hold.
+    test.skip(isMobile, 'drag selection needs a mouse pointer');
+
     await createEntry(authedPage, {
       word: 'bapple',
       gloss: 'apple, but rounder, and worth quoting to someone else',

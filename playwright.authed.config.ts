@@ -105,7 +105,22 @@ export default defineConfig({
     // picks the language the English accessible names here are written for.
     locale: 'en-US',
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  // Desktop AND phone (VKB-114): the product is mobile-first, so a suite
+  // that only renders at 1280x720 is blind to the class of defect the
+  // VKB-108 review proved it misses (a 3000px column left 12 specs green).
+  // Both run rather than phone replacing desktop — dropping one would just
+  // relocate the blind spot, and the extra ~2min fits the CI budget. The
+  // phone project takes the iPhone 13 metrics (390x664, touch, iOS UA) but
+  // pins browserName to chromium: the preset's default is webkit, which CI
+  // does not install, so this is chromium emulating the iPhone form factor,
+  // not a real WebKit engine.
+  projects: [
+    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+    {
+      name: 'phone',
+      use: { ...devices['iPhone 13'], browserName: 'chromium' },
+    },
+  ],
   webServer: {
     command: 'node node_modules/.bin/nuxt build && node scripts/e2e-server.js',
     url: baseURL,
