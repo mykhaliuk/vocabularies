@@ -240,10 +240,15 @@ export const run = async ({ base, findLink }) => {
 
     console.log('\n== free tier: the video gate is the server, not a guess ==');
     check('the sheet reopens for the video attempt', await openSheet());
+    // AUDIO_ACCEPT is audio/* plus an extension roster (shared/media-types):
+    // iOS resolves extensions to UTIs more reliably than MIME wildcards.
+    const accept = await page
+      .locator('input.attach__input')
+      .getAttribute('accept');
     check(
       'the free picker accepts audio only',
-      (await page.locator('input.attach__input').getAttribute('accept')) ===
-        'audio/*',
+      accept.startsWith('audio/*') && !accept.includes('video/'),
+      accept,
     );
     check(
       'the video gate is stated before it can be hit',
@@ -305,7 +310,10 @@ export const run = async ({ base, findLink }) => {
     let cleaned = true;
     try {
       await upsell.getByRole('button', { name: /close/i }).click();
+      // The sheet is dirty, so cancel asks first (VKB-154); discarding is
+      // what actually closes it.
       await page.getByRole('button', { name: /cancel/i }).click();
+      await page.getByRole('button', { name: /^discard$/i }).click();
       await sheet.waitFor({ state: 'hidden', timeout: 5000 });
     } catch {
       cleaned = false;
