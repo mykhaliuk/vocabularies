@@ -34,8 +34,17 @@ mkdirSync(dirname(logPath), { recursive: true });
 // Truncate: a link left by an earlier run must never satisfy a fixture.
 const log = createWriteStream(logPath, { flags: 'w' });
 
+// The server side of the hermeticity guard (VKB-123): the same preload that
+// keeps the build offline turns any outbound third-party request from the
+// app server into a loud failure. Loopback — Postgres, MinIO — stays open.
+const noNetwork = resolve(process.cwd(), 'scripts/no-network.mjs');
+const nodeOptions = [process.env.NODE_OPTIONS, `--import=${noNetwork}`]
+  .filter(Boolean)
+  .join(' ');
+
 const child = spawn(process.execPath, [entry], {
   stdio: ['ignore', 'pipe', 'pipe'],
+  env: { ...process.env, NODE_OPTIONS: nodeOptions },
 });
 
 // A stream 'error' with no listener is thrown, which would kill this wrapper

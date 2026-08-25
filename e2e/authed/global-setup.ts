@@ -44,4 +44,29 @@ export default async () => {
   } finally {
     await client.end();
   }
+
+  const s3 = process.env.S3_ENDPOINT;
+  // The placeholder is specifically the RFC 2606 reserved TLD, so check the
+  // parsed hostname — a substring match could hit a path or query instead.
+  const isPlaceholder = (endpoint: string) => {
+    try {
+      return new URL(endpoint).hostname.endsWith('.invalid');
+    } catch {
+      return false;
+    }
+  };
+  if (s3 && !isPlaceholder(s3)) {
+    try {
+      const health = await fetch(new URL('/minio/health/live', s3), {
+        signal: AbortSignal.timeout(5000),
+      });
+      if (!health.ok) throw new Error(`status ${health.status}`);
+    } catch (error) {
+      throw new Error(
+        `[authed] S3_ENDPOINT is set but no MinIO answers at ${s3} — start ` +
+          'it with `bun run infra:up`, or unset S3_* to run without storage ' +
+          `(storage specs then skip). Cause: ${(error as Error).message}`,
+      );
+    }
+  }
 };

@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 
 // M10 verification: locale auto-detect via Accept-Language and the explicit
 // choice persisting through the vocabu-locale cookie (strategy: no_prefix —

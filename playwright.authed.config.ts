@@ -1,4 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
+import { HERMETIC_LAUNCH_ARGS } from './e2e/hermetic';
 import { SERVER_LOG_PATH } from './e2e/authed/server-log';
 
 // Authed E2E (VKB-101) — everything behind `middleware: 'auth'`. Needs a
@@ -104,6 +105,8 @@ export default defineConfig({
     // Nothing sets a locale cookie before a spec does, so Accept-Language
     // picks the language the English accessible names here are written for.
     locale: 'en-US',
+    // Hermeticity (VKB-123): external hostnames do not resolve at all.
+    launchOptions: { args: HERMETIC_LAUNCH_ARGS },
   },
   // browserName is pinned because the iPhone preset defaults to webkit,
   // which CI does not install — this is chromium emulating the iPhone form

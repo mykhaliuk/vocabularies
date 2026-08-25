@@ -1,4 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
+import { HERMETIC_LAUNCH_ARGS } from './e2e/hermetic';
 
 // Smoke E2E against a production preview (build + preview) — clean, fast
 // hydration, no dev HMR races. The covered routes (landing, login, offline,
@@ -40,6 +41,8 @@ export default defineConfig({
     // Accept-Language decides the locale on a first visit with no cookie, so
     // without this the English cases fail on a French or Ukrainian machine.
     locale: 'en-US',
+    // Hermeticity (VKB-123): external hostnames do not resolve at all.
+    launchOptions: { args: HERMETIC_LAUNCH_ARGS },
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: {

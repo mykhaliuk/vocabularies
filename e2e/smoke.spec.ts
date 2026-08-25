@@ -1,5 +1,5 @@
 import type { Locator } from '@playwright/test';
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 
 // Alpha of a computed CSS color. Chromium serializes computed colors as
 // rgb(r, g, b), rgba(r, g, b, a), or color(srgb r g b [/ a]) — the alpha
