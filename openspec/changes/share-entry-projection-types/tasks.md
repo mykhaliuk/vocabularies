@@ -96,19 +96,18 @@ that carries the weight.
       `bun run fmt:check`, `bun run typecheck`, `bun run ds:check`,
       `bun run layering:check`, `bun run graph:check`, `bun run spec:check`,
       `bun run test:unit`. Verify: every command exits 0.
-- [ ] 5.2 Run `bun run test:e2e` (smoke) and `bun run test:e2e:authed`. The
+- [x] 5.2 Run `bun run test:e2e` (smoke) and `bun run test:e2e:authed`. The
       authed suite is what proves the payload still renders — `feed.spec.ts`,
       `entry-detail.spec.ts`, `entry-media.spec.ts`, `entry-date.spec.ts` and
       `playback-cache.spec.ts` all cross the shapes this change re-types.
       Verify: both suites green, run WITHOUT piping to `tail` (a piped
       Playwright run reports the pipe's exit code, not Playwright's).
-      **Half done, and left unchecked for it.** Smoke: 24 passed. Authed: not
-      run. `infra:up` from a worktree hits the fixed `container_name:
-      vocabu-postgres`, and starting the existing container instead fails
-      because host port 5433 is held by an unrelated project's
-      `maestra-postgres-1`. Freeing it means stopping someone else's running
-      database, which is not this change's call. CI runs the suite; until it
-      does, the authed screens are unverified here.
+      Smoke: 24 passed locally and again in CI. Authed: **221 passed in CI**
+      (run 34350883608, job 102464007275) — it could not run locally, because
+      `infra:up` from a worktree hits the fixed `container_name:
+      vocabu-postgres` and starting the existing container fails on host port
+      5433, held by an unrelated project's `maestra-postgres-1`. The task asks
+      for both suites green, not for where they ran, so this is done.
 - [x] 5.3 **No new e2e spec is added.** The schema rule asks for one when a UI
       task touches an authed screen; this change adds no behaviour and no
       rendered difference, so a new spec would assert what 5.2's existing specs
@@ -117,8 +116,13 @@ that carries the weight.
       an entry with media renders exactly as before (both themes). Verify: the
       before/after screenshots are indistinguishable — for a change that is
       entirely erased at build time, any visible difference is a bug.
-      **Blocked by the same port conflict as 5.2** — feed and word detail sit
-      behind `middleware: 'auth'` and need the database. Left unchecked.
+      **Still open — the one thing this change owes.** Same port conflict as
+      5.2 blocked it locally, and CI does not close it: the authed suite
+      asserts rendered output (`no-overflow`, `type-scale`, the entry specs,
+      221 passed) but nobody has looked at the two screens in both themes.
+      For a change erased at build time the residual risk is small, which is
+      an argument for doing it quickly, not for calling it done. Needs the
+      owner's eyes, or an explicit waiver.
 - [x] 5.5 Run the adversarial `/code-review` pass from `docs/PR-CHECKLIST.md`
       and fix confirmed findings. Verify: checklist walked, findings triaged.
       No bugs found; the diff was confirmed behaviour-neutral, including that
