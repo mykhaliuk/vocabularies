@@ -153,7 +153,7 @@ that carries the weight.
 
 ## 6. Ship
 
-- [ ] 6.1 Commit with a Conventional Commits subject scoped `entry-view`, on
+- [x] 6.1 Commit with a Conventional Commits subject scoped `entry-view`, on
       the `refactor/vkb-116-share-projection-types` branch, authored
       and SSH-signed as `claude-agent-myka` with the owner's co-author trailer
       (CLAUDE.md — Agent identity). Verify: `git log --show-signature -1`.
@@ -164,6 +164,6 @@ that carries the weight.
       box, and 5.2 / 5.4 are open on purpose — the gate is working. Archive
       once CI's authed run is green and those two can be ticked honestly; the
       change folder stays active until then, which is what it is for.
-- [ ] 6.3 Open a ready (not draft) PR into `dev` with `Closes VKB-116`, assign
+- [x] 6.3 Open a ready (not draft) PR into `dev` with `Closes VKB-116`, assign
       the owner, request review from `mykhaliuk` only. Verify: PR is ready, CI
-      green, VKB-116 moves to In Review.
+      green, VKB-116 moves to In Review. Opened as #283.
