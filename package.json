@@ -37,6 +37,7 @@
     "graph:check": "node scripts/capability-graph.js check",
     "spec:check": "openspec validate --all --strict --no-interactive && openspec validate --archived --no-interactive",
     "spec:status": "openspec list",
+    "commits:check": "node scripts/check-commits.js",
     "proto:check": "node scripts/proto-check.js",
     "proto:pull": "node scripts/proto-pull.js",
     "proto:update": "node scripts/proto-pull.js && node scripts/proto-check.js",
