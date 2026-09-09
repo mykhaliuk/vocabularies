@@ -10,9 +10,9 @@ import {
   getSessionTtlMs,
   hashToken,
   setSessionCookie,
-  signSession,
 } from '~/server/utils/auth';
 import { renderConfirmPage } from '~/server/utils/confirm-page';
+import { signSession } from '~/server/utils/session-jwt';
 import { useCallbackIpRatelimit } from '~/server/utils/ratelimit';
 import { reportRatelimitFailure } from '~/server/utils/ratelimit-alert';
 import { noStoreRedirect } from '~/server/utils/redirect';

@@ -10,9 +10,6 @@ import { SESSION_TTL_MS, verifySession } from './session-jwt';
 import type { H3Event } from 'h3';
 import type { Entitlements } from './entitlements';
 
-export { signSession } from './session-jwt';
-export { verifySession };
-
 // The authenticated caller as the rest of the server sees them: identity plus
 // already-resolved rights. The `users` row is consumed inside resolveSession
 // and never handed out, so no consumer can read a raw tier — the invariant
