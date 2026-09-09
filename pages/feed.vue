@@ -1,40 +1,8 @@
 <script setup lang="ts">
 import { CircleAlert, Loader2, RotateCcw } from 'lucide-vue-next';
+import type { FeedEntryView, FeedResponse } from '~/server/utils/entry-view';
 
 definePageMeta({ layout: 'app', middleware: 'auth' });
-
-// Shapes returned by GET /api/entries (declared inline — no DTO layer).
-type FeedMedia = {
-  mediaId: string;
-  kind: 'audio' | 'video';
-  status: 'processing' | 'ready' | 'failed';
-  durationSec: number | null;
-  width: number | null;
-  height: number | null;
-  peaks: number[] | null;
-  error: string | null;
-};
-
-type FeedSpeaker = {
-  name: string;
-  tone: 'rose' | 'blue' | 'ink' | null;
-  rel: string | null;
-  birthday: string | null;
-};
-
-type FeedEntry = {
-  id: string;
-  word: string;
-  gloss: string | null;
-  speaker: FeedSpeaker | null;
-  saidAt: string;
-  story: string | null;
-  collection: string | null;
-  createdAt: string;
-  media: FeedMedia | null;
-};
-
-type FeedResponse = { entries: FeedEntry[]; nextCursor: string | null };
 
 const { t } = useI18n();
 useHead(() => ({ title: t('app.feed.pageTitle') }));
@@ -46,7 +14,7 @@ useHead(() => ({ title: t('app.feed.pageTitle') }));
 const POLL_INTERVAL_MS = 4000;
 const POLL_MAX_ATTEMPTS = 75; // ~5 minutes, matching the worker's own ceiling
 
-const entries = useState<FeedEntry[]>('feed-cache-entries', () => []);
+const entries = useState<FeedEntryView[]>('feed-cache-entries', () => []);
 const nextCursor = useState<string | null>('feed-cache-cursor', () => null);
 const loadingMore = ref(false);
 
@@ -61,7 +29,7 @@ let fetchSeq = 0;
 let appliedSeq = 0;
 let asyncDataSeq = 0;
 
-const isOlderThan = (entry: FeedEntry, boundary: FeedEntry) =>
+const isOlderThan = (entry: FeedEntryView, boundary: FeedEntryView) =>
   entry.createdAt < boundary.createdAt ||
   (entry.createdAt === boundary.createdAt && entry.id < boundary.id);
 
@@ -84,7 +52,7 @@ const applyFirstPage = (res: FeedResponse | null | undefined, seq: number) => {
   if (tail.length === 0) {
     nextCursor.value = res.nextCursor;
   } else if (kept.length < fresh.length + tail.length) {
-    const lastKept = kept[kept.length - 1] as FeedEntry;
+    const lastKept = kept[kept.length - 1] as FeedEntryView;
     nextCursor.value = `${lastKept.createdAt}_${lastKept.id}`;
   }
 };

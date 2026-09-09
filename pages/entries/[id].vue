@@ -1,52 +1,10 @@
 <script setup lang="ts">
 import { Bookmark, Calendar, ChevronDown, CircleAlert } from 'lucide-vue-next';
+import type { EntryDetailResponse } from '~/server/utils/entry-view';
 
 definePageMeta({ layout: false, middleware: 'auth' });
 
 // Read layout: word-detail-spec.html. ⋯ menu: entry-actions-spec.html.
-
-// Shapes returned by GET /api/entries/:id (declared inline — no DTO layer).
-type EntryMedia = {
-  mediaId: string;
-  kind: 'audio' | 'video';
-  status: 'processing' | 'ready' | 'failed';
-  durationSec: number | null;
-  width: number | null;
-  height: number | null;
-  peaks: number[] | null;
-  error: string | null;
-};
-
-type EntrySpeaker = {
-  name: string;
-  tone: 'rose' | 'blue' | 'ink' | null;
-  rel: string | null;
-  birthday: string | null;
-};
-
-type EntryDetail = {
-  id: string;
-  word: string;
-  gloss: string | null;
-  speaker: EntrySpeaker | null;
-  // Display-only `speaker` above cannot drive a chip selection; the edit
-  // sheet prefills its speaker row from this.
-  sid: string | null;
-  saidAt: string;
-  story: string | null;
-  collection: string | null;
-  createdAt: string;
-};
-
-type EntryDetailResponse = {
-  entry: EntryDetail;
-  media: EntryMedia | null;
-  playback: {
-    videoUrl: string | null;
-    posterUrl: string | null;
-    audioUrl: string | null;
-  } | null;
-};
 
 const { t, locale } = useI18n();
 const route = useRoute();

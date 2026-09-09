@@ -15,6 +15,7 @@ import { loadEntitlements } from './entitlements';
 import { isEntryMomentConflict } from '~/server/utils/pg-errors';
 import { DOMAIN_ERROR_CODES, DomainError } from './errors';
 import type { InferSelectModel } from 'drizzle-orm';
+import type { MediaKind } from '~/db/schema/media';
 import type { AuthUser } from '~/server/utils/auth';
 import type {
   MediaManifest,
@@ -51,7 +52,7 @@ export interface MintedSlot {
   row: MediaRow;
 }
 
-const kindOfContentType = (contentType: string): 'audio' | 'video' =>
+const kindOfContentType = (contentType: string): MediaKind =>
   contentType.startsWith('video/') ? 'video' : 'audio';
 
 // The single enforcement point for the videoUpload capability: every upload

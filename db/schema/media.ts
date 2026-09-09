@@ -13,6 +13,16 @@ import {
 import { entries } from './entries';
 import { users } from './users';
 
+// Compile-time only: the columns below stay `text`, so an unknown value is a
+// type error but never a database error.
+export const MEDIA_KINDS = ['audio', 'video'] as const;
+
+export type MediaKind = (typeof MEDIA_KINDS)[number];
+
+export const MEDIA_STATUSES = ['processing', 'ready', 'failed'] as const;
+
+export type MediaStatus = (typeof MEDIA_STATUSES)[number];
+
 // One row per uploaded moment, keyed by the minted media id that also names
 // the R2 object layout (<userId>/<mediaId>/original.<ext>). Status mirrors
 // the processing manifest (ADR-0009): the manifest in R2 stays the worker's
@@ -38,8 +48,8 @@ export const media = pgTable(
     ownerId: uuid('owner_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
-    kind: text('kind').notNull(), // audio | video
-    status: text('status').notNull().default('processing'), // processing | ready | failed
+    kind: text('kind').$type<MediaKind>().notNull(),
+    status: text('status').$type<MediaStatus>().notNull().default('processing'),
     originalKey: text('original_key').notNull(),
     derivativeKey: text('derivative_key'),
     posterKey: text('poster_key'),

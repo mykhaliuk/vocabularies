@@ -3,6 +3,7 @@ import { getFeedPage } from '~/server/domain/entries';
 import { requireUser } from '~/server/utils/auth';
 import { toEntryView, toMediaView } from '~/server/utils/entry-view';
 import type { FeedCursor } from '~/server/domain/entries';
+import type { FeedResponse } from '~/server/utils/entry-view';
 
 // Opaque keyset cursor: "<createdAt ISO>_<entry uuid>". ISO timestamps and
 // uuids never contain an underscore, so the split is unambiguous.
@@ -22,7 +23,7 @@ const parseCursor = (raw: string): FeedCursor => {
 
 const formatCursor = (at: Date, id: string) => `${at.toISOString()}_${id}`;
 
-export default defineEventHandler(async (event) => {
+export default defineEventHandler(async (event): Promise<FeedResponse> => {
   const { user } = await requireUser(event);
   const { limit, cursor } = await getValidatedQuery(event, (data) =>
     Query.parse(data),

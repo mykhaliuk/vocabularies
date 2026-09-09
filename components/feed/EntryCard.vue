@@ -1,27 +1,8 @@
 <script setup lang="ts">
-import type { EntrySpeakerView } from '~/server/utils/entry-view';
+import type { FeedEntryView } from '~/server/utils/entry-view';
 
 const props = defineProps<{
-  entry: {
-    id: string;
-    word: string;
-    gloss: string | null;
-    speaker: EntrySpeakerView | null;
-    saidAt: string;
-    story: string | null;
-    collection: string | null;
-    createdAt: string;
-    media: {
-      mediaId: string;
-      kind: 'audio' | 'video';
-      status: 'processing' | 'ready' | 'failed';
-      durationSec: number | null;
-      width: number | null;
-      height: number | null;
-      peaks: number[] | null;
-      error: string | null;
-    } | null;
-  };
+  entry: FeedEntryView;
 }>();
 
 // Bold name, faint "· relation · age" tail — shared with the word detail

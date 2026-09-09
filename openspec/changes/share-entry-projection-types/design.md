@@ -28,8 +28,12 @@ See proposal.md — Why. What matters for the approach:
 
 - One declaration per shape, with the compiler enforcing that the payload a
   handler returns matches the type the client consumes.
-- Narrowing that arrives by inference — `MediaRow` → `MediaView` → props — with
-  no cast, no assertion and no re-statement of the union at any hop.
+- Narrowing carried by one named type from the column to the props, with no
+  cast and no assertion at any hop. It is not carried by inference the whole
+  way: `MediaView` is a hand-declared interface, not a type derived from
+  `MediaRow`, so it names `MediaKind` / `MediaStatus` explicitly. The union's
+  _literal_ is written once, in the schema; every other mention is a reference
+  to it.
 - A diff a reviewer can check mechanically: every deletion is matched by an
   import of a type that is structurally identical to what was deleted.
 
@@ -61,9 +65,12 @@ status: text('status').$type<MediaStatus>().notNull().default('processing'),
 ```
 
 _Why here._ The column is the only point every consumer passes through.
-Narrowing it makes `MediaRow`, `toMediaView`, `MediaView` and every domain
-read correct at once, and makes a future widening (a third kind) a one-line
-change with the compiler listing the places that must handle it.
+Narrowing it makes `MediaRow` and every domain read correct at once, and makes
+a future widening (a third kind) a one-line change with the compiler listing
+the places that must handle it. `MediaView` needs its own one-word edit —
+`kind: string` → `kind: MediaKind` — because the interface is written by hand
+rather than derived from the row; without the column change first, that edit
+would need a cast to compile.
 
 _Alternatives._
 

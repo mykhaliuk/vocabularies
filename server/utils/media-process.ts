@@ -14,7 +14,9 @@ import {
   parseOriginalKey,
 } from './media-key';
 import { getObject, isNotFoundError, putFile, putObject } from './storage';
+import { MEDIA_KINDS } from '~/db/schema/media';
 import type { Readable } from 'node:stream';
+import type { MediaKind } from '~/db/schema/media';
 
 const execFileAsync = promisify(execFile);
 
@@ -40,7 +42,7 @@ export interface MediaTimings {
 
 export interface MediaManifest {
   status: 'ready';
-  kind: 'audio' | 'video';
+  kind: MediaKind;
   durationSec: number;
   width: number | null;
   height: number | null;
@@ -225,7 +227,7 @@ const SCALE_720 =
   `scale=w='if(gt(iw,ih),-2,min(${VIDEO_TARGET_EDGE_PX},iw))'` +
   `:h='if(gt(iw,ih),min(${VIDEO_TARGET_EDGE_PX},ih),-2)'`;
 
-const durationLimitSec = (kind: 'audio' | 'video') =>
+const durationLimitSec = (kind: MediaKind) =>
   kind === 'video' ? MAX_VIDEO_DURATION_SEC : MAX_AUDIO_DURATION_SEC;
 
 const runPipeline = async (
@@ -506,7 +508,9 @@ export const isReadyManifest = (
   existing !== null &&
   existing.status === 'ready' &&
   typeof existing.durationSec === 'number' &&
-  (existing.kind === 'audio' || existing.kind === 'video');
+  // The manifest is parsed JSON from R2, so this stays a runtime membership
+  // test — the declared MediaKind is a claim about it, not a guarantee.
+  MEDIA_KINDS.includes(existing.kind);
 
 // processMedia's outcome, tagged with whether the ready-manifest guard
 // short-circuited the run. Always present (never a conditionally-present

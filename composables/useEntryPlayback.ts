@@ -5,15 +5,10 @@
 // every card in the feed, and re-calls with force=true to refetch once after a
 // playback error (an expired URL is the likely cause).
 
-interface PlaybackUrls {
-  videoUrl: string | null;
-  posterUrl: string | null;
-  audioUrl: string | null;
-}
-
-interface EntryDetailResponse {
-  playback: PlaybackUrls | null;
-}
+import type {
+  EntryDetailResponse,
+  MediaPlaybackUrls,
+} from '~/server/utils/entry-view';
 
 // Module-level cache shared across every component instance: a given entry's
 // presigned URLs are resolved once and reused until an explicit force refetch.
@@ -25,9 +20,9 @@ interface EntryDetailResponse {
 // re-resolve costs one request. It also caps how long an evicted (and by then
 // likely expired) URL can linger.
 const CACHE_LIMIT = 100;
-const cache = new Map<string, PlaybackUrls>();
+const cache = new Map<string, MediaPlaybackUrls>();
 
-const remember = (entryId: string, playback: PlaybackUrls) => {
+const remember = (entryId: string, playback: MediaPlaybackUrls) => {
   // Re-insert so refreshed entries move to the newest position.
   cache.delete(entryId);
   cache.set(entryId, playback);
@@ -56,7 +51,10 @@ export const useEntryPlayback = () => {
   // server either — the day something does read it there, the isolation is
   // already in place, and it sits with the cache rather than in every caller
   // that might arrive later.
-  const primePlayback = (entryId: string, playback: PlaybackUrls | null) => {
+  const primePlayback = (
+    entryId: string,
+    playback: MediaPlaybackUrls | null,
+  ) => {
     if (!import.meta.client || !playback) return;
     remember(entryId, playback);
   };
@@ -64,7 +62,7 @@ export const useEntryPlayback = () => {
   const resolvePlayback = async (
     entryId: string,
     force = false,
-  ): Promise<PlaybackUrls | null> => {
+  ): Promise<MediaPlaybackUrls | null> => {
     if (!force) {
       const cached = cache.get(entryId);
       if (cached) return cached;

@@ -2,12 +2,17 @@ import { derivedKeys } from './media-key';
 import { presignGet } from './storage';
 import type { InferSelectModel } from 'drizzle-orm';
 import type { entries } from '~/db/schema/entries';
-import type { media } from '~/db/schema/media';
+import type { MediaKind, MediaStatus, media } from '~/db/schema/media';
 import type { speakers, SpeakerTone } from '~/db/schema/speakers';
 
 type EntryRow = InferSelectModel<typeof entries>;
 type MediaRow = InferSelectModel<typeof media>;
 type SpeakerRow = InferSelectModel<typeof speakers>;
+
+// Re-exported so client code never has to import `~/db/schema/*` for a type:
+// that module pulls drizzle in, and only the `type` keyword keeps it out of
+// the browser bundle. Nothing in CI checks that keyword.
+export type { MediaKind, MediaStatus };
 
 // Plain projection functions — the exposed API shapes (serialization, not a
 // DTO layer; see feedback_no_dto_in_js.md).
@@ -44,8 +49,8 @@ export interface EntryView {
 
 export interface MediaView {
   mediaId: string;
-  kind: string;
-  status: string;
+  kind: MediaKind;
+  status: MediaStatus;
   durationSec: number | null;
   width: number | null;
   height: number | null;
@@ -57,6 +62,24 @@ export interface MediaPlaybackUrls {
   videoUrl: string | null;
   posterUrl: string | null;
   audioUrl: string | null;
+}
+
+// The wire shapes, published so the client consumes the same declaration the
+// handlers are checked against. The feed flattens media onto each entry while
+// the detail screen nests it beside one — the two are not interchangeable.
+export interface FeedEntryView extends EntryView {
+  media: MediaView | null;
+}
+
+export interface FeedResponse {
+  entries: FeedEntryView[];
+  nextCursor: string | null;
+}
+
+export interface EntryDetailResponse {
+  entry: EntryView;
+  media: MediaView | null;
+  playback: MediaPlaybackUrls | null;
 }
 
 const toSpeakerOnEntry = (
