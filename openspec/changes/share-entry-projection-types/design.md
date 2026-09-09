@@ -6,9 +6,10 @@ See proposal.md — Why. What matters for the approach:
   are built. It is not the single place they are _typed_: the envelope around
   the projections is only an inline return literal in four handlers.
 - The client→server `import type` path is established, not new. Six files
-  already take types from `~/server/utils/*`, and `components/compose/
-MediaAttach.vue` already types a `defineProps` field with an imported
-  `MediaView`. So the pattern is proven for both plain TS and the Vue macro.
+  already take types from `~/server/utils/*`, and
+  `components/compose/MediaAttach.vue` already types a `defineProps` field
+  with an imported `MediaView`. So the pattern is proven for both plain TS
+  and the Vue macro.
 - `media.kind` and `media.status` are `text()` columns. `peaks` on the same
   table is already narrowed with `$type<number[]>()`, and `speakers.tone` is a
   `pgEnum` whose derived `SpeakerTone` reaches the client today through
@@ -140,9 +141,9 @@ consumes it.
 
 ### D4 — The client adopts the types by `import type`, and nothing is relocated
 
-`import type` is erased before bundling, so importing from `~/server/utils/
-entry-view.ts` does not pull `presignGet` or the storage client into the client
-bundle. This is how `MediaAttach.vue`, `EntryCard.vue`, `useCompose.ts` and
+`import type` is erased before bundling, so importing from
+`~/server/utils/entry-view.ts` does not pull `presignGet` or the storage
+client into the client bundle. This is how `MediaAttach.vue`, `EntryCard.vue`, `useCompose.ts` and
 `pages/me.vue` already work.
 
 Mapping, one line per deletion:

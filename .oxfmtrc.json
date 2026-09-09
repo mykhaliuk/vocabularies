@@ -15,6 +15,7 @@
     ".claude/rules",
     ".claude/commands/opsx",
     ".claude/skills/openspec-*",
+    "openspec",
     "db/migrations",
     "bun.lockb",
     "package-lock.json",
