@@ -107,7 +107,7 @@ jobs:
             You are the requested reviewer on this pull request. Do a
             thorough code review:
 
-            1. Read CLAUDE.md and every file in .claude/rules/ first —
+            1. Read AGENTS.md and every file in .claude/rules/ first —
                they are the review baseline (conventions, error handling,
                design-token rules, no-DTO policy).
             2. Read the PR description and the full diff (`gh pr diff`).

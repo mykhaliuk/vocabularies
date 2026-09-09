@@ -3,7 +3,7 @@
 Born from the PR #80 retro: three tickets on one branch, and a review that
 found 17 confirmed issues after "all checks green". Every item below maps to
 a class of defect that actually shipped to that branch. Run it before opening
-a PR (or flipping it ready); the agent execution contract in CLAUDE.md
+a PR (or flipping it ready); the agent execution contract in AGENTS.md
 requires it for agent-authored work.
 
 ## Scope — before writing code
