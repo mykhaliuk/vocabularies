@@ -9,7 +9,7 @@ context: |
 
   Mandatory rulebook: .claude/rules/*.md (no TS enums, no DTO layer, plain
   objects and stable shapes, English-only in-source artifacts, Conventional
-  Commits). CLAUDE.md carries the agent execution contract.
+  Commits). AGENTS.md carries the agent execution contract.
 
   Server layering (ADR-0010): transport (server/api|routes|middleware|plugins)
   never touches the db; every db access is a named domain operation in
@@ -23,7 +23,9 @@ context: |
 
   Tracking: Linear, team prefix VKB. One issue = one change = one branch =
   one PR into dev. Branches `<type>/vkb-<n>-<short-desc>`; PR descriptions
-  include "Closes VKB-<n>". Decisions log: docs/adr/; vocabulary:
+  include "Closes VKB-<n>". Every feat/fix commit carries a
+  `Change: <change-name>` trailer naming its folder under openspec/changes/;
+  `bun run commits:check` enforces it. Decisions log: docs/adr/; vocabulary:
   docs/GLOSSARY.md.
 
 rules:
@@ -40,7 +42,7 @@ rules:
     - Argue against existing ADRs when reversing one, not from scratch
   tasks:
     - Extractions from already-shipped code ship first as their own PR,
-      before the feature tasks that motivated them (see CLAUDE.md)
+      before the feature tasks that motivated them (see AGENTS.md)
     - A UI task on an authed screen includes its e2e spec in e2e/authed/
 
 operations:

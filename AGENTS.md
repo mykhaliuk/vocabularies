@@ -200,6 +200,17 @@ works without a global install.
   change touches it. Never backfill in bulk.
 - **Archive inside the feature PR** (`openspec archive`), so `specs/` advances
   atomically with the merge and a merged change cannot leave its spec behind.
+- **Every commit names its change** — a `Change: <change-name>` git trailer in
+  the footer block, next to `Closes VKB-<n>` and the co-author trailer, where
+  `<change-name>` is the bare folder name under `openspec/changes/` (no
+  archive date prefix). One commit, one change. `feat` and `fix` commits must
+  carry it; the changeless commits the threshold below allows omit it, and so
+  does the archive commit's own housekeeping when it belongs to no change.
+  This is the commit → change link, the way `Closes VKB-<n>` on the PR is the
+  change → issue link — without it a change folder says what was intended and
+  git says what happened, with nothing joining the two.
+  `git log --grep='^Change: <name>'` lists a change's commits;
+  `git log --format='%(trailers:key=Change,valueonly)'` goes the other way.
 
 **When a change folder is required** — the test is whether the ticket's
 premise could be wrong, because that is what the proposal step catches:
@@ -209,8 +220,9 @@ premise could be wrong, because that is what the proposal step catches:
 - **Not required** for a dependency bump, a formatting pass, a docs edit, or a
   mechanical refactor whose acceptance is "behaviour is identical".
 - A tooling or docs change that legitimately has no behaviour sets
-  `skip_specs: true` in `.openspec.yaml`. Never invent a requirement to
-  satisfy validation.
+  `skip_specs: true` in the change folder's own `.openspec.yaml` (not the
+  repo-level `openspec/config.yaml`). Never invent a requirement to satisfy
+  validation.
 
 **How it sits against the artifacts that already exist** — each answers a
 different question, and the overlap is zero by construction:
@@ -228,9 +240,13 @@ in the same PR; `design.md` references it instead of restating it. The Linear
 issue stays one paragraph plus a link to the change folder — the proposal is
 the source of truth for scope.
 
-**Enforced** by `bun run spec:check`, which fails on a malformed or zero-delta
-change, and on an archived change whose `tasks.md` still has an open box — so
-the checklist is a gate rather than decorative prose. `bun run spec:status`
+**Enforced** by two checks. `bun run spec:check` fails on a malformed or
+zero-delta change, and on an archived change whose `tasks.md` still has an
+open box — so the checklist is a gate rather than decorative prose.
+`bun run commits:check [<range>]` (default `origin/dev..HEAD`; CI runs it on
+every PR over `origin/<base>..HEAD`) fails when a `feat` or `fix` commit
+carries no `Change:` trailer, when a commit carries more than one, or when a
+trailer names no folder under `openspec/changes/`. `bun run spec:status`
 lists active changes. Like every other check here, the coupling is the check,
 not the convention — but note its limit: validation sees only the changes that
 exist, so it cannot catch a change that should have had a folder and did not.
@@ -239,7 +255,7 @@ That one is held by the threshold above.
 ## Project management — Linear
 
 Work is tracked in Linear: team **Vocabu team** (prefix `VKB`), project
-**Vocabu**, milestones `M1…M11` mirroring ROADMAP.md. ROADMAP.md stays the
+**Vocabu**, milestones `M1…M22` mirroring ROADMAP.md. ROADMAP.md stays the
 narrative source of truth; Linear tracks execution state.
 
 - Every code task starts from a Linear issue (`VKB-N`). Create or decompose
@@ -323,6 +339,8 @@ silently skipping it.
 - **Commits:** Conventional Commits — `<type>(<scope>): <subject>`, imperative,
   lowercase, no trailing period, ≤ 72 chars. Types: feat, fix, chore, refactor,
   docs, test, perf, ci, build, style. Branch: `<type>/vkb-<n>-<short-desc>`.
+  A commit that belongs to an OpenSpec change carries the `Change:` trailer
+  described above; `bun run commits:check` is what says so.
 - **Verify hands-on, never ship blind.** For any UI-affecting change: install
   deps (`bun install`), run the app (`bun run dev`, or `bun run build` +
   preview), open the affected pages with Playwright (already a dev dep),
@@ -333,11 +351,17 @@ silently skipping it.
   change folder first and let the proposal settle scope. Two Phase 1 tickets
   (VKB-113, VKB-137) were implemented from premises that turned out to be
   wrong once the code was read — that is the cost this step exists to avoid.
-- **Checks before shipping:** `bun run lint`, `bun run fmt:check`,
-  `bun run ds:check` (plus `proto:check` when design files are touched),
-  `bun run spec:check` when a change folder exists, and `bun run test:e2e`
-  when the change affects covered flows. CI enforces these, but run them
-  yourself first.
+- **Checks before shipping — the full set, never a subset.**
+  `.github/workflows/ci.yml` is the list, and this one mirrors it:
+  `bun run ds:check`, `bun run proto:check`, `bun run i18n:check`,
+  `bun run layering:check`, `bun run graph:check`, `bun run spec:check`,
+  `bun run commits:check`, `bun run lint`, `bun run fmt:check`,
+  `bun run typecheck`, `bun run typecheck:e2e`, `bun run test:unit`,
+  `bun run fonts:check`, `bun run test:e2e`, `bun run test:e2e:authed`.
+  Picking the ones that look relevant is how VKB-93 sent 30 TypeScript
+  errors to CI. The last two need infra (`test:e2e:authed` wants Postgres and
+  MinIO); when a sandbox cannot run one, say which in the PR rather than
+  quietly dropping it.
 - **Known sandbox limits:** flows requiring live Postgres or real email
   (magic-link login, `/me`) cannot be fully exercised in agent sandboxes.
   State explicitly in the PR what was verified and what needs a local check.
