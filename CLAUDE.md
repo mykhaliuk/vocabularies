@@ -146,9 +146,9 @@ Rules that keep it honest:
   `feedback_no_dto_in_js.md` ("inject resources as a context object"),
   ADR-0010 wins until the upstream rule is aligned via `rules:sync`.
 - Enforced by `bun run layering:check` (CI): zero db references in
-  transport outside the shrinking legacy allowlist in
-  `scripts/layering-check.js`. Never add a file to that list; remove
-  entries as legacy routes migrate (opportunistically, when touched).
+  transport, no exceptions. The pre-ADR-0010 allowlist reached zero and
+  its machinery was deleted (VKB-90), so the guard fails unconditionally;
+  ADR-0010 keeps the allowlist wording only as the record of decision time.
 
 ### Capability graph (ADR-0013)
 
