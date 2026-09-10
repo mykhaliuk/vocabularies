@@ -112,17 +112,16 @@ that carries the weight.
       task touches an authed screen; this change adds no behaviour and no
       rendered difference, so a new spec would assert what 5.2's existing specs
       already assert. Recorded here as a decision, not an omission.
-- [ ] 5.4 Open the feed and one word detail screen in a running app and confirm
+- [x] 5.4 Open the feed and one word detail screen in a running app and confirm
       an entry with media renders exactly as before (both themes). Verify: the
       before/after screenshots are indistinguishable — for a change that is
       entirely erased at build time, any visible difference is a bug.
-      **Still open — the one thing this change owes.** Same port conflict as
-      5.2 blocked it locally, and CI does not close it: the authed suite
-      asserts rendered output (`no-overflow`, `type-scale`, the entry specs,
-      221 passed) but nobody has looked at the two screens in both themes.
-      For a change erased at build time the residual risk is small, which is
-      an argument for doing it quickly, not for calling it done. Needs the
-      owner's eyes, or an explicit waiver.
+      Done by the owner on 2026-09-10, against a local Postgres. Both states
+      checked on the feed and on word detail, in both themes: nothing moved.
+      One thing looked wrong and was not — the `processing` spinner sits
+      static. That is `MediaBlock.vue:137` doing its job: the spin is disabled
+      under `prefers-reduced-motion: reduce`, which the reviewer's system has
+      on. Confirmed, not waived.
 - [x] 5.5 Run the adversarial `/code-review` pass from `docs/PR-CHECKLIST.md`
       and fix confirmed findings. Verify: checklist walked, findings triaged.
       No bugs found; the diff was confirmed behaviour-neutral, including that
@@ -161,13 +160,13 @@ that carries the weight.
       the `refactor/vkb-116-share-projection-types` branch, authored
       and SSH-signed as `claude-agent-myka` with the owner's co-author trailer
       (CLAUDE.md — Agent identity). Verify: `git log --show-signature -1`.
-- [ ] 6.2 Archive this change inside the PR (`openspec archive`) so
+- [x] 6.2 Archive this change inside the PR (`openspec archive`) so
       `openspec/specs/` advances with the merge. Verify: `bun run spec:check`
-      passes after archiving. **Deferred to the end of the PR, deliberately.**
+      passes after archiving. Deferred to the end of the PR on purpose:
       `spec:check` fails an archived change whose `tasks.md` still has an open
-      box, and 5.2 / 5.4 are open on purpose — the gate is working. Archive
-      once CI's authed run is green and those two can be ticked honestly; the
-      change folder stays active until then, which is what it is for.
+      box, so archiving had to wait until 5.2 and 5.4 could be ticked
+      honestly — CI's authed run for the first, the owner's eyes for the
+      second. The gate worked as intended.
 - [x] 6.3 Open a ready (not draft) PR into `dev` with `Closes VKB-116`, assign
       the owner, request review from `mykhaliuk` only. Verify: PR is ready, CI
       green, VKB-116 moves to In Review. Opened as #283.
