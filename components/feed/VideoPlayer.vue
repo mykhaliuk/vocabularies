@@ -50,9 +50,13 @@ const videoRef = ref<HTMLVideoElement | null>(null);
 // exists": without it a second tap during that round-trip starts a second
 // resolve and can expand onto a half-built player.
 let starting = false;
-// Reset in `finally`, so it only stops a loop within one failure — a later
-// expiry an hour on is still recoverable.
-let retrying = false;
+// The element a refresh is in flight for, not a bare flag: collapsing and
+// expanding replaces the <video>, and a discarded attempt must not gag the
+// new element's error nor clear a newer attempt's guard. It stops a second
+// refresh starting while one is in the air; the bound on how many an attempt
+// may start at all is the allowance below (VKB-182).
+let retryingFor: HTMLVideoElement | null = null;
+const refreshes = createRefreshAllowance();
 
 // Portrait fills more height than landscape, but neither may swallow the
 // entry. Missing dimensions fall back to landscape, the shorter frame.
@@ -104,33 +108,63 @@ const onEnded = () => {
   playedFraction.value = 0;
 };
 
+// Collapsing is not cosmetic. `failed` is rendered in the collapsed row only,
+// so an expanded player that gave up would sit blank and silent; and an
+// element that has errored never reloads on its own, so the next tap has to
+// rebuild it through expand() to be a real second attempt.
+const giveUp = () => {
+  // Paused before the element is unmounted: `error` does not require the
+  // element to be paused, and a detached one can go on producing sound.
+  videoRef.value?.pause();
+  playing.value = false;
+  playedFraction.value = 0;
+  failed.value = true;
+  expanded.value = false;
+  sourceUrl.value = undefined;
+};
+
 // An expired signed URL surfaces as an 'error' event on the element. Refresh
-// once and retry before admitting failure.
+// once and retry before admitting failure; an object that can never load
+// spends the allowance and stops there instead of refreshing forever
+// (VKB-182). Only a tap gives the allowance back, never playback itself: a
+// clip that plays and then fails would otherwise refill it every cycle.
 const onError = async () => {
   const element = videoRef.value;
-  if (retrying || !element) {
+  if (!element || retryingFor === element) {
     playing.value = false;
     return;
   }
-  retrying = true;
+  if (!refreshes.spend()) {
+    giveUp();
+    return;
+  }
+  retryingFor = element;
   try {
     const url = await resolveUrl(true);
-    if (!url || !videoRef.value) {
-      playing.value = false;
-      failed.value = true;
+    // Same capture as the audio player: collapsing and expanding again during
+    // the round-trip replaces the element, and this attempt no longer owns it.
+    if (videoRef.value !== element) return;
+    if (!url) {
+      giveUp();
       return;
     }
+    // Only the binding, never element.src as well: the reactive write queues
+    // Vue's patch, which re-assigns src with no equality check, and setting a
+    // media element's src re-runs the load algorithm and rejects the play()
+    // we are awaiting. Two sources of truth for one attribute turned every
+    // successful refresh into a failure. `expand` has always awaited the
+    // flush; this now does the same.
     sourceUrl.value = url;
-    videoRef.value.src = url;
-    await videoRef.value.play();
+    await nextTick();
+    if (videoRef.value !== element) return;
+    await element.play();
     playing.value = true;
     failed.value = false;
   } catch (error) {
     console.error('[FeedVideoPlayer] retry playback failed', error);
-    playing.value = false;
-    failed.value = true;
+    if (videoRef.value === element) giveUp();
   } finally {
-    retrying = false;
+    if (retryingFor === element) retryingFor = null;
   }
 };
 
@@ -138,8 +172,14 @@ const expand = async () => {
   if (starting) return;
   starting = true;
   try {
+    // Asking to play is a new attempt, so a failed player is one tap from
+    // another try rather than a dead end. Inside the try, so nothing here can
+    // strand `starting` and leave every later tap returning at the guard.
+    refreshes.restore();
     if (!sourceUrl.value) {
-      const url = await resolveUrl(false);
+      // Coming back from a failure, the cached URL is the one that just did
+      // not work — ask for a fresh signature instead.
+      const url = await resolveUrl(failed.value);
       if (!url) {
         failed.value = true;
         return;
@@ -165,7 +205,18 @@ const toggle = async () => {
   const element = videoRef.value;
   if (!element) return;
   if (element.paused) {
+    // An errored element will not reload, so restoring an allowance here
+    // would advertise a recovery that cannot happen (D3). Admit the failure
+    // instead — collapsing is what lets the next tap expand onto a new one.
+    if (element.error) {
+      giveUp();
+      return;
+    }
     try {
+      // A healthy element being resumed is a request from the person like any
+      // other, and the allowance restored here is spendable: the failure it
+      // pays for has not happened yet (D2).
+      refreshes.restore();
       await element.play();
       playing.value = true;
     } catch (error) {
@@ -180,10 +231,16 @@ const toggle = async () => {
 const collapse = () => {
   videoRef.value?.pause();
   playing.value = false;
+  // Expanding again mounts a fresh element that starts at zero; without this
+  // the progress bar renders at the old position until the first timeupdate.
+  playedFraction.value = 0;
   expanded.value = false;
 };
 
-onUnmounted(() => {
+// onBeforeUnmount, not onUnmounted: Vue nulls template refs while unmounting
+// the subtree, so by the time `unmounted` runs there is nothing left to pause
+// and a detached element keeps playing after the feed is left.
+onBeforeUnmount(() => {
   videoRef.value?.pause();
 });
 </script>

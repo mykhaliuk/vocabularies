@@ -18,8 +18,8 @@ const { t } = useI18n();
 const { resolvePlayback } = useEntryPlayback();
 
 // Both variants' numbers live in utils/media-metrics.ts, where a unit test
-// can pin them: a ready player needs MinIO to render, so nothing in CI ever
-// looks at this component.
+// pins the table and e2e/authed/media-ready.spec.ts pins that this component
+// consumes it — against the MinIO the e2e-authed job starts.
 const glyphSize = computed(() => AUDIO_METRICS[props.variant].glyphPx);
 const styleVars = computed(() => audioStyleVars(props.variant));
 
@@ -60,7 +60,11 @@ let audioEl: HTMLAudioElement | null = null;
 // without it a second tap during that round-trip builds a second element and
 // orphans the first (which keeps playing, unreachable, past unmount).
 let starting = false;
-let retrying = false;
+// The element a refresh is in flight for, not a bare flag: an attempt that
+// has been discarded must not gag the error of the element that replaced it,
+// and must not clear a newer attempt's guard when it finally returns.
+let retryingFor: HTMLAudioElement | null = null;
+const refreshes = createRefreshAllowance();
 
 const playing = ref(false);
 const playedFraction = ref(0);
@@ -100,6 +104,18 @@ const onEnded = () => {
   playedFraction.value = 0;
 };
 
+// Every give-up goes through here, so none of them can leave the waveform
+// tinted at the position the clip died on — or the clip still audible: an
+// `error` does not pause the element, so a connection lost mid-stream keeps
+// playing out of the buffer under a "playback unavailable" row whose button
+// no longer routes to pause.
+const admitFailure = () => {
+  audioEl?.pause();
+  playing.value = false;
+  playedFraction.value = 0;
+  failed.value = true;
+};
+
 const resolveUrl = async (
   forceRefresh: boolean,
 ): Promise<string | undefined> => {
@@ -113,42 +129,83 @@ const resolveUrl = async (
 };
 
 // Signed playback URLs expire (~1h), which surfaces as an 'error' event on the
-// element. Refresh once per failure and retry; `retrying` only guards against
-// looping within a single attempt, so a later expiry is still recoverable.
+// element. The two guards are not interchangeable: `retryingFor` keeps a
+// second error from starting a second refresh while one is in the air, and
+// the allowance caps how many an attempt may start at all — without it an
+// object that can never load refreshes forever (VKB-182). Only a tap gives
+// the allowance back, never playback itself: a clip that plays and then
+// fails would otherwise refill it on every cycle and loop just as hard.
 const onError = async () => {
-  if (retrying || !audioEl) {
+  // Captured, never re-read after the await: a tap during the round-trip
+  // discards this element and builds another, and writing the refreshed URL
+  // into that one would restart a load the newer attempt already owns.
+  const element = audioEl;
+  if (!element || retryingFor === element) {
     playing.value = false;
     return;
   }
-  retrying = true;
+  if (!refreshes.spend()) {
+    admitFailure();
+    return;
+  }
+  retryingFor = element;
   try {
     const url = await resolveUrl(true);
-    if (!url || !audioEl) {
-      playing.value = false;
-      failed.value = true;
+    if (audioEl !== element) return;
+    if (!url) {
+      admitFailure();
       return;
     }
-    audioEl.src = url;
-    await audioEl.play();
+    element.src = url;
+    await element.play();
     playing.value = true;
     failed.value = false;
   } catch (error) {
     console.error('[FeedAudioPlayer] retry playback failed', error);
-    playing.value = false;
-    failed.value = true;
+    if (audioEl === element) admitFailure();
   } finally {
-    retrying = false;
+    if (retryingFor === element) retryingFor = null;
   }
+};
+
+const discardElement = () => {
+  if (!audioEl) return;
+  audioEl.pause();
+  audioEl.removeEventListener('loadedmetadata', onLoadedMetadata);
+  audioEl.removeEventListener('timeupdate', onTimeUpdate);
+  audioEl.removeEventListener('ended', onEnded);
+  audioEl.removeEventListener('error', onError);
+  // NOT src = '': the empty string resolves against the document base URL, so
+  // the element would fetch this page as if it were media. Removing the
+  // attribute and reloading is what actually detaches the source.
+  audioEl.removeAttribute('src');
+  audioEl.load();
+  audioEl = null;
+  playedFraction.value = 0;
 };
 
 const startPlayback = async () => {
   if (starting) return;
   starting = true;
   try {
+    // An element that has already errored never reloads on its own: play() on
+    // it rejects without re-running resource selection and without firing
+    // another 'error', so reusing it would make the player dead for the rest
+    // of the session. Discard it and rebuild from a freshly signed URL, which
+    // is what makes a tap a real second attempt. `failed` rather than the
+    // element's own error, because a failure can also leave no element at all
+    // — and then the cached URL is the one already known not to work.
+    // Both, because they disagree: a second error arriving while a refresh is
+    // in flight leaves the element errored without ever setting `failed`, and
+    // reading only `failed` would then rebuild from the cached URL that just
+    // died.
+    const recovering = failed.value || Boolean(audioEl?.error);
+    if (audioEl?.error) discardElement();
+    refreshes.restore();
     if (!audioEl) {
-      const url = await resolveUrl(false);
+      const url = await resolveUrl(recovering);
       if (!url) {
-        failed.value = true;
+        admitFailure();
         return;
       }
       const element = new Audio(url);
@@ -163,8 +220,7 @@ const startPlayback = async () => {
     failed.value = false;
   } catch (error) {
     console.error('[FeedAudioPlayer] playback failed', error);
-    playing.value = false;
-    failed.value = true;
+    admitFailure();
   } finally {
     starting = false;
   }
@@ -179,16 +235,7 @@ const toggle = async () => {
   await startPlayback();
 };
 
-onBeforeUnmount(() => {
-  if (!audioEl) return;
-  audioEl.pause();
-  audioEl.removeEventListener('loadedmetadata', onLoadedMetadata);
-  audioEl.removeEventListener('timeupdate', onTimeUpdate);
-  audioEl.removeEventListener('ended', onEnded);
-  audioEl.removeEventListener('error', onError);
-  audioEl.src = '';
-  audioEl = null;
-});
+onBeforeUnmount(discardElement);
 </script>
 
 <template>
