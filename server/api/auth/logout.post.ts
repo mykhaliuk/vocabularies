@@ -1,9 +1,6 @@
 import { endSession } from '~/server/domain/auth';
-import {
-  clearSessionCookie,
-  getSessionCookieName,
-  verifySession,
-} from '~/server/utils/auth';
+import { clearSessionCookie, getSessionCookieName } from '~/server/utils/auth';
+import { verifySession } from '~/server/utils/session-jwt';
 
 export default defineEventHandler(async (event) => {
   const jwt = getCookie(event, getSessionCookieName());

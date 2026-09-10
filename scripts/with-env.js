@@ -69,7 +69,28 @@ const child = spawn(bin, args, {
   shell: process.platform === 'win32',
 });
 
+const TERMINAL_SIGNALS = ['SIGINT', 'SIGTERM', 'SIGHUP'];
+
+// The child shares this process group, so the terminal already signals it —
+// forwarding is belt and braces. What matters is that a listener EXISTS:
+// without one, Ctrl+C kills this process instantly, the shell takes its
+// prompt back, and the dev server is still restoring the terminal's keyboard
+// mode as it exits. The shell then reads a terminal left in raw mode.
+const forwardSignal = (signal) => {
+  child.kill(signal);
+};
+
+for (const signal of TERMINAL_SIGNALS) {
+  process.on(signal, forwardSignal);
+}
+
 child.on('exit', (code, signal) => {
-  if (signal) process.kill(process.pid, signal);
-  else process.exit(code ?? 1);
+  if (!signal) {
+    process.exit(code ?? 1);
+    return;
+  }
+  // Drop the listeners before re-raising, or the signal lands back in
+  // forwardSignal and nothing ever exits.
+  for (const name of TERMINAL_SIGNALS) process.off(name, forwardSignal);
+  process.kill(process.pid, signal);
 });

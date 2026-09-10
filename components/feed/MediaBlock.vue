@@ -1,23 +1,13 @@
 <script setup lang="ts">
 import { AlertCircle, Loader2, Mic, Video } from 'lucide-vue-next';
-
-type FeedMedia = {
-  mediaId: string;
-  kind: 'audio' | 'video';
-  status: 'processing' | 'ready' | 'failed';
-  durationSec: number | null;
-  width: number | null;
-  height: number | null;
-  peaks: number[] | null;
-  error: string | null;
-};
+import type { MediaView } from '~/server/utils/entry-view';
 
 // `variant` only reaches the ready players: the transient processing and
 // failed rows below are the same size everywhere, because they are a status
 // line rather than a thing you look at.
 const props = withDefaults(
   defineProps<{
-    media: FeedMedia | null;
+    media: MediaView | null;
     entryId: string;
     variant?: 'inline' | 'big';
   }>(),

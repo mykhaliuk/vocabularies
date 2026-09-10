@@ -1,10 +1,12 @@
 <script setup lang="ts">
+import type { MediaKind } from '~/server/utils/entry-view';
+
 const props = withDefaults(
   defineProps<{
     open: boolean;
     word: string;
     hasStory: boolean;
-    mediaKind?: 'audio' | 'video' | null;
+    mediaKind?: MediaKind | null;
     busy?: boolean;
     failed?: boolean;
   }>(),

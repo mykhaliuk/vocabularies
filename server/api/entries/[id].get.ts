@@ -7,31 +7,34 @@ import {
   toMediaView,
 } from '~/server/utils/entry-view';
 import { toHttpError } from '~/server/utils/http-errors';
+import type { EntryDetailResponse } from '~/server/utils/entry-view';
 
 const Params = z.object({ id: z.string().uuid() });
 
-export default defineEventHandler(async (event) => {
-  const { user } = await requireUser(event);
-  const { id } = await getValidatedRouterParams(event, (data) =>
-    Params.parse(data),
-  );
+export default defineEventHandler(
+  async (event): Promise<EntryDetailResponse> => {
+    const { user } = await requireUser(event);
+    const { id } = await getValidatedRouterParams(event, (data) =>
+      Params.parse(data),
+    );
 
-  let found;
-  try {
-    found = await getOwnEntry(user.id, id);
-  } catch (error) {
-    throw toHttpError(error);
-  }
+    let found;
+    try {
+      found = await getOwnEntry(user.id, id);
+    } catch (error) {
+      throw toHttpError(error);
+    }
 
-  setResponseHeader(event, 'Cache-Control', 'no-store');
-  const mediaView = found.media ? toMediaView(found.media) : null;
-  const playback =
-    found.media && found.media.status === 'ready'
-      ? await toMediaPlaybackUrls(found.media)
-      : null;
-  return {
-    entry: toEntryView(found.entry, found.speaker),
-    media: mediaView,
-    playback,
-  };
-});
+    setResponseHeader(event, 'Cache-Control', 'no-store');
+    const mediaView = found.media ? toMediaView(found.media) : null;
+    const playback =
+      found.media && found.media.status === 'ready'
+        ? await toMediaPlaybackUrls(found.media)
+        : null;
+    return {
+      entry: toEntryView(found.entry, found.speaker),
+      media: mediaView,
+      playback,
+    };
+  },
+);
