@@ -74,7 +74,8 @@
       the project named `phone` is Chromium emulating an iPhone. Carry the
       measurement above as the evidence, since it is a defect class CI cannot
       currently see. Filed as VKB-183; the silent expanded video frame from 5.6 is VKB-184.
-- [ ] 4.7 Run `bun run test:e2e:authed` green with the fix in place.
+- [x] 4.7 Run `bun run test:e2e:authed` green with the fix in place — 223
+      passed across the final run (see 8.1 for the flake seen twice en route).
 
 ## 5. Verify by hand, in the owner's browser
 
@@ -121,18 +122,18 @@ verifies the wiring and the visible outcome, not the bound.
 
 ## 6. Ship
 
-- [ ] 6.1 Run the full check set from AGENTS.md, not a subset: `ds:check`,
+- [x] 6.1 Run the full check set from AGENTS.md, not a subset: `ds:check`,
       `proto:check`, `i18n:check`, `layering:check`, `graph:check`,
       `spec:check`, `commits:check`, `lint`, `fmt:check`, `typecheck`,
       `typecheck:e2e`, `test:unit`, `fonts:check`, `test:e2e`,
       `test:e2e:authed`. Record any that infra prevents running.
-- [ ] 6.2 Run `docs/PR-CHECKLIST.md`, including the adversarial
+- [x] 6.2 Run `docs/PR-CHECKLIST.md`, including the adversarial
       `/code-review` pass; fix confirmed findings before opening the PR.
-- [ ] 6.3 Commit as `fix(...)` with the `Change: cap-media-playback-retries`
+- [x] 6.3 Commit as `fix(...)` with the `Change: cap-media-playback-retries`
       trailer and `Closes VKB-182` on the PR; open it ready against `dev`,
       assigned to the owner. State in the body what the e2e spec covers, that
       the video path is hand-verified, and the measured before/after counts.
-- [ ] 6.4 Archive the change (`openspec archive`) in this PR so
+- [x] 6.4 Archive the change (`openspec archive`) in this PR so
       `openspec/specs/media-playback/spec.md` lands with the fix.
 
 ## 7. Review round
