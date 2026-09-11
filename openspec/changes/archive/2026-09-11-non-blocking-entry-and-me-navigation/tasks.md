@@ -28,4 +28,4 @@
 - [x] 5.1 Run the full CI check set: `ds:check`, `proto:check`, `i18n:check`, `layering:check`, `graph:check`, `spec:check`, `commits:check`, `lint`, `fmt:check`, `typecheck`, `typecheck:e2e`, `test:unit`, `fonts:check`, `test:e2e`, `test:e2e:authed`
 - [x] 5.2 Drive both screens in a browser against a production build, with the API delayed, in both themes: the loading state appears at once and settles on content; screenshot before/after
 - [x] 5.3 Adversarial `/code-review` pass on the diff; fix the confirmed findings and re-review the delta
-- [ ] 5.4 Archive the change inside the PR (`openspec archive`), so `openspec/specs/screen-loading/` lands with the merge
+- [x] 5.4 Archive the change inside the PR (`openspec archive`), so `openspec/specs/screen-loading/` lands with the merge
