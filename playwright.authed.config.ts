@@ -117,6 +117,33 @@ export default defineConfig({
       name: 'phone',
       use: { ...devices['iPhone 13'], browserName: 'chromium' },
     },
+    // Opt-in, and only for the specs whose behaviour is engine-dependent.
+    // VKB-182 is one: the players' retry loop is bounded in Chromium purely
+    // by the order it delivers `error` against the play() rejection, and
+    // unbounded in WebKit — 61 retries in 5s against 1, measured. Every
+    // project above is Chromium, so nothing in CI can see that difference.
+    // Turning this on in CI needs webkit added to the install step, which is
+    // a workflow edit and its own ticket; until then it runs locally with
+    // E2E_WEBKIT=1.
+    ...(process.env.E2E_WEBKIT
+      ? [
+          {
+            name: 'webkit-media',
+            testMatch: /playback-retry\.spec\.ts/,
+            use: {
+              ...devices['iPhone 13'],
+              // Stated, not inherited from the preset's default: every other
+              // project above pins `browserName` away from webkit, so the one
+              // that must BE webkit is the one that has to say so.
+              browserName: 'webkit' as const,
+              // The hermetic resolver rule is a Chromium flag; WebKit keeps
+              // the passive listener half of e2e/hermetic.ts, which is what
+              // fails a test that reaches out.
+              launchOptions: { args: [] },
+            },
+          },
+        ]
+      : []),
   ],
   webServer: {
     command: 'node node_modules/.bin/nuxt build && node scripts/e2e-server.js',
