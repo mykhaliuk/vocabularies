@@ -145,10 +145,31 @@ Rules that keep it honest:
   `entitlements`, per ADR-0012 — and tx) with a fixed shape. Where this narrows the resource-injection sentence of
   `feedback_no_dto_in_js.md` ("inject resources as a context object"),
   ADR-0010 wins until the upstream rule is aligned via `rules:sync`.
-- Enforced by `bun run layering:check` (CI): zero db references in
-  transport, no exceptions. The pre-ADR-0010 allowlist reached zero and
-  its machinery was deleted (VKB-90), so the guard fails unconditionally;
-  ADR-0010 keeps the allowlist wording only as the record of decision time.
+- Enforced by `bun run layering:check` (CI), which guards the boundary from
+  **both** sides:
+  - **Inwards:** zero db references in transport, no exceptions. The
+    pre-ADR-0010 allowlist reached zero and its machinery was deleted
+    (VKB-90), so the guard fails unconditionally; ADR-0010 keeps the
+    allowlist wording only as the record of decision time.
+  - **Outwards (VKB-181):** client code may import `server/**` and `db/**`
+    for TYPES and nothing else. Those modules pull the AWS SDK transitively,
+    so a single dropped `type` keyword ships the S3 client to the browser.
+    Side-effect imports, dynamic imports, `import.meta.glob` patterns and
+    value re-exports fail too. **Everything is scanned by default** — every
+    top-level directory and every root-level file — and exclusions are named
+    in `DIRS_NOT_BUNDLED` / `ROOT_FILES_NOT_BUNDLED` (the two sides of this
+    boundary itself, plus what runs in node or never ships). Denylists on
+    purpose, in both cases: the allowlist version silently missed
+    `sentry.client.config.js`, which was value-importing from `server/utils`
+    while the check reported the tree clean. Add a new client directory and
+    it is guarded without being registered.
+  - A deliberate exception is annotated `// layering-allow: <reason>` on the
+    import or the line above it. The reason is required, so it reads as a
+    decision rather than a mute button, and like every annotation here it
+    goes stale on its own once the line stops violating.
+
+  Both halves are lexical: a value reached transitively through a helper is
+  out of the guard's sight, and review is what keeps that closed.
 
 ### Capability graph (ADR-0013)
 

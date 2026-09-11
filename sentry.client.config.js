@@ -1,5 +1,5 @@
 import * as Sentry from '@sentry/nuxt';
-import { beforeSend } from '~/server/utils/sentry-scrub';
+import { beforeSend } from '~/shared/sentry-scrub';
 
 const config = useRuntimeConfig();
 const dsn = config.public.sentryDsn || '';

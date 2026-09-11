@@ -93,6 +93,7 @@ placeholder awaiting its ticket.
 - `shared/magic-link.ts`
 - `shared/media-types.ts`
 - `shared/pwa-caches.ts`
+- `shared/sentry-scrub.ts`
 - `shared/speaker-age.ts`
 
 ## Domain and infra modules
