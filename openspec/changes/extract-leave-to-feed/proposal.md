@@ -38,7 +38,7 @@ None.
 ## Non-goals
 
 - Changing when history counts as "ours" (the `history.state.back` string
-  test), or the accepted pre-hydration limitation the top bar documents.
+  test), or the accepted pre-hydration limitation `leaveToFeed` documents.
 - Any other back affordance (`/me`'s "back to the feed" link is a plain link,
   not this rule).
 

@@ -15,27 +15,7 @@ const router = useRouter();
 const hasNav = computed(() => props.back || props.title !== undefined);
 
 const goBack = () => {
-  // A word reached by a CLIENT-SIDE navigation returns to the feed for
-  // real: the stack shortens and the feed keeps whatever scroll it had.
-  const previous = router.options.history.state.back;
-  if (typeof previous === 'string') {
-    router.back();
-    return;
-  }
-  // Nothing of ours behind the word, so the feed is invented as the
-  // destination. REPLACE, never push: this is an "up" affordance, and
-  // pushing would park the word behind the OS back button forever, so back
-  // would walk into the screen the user just left and every round trip
-  // would grow the stack.
-  //
-  // Reached by a refresh, a pasted link, a notification — and also by a feed
-  // link tapped BEFORE hydration, which the browser answers with a native
-  // document navigation that leaves no router state behind. That last case
-  // is an accepted limitation, not a promise kept: the feed re-renders from
-  // scratch, its scroll is gone, and the feed document the browser left
-  // stays behind the OS back button whatever this handler does. Only the
-  // arrow's own behaviour is ours to get right here.
-  void navigateTo('/feed', { replace: true });
+  void leaveToFeed(router, navigateTo);
 };
 </script>
 

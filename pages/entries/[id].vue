@@ -426,14 +426,7 @@ const requestDelete = async (): Promise<DeleteOutcome> => {
   }
 };
 
-const leaveTheDeletedWord = async () => {
-  const previous = router.options.history.state.back;
-  if (typeof previous === 'string') {
-    router.back();
-    return;
-  }
-  await navigateTo('/feed', { replace: true });
-};
+const leaveTheDeletedWord = () => leaveToFeed(router, navigateTo);
 
 const confirmDelete = async () => {
   if (isDeleting.value) return;
