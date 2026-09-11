@@ -74,6 +74,73 @@ const holdEntryRequest = async (page: Page, entryId: string) => {
   return gate;
 };
 
+const PROCESSING_MEDIA = {
+  mediaId: 'e2e-staged-media',
+  kind: 'audio',
+  status: 'processing',
+  durationSec: null,
+  width: null,
+  height: null,
+  peaks: null,
+  error: null,
+};
+const READY_MEDIA = {
+  ...PROCESSING_MEDIA,
+  status: 'ready',
+  durationSec: 2,
+  peaks: [0.2, 0.6, 1, 0.6, 0.2],
+};
+const READY_PLAYBACK = {
+  audioUrl: 'https://media.invalid/staged.m4a',
+  videoUrl: null,
+  posterUrl: null,
+};
+
+// Serves the word's real payload with its media swapped for whatever the
+// test stages, so a transition the transcoder would take minutes to produce
+// happens on cue, and counts the reads the screen makes.
+const stageEntryMedia = async (page: Page, entryId: string) => {
+  const staged = {
+    media: PROCESSING_MEDIA as Record<string, unknown>,
+    playback: null as Record<string, unknown> | null,
+    failWith: 0,
+    reads: 0,
+  };
+  await page.route(`**/api/entries/${entryId}`, async (route) => {
+    if (route.request().method() !== 'GET') {
+      await route.continue();
+      return;
+    }
+    staged.reads += 1;
+    if (staged.failWith !== 0) {
+      await route.fulfill({
+        status: staged.failWith,
+        contentType: 'application/json',
+        body: '{}',
+      });
+      return;
+    }
+    const response = await route.fetch();
+    const body = (await response.json()) as Record<string, unknown>;
+    await route.fulfill({
+      response,
+      json: { ...body, media: staged.media, playback: staged.playback },
+    });
+  });
+  return staged;
+};
+
+const openFromFeed = async (page: Page, word: string) => {
+  await page.reload();
+  await settleHydration(page);
+  await page.getByRole('link', { name: new RegExp(word) }).click();
+  await expect(page).toHaveURL(/\/entries\//);
+};
+
+// Two full poll intervals: long enough for a poll that should have stopped
+// to show itself.
+const QUIET_WINDOW_MS = 9000;
+
 const dateEntry = async (page: Page, entryId: string, saidAt: string) => {
   const patched = await page.request.patch(`/api/entries/${entryId}`, {
     data: { saidAt },
@@ -571,6 +638,138 @@ test.describe('while the word is still loading', () => {
     expect(html).not.toMatch(
       /<div[^>]*class="detail__state"[^>]*role="status"/,
     );
+  });
+});
+
+// VKB-187: a word opened while its media is processing follows it until it
+// settles. The payload is staged (see stageEntryMedia), and the navigation is
+// client-side because SSR fetches the entry in-process, out of page.route's
+// sight.
+test.describe('while the media is processing', () => {
+  test.use({ serviceWorkers: 'block' });
+
+  test('the player replaces the processing line once the media is ready', async ({
+    authedPage,
+  }) => {
+    const entryId = await createEntry(authedPage, { word: 'appo' });
+    const staged = await stageEntryMedia(authedPage, entryId);
+    await openFromFeed(authedPage, 'appo');
+    const processing = authedPage.locator('.media-block__row');
+    await expect(processing).toBeVisible();
+
+    staged.media = READY_MEDIA;
+    staged.playback = READY_PLAYBACK;
+
+    await expect(authedPage.locator('.audio')).toBeVisible({ timeout: 10_000 });
+    await expect(processing).toHaveCount(0);
+  });
+
+  test('the failure line replaces the processing line once it fails', async ({
+    authedPage,
+  }) => {
+    const entryId = await createEntry(authedPage, { word: 'appo' });
+    const staged = await stageEntryMedia(authedPage, entryId);
+    await openFromFeed(authedPage, 'appo');
+    await expect(authedPage.locator('.media-block__row')).toBeVisible();
+
+    staged.media = { ...PROCESSING_MEDIA, status: 'failed' };
+
+    await expect(authedPage.locator('.media-block__failed')).toBeVisible({
+      timeout: 10_000,
+    });
+  });
+
+  test('no more reads once the media has settled', async ({ authedPage }) => {
+    const entryId = await createEntry(authedPage, { word: 'appo' });
+    const staged = await stageEntryMedia(authedPage, entryId);
+    await openFromFeed(authedPage, 'appo');
+    await expect(authedPage.locator('.media-block__row')).toBeVisible();
+
+    staged.media = READY_MEDIA;
+    staged.playback = READY_PLAYBACK;
+    await expect(authedPage.locator('.audio')).toBeVisible({ timeout: 10_000 });
+
+    // The settle came from a poll, not from the first load.
+    expect(staged.reads).toBeGreaterThanOrEqual(2);
+    const settledAt = staged.reads;
+    await authedPage.waitForTimeout(QUIET_WINDOW_MS);
+    expect(staged.reads).toBe(settledAt);
+  });
+
+  test('no more reads after leaving a word that is still processing', async ({
+    authedPage,
+  }) => {
+    const entryId = await createEntry(authedPage, { word: 'appo' });
+    const staged = await stageEntryMedia(authedPage, entryId);
+    await openFromFeed(authedPage, 'appo');
+    await expect(authedPage.locator('.media-block__row')).toBeVisible();
+
+    await authedPage.goBack();
+    await expect(authedPage).not.toHaveURL(/\/entries\//);
+
+    const leftAt = staged.reads;
+    await authedPage.waitForTimeout(QUIET_WINDOW_MS);
+    expect(staged.reads).toBe(leftAt);
+  });
+
+  test('a word opened with ready media is read once', async ({
+    authedPage,
+  }) => {
+    const entryId = await createEntry(authedPage, { word: 'appo' });
+    const staged = await stageEntryMedia(authedPage, entryId);
+    staged.media = READY_MEDIA;
+    staged.playback = READY_PLAYBACK;
+    await openFromFeed(authedPage, 'appo');
+    await expect(authedPage.locator('.audio')).toBeVisible();
+
+    await authedPage.waitForTimeout(QUIET_WINDOW_MS);
+    expect(staged.reads).toBe(1);
+  });
+
+  test('a failed check keeps the word on screen and the next one lands', async ({
+    authedPage,
+  }) => {
+    const entryId = await createEntry(authedPage, { word: 'appo' });
+    const staged = await stageEntryMedia(authedPage, entryId);
+    await openFromFeed(authedPage, 'appo');
+    const processing = authedPage.locator('.media-block__row');
+    await expect(processing).toBeVisible();
+
+    // Two failed reads, so the first has certainly reached the screen.
+    const before = staged.reads;
+    staged.failWith = 500;
+    await expect
+      .poll(() => staged.reads, { timeout: 15_000 })
+      .toBeGreaterThan(before + 1);
+    await expect(processing).toBeVisible();
+    await expect(authedPage.locator('.detail__state')).toHaveCount(0);
+
+    staged.failWith = 0;
+    staged.media = READY_MEDIA;
+    staged.playback = READY_PLAYBACK;
+    await expect(authedPage.locator('.audio')).toBeVisible({ timeout: 10_000 });
+  });
+
+  test('a session that ended while it processed goes to sign in', async ({
+    authedPage,
+  }) => {
+    const entryId = await createEntry(authedPage, { word: 'appo' });
+    const staged = await stageEntryMedia(authedPage, entryId);
+    await openFromFeed(authedPage, 'appo');
+    await expect(authedPage.locator('.media-block__row')).toBeVisible();
+
+    // /api/me answers the same, which keeps /login from bouncing a reader it
+    // still believes is signed in.
+    await authedPage.route('**/api/me', (route) =>
+      route.fulfill({
+        status: 401,
+        contentType: 'application/json',
+        body: '{}',
+      }),
+    );
+    staged.failWith = 401;
+
+    await expect(authedPage).toHaveURL(/\/login/, { timeout: 10_000 });
   });
 });
 

@@ -32,9 +32,23 @@ through `useAsyncData`: on failure it sets the page's error ref and resets
 it flips `status`. A single transient 500 during a background check would
 replace a perfectly good word with "we couldn't load this word". The feed
 avoids `refresh()` for its poll for the same reason. The detail check instead
-calls `$fetch` itself and, on success, assigns the whole payload
-(`data.value = fresh`). The playback-cache `watchEffect` sees the new payload
-and primes the fresh URLs, so the ready player needs no extra request.
+calls `$fetch` itself (`retry: 0`, since the next tick is the retry, and a
+10 s timeout, so one stalled request cannot hold the poll; the timeout is an
+abort signal, because ofetch ignores its `timeout` option whenever a signal is
+passed, and it is built by hand rather than with `AbortSignal.any`, which older
+iOS Safari lacks) and, on success, merges
+only `media` and `playback` into the payload. The word's own fields are left
+alone, because a check's response can be older than what the screen shows: the
+service worker answers `/api/*` from a one-hour cache after a 3 s timeout. The
+playback-cache `watchEffect` sees the new payload and primes the fresh URLs, so
+the ready player needs no extra request.
+
+**Stale checks are dropped.** The date edit and the post-save `refresh()` are
+the page's other writers. Each one bumps a version counter, and a check whose
+version changed while it was in flight discards its response. Without this, a
+check sent before a date change could put the old date back, and one sent
+before an edit sheet's save could bring the processing line back after the
+save had already shown the player.
 
 **Key the poll by the processing media id.** A `watch` on the id of the media
 while it is processing (`null` otherwise) starts the poll when an id appears,
@@ -57,7 +71,8 @@ keep the screen, and let the next tick try within the budget.
 the client; SSR renders the first payload as today). An `AbortController`
 cancels an in-flight check on unmount so a late response never writes into a
 screen that is gone, and `onUnmounted` clears the interval. A tick is skipped
-while the previous check is still in flight.
+while the previous check is still in flight, and only started checks count
+against the budget.
 
 **e2e by payload substitution.** The spec routes `GET /api/entries/:id`, takes
 the real response (`route.fetch()`), and rewrites `media` to a processing row
@@ -75,7 +90,8 @@ after the settle and after leaving the screen, over more than one interval.
   JSON request, on the one screen where the person is waiting for exactly
   this. It ends the moment the media settles.
 - [The word's text changes elsewhere while the poll runs (another tab edits
-  it)] → The fresh payload carries it, which is correct.
+  it)] → Not picked up: the poll merges only the media, because its response
+  can be older than the screen. A reload or the next visit shows the edit.
 - [Vacuous pass] → The ready-transition spec is run once against the pre-change
   page, where the processing line never goes away, and must fail.
 
