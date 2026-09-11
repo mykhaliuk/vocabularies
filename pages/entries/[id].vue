@@ -117,6 +117,112 @@ watchEffect(() => {
   if (loaded) primePlayback(loaded.entry.id, loaded.playback);
 });
 
+// ~5 minutes of checks: the media worker's own ceiling.
+const MEDIA_POLL_INTERVAL_MS = 4000;
+const MEDIA_POLL_MAX_ATTEMPTS = 75;
+const MEDIA_CHECK_TIMEOUT_MS = 10_000;
+const NOT_FOUND = 404;
+
+const processingMediaId = computed(() =>
+  media.value?.status === 'processing' ? media.value.mediaId : null,
+);
+
+const pollDisposal = new AbortController();
+let pollTimer: ReturnType<typeof setInterval> | null = null;
+let pollAttempts = 0;
+let isCheckingMedia = false;
+// Bumped by every other write to `data`; a check sent before one is stale.
+let payloadVersion = 0;
+
+const stopMediaPoll = () => {
+  if (pollTimer === null) return;
+  clearInterval(pollTimer);
+  pollTimer = null;
+};
+
+// $fetch, not refresh(): a failed refresh() resets `data` and renders the
+// load-failure state over a word that was on screen a moment ago.
+const checkMedia = async () => {
+  if (isCheckingMedia) return;
+  isCheckingMedia = true;
+  pollAttempts += 1;
+  const sentAt = payloadVersion;
+  // ofetch drops `timeout` whenever a signal is passed, so the timeout is a
+  // signal too, and the page's disposal is forwarded into it.
+  const check = new AbortController();
+  const forwardDisposal = () => check.abort();
+  pollDisposal.signal.addEventListener('abort', forwardDisposal, {
+    once: true,
+  });
+  const timeout = setTimeout(() => check.abort(), MEDIA_CHECK_TIMEOUT_MS);
+  try {
+    // retry: 0, because the next tick is the retry.
+    const fresh = await $fetch<EntryDetailResponse>(
+      `/api/entries/${encodeURIComponent(entryId)}`,
+      {
+        credentials: 'include',
+        signal: check.signal,
+        retry: 0,
+      },
+    );
+    if (sentAt !== payloadVersion || !data.value) return;
+    // Only the media: the word itself may be older here (a cached response)
+    // than what the screen already shows.
+    data.value = {
+      ...data.value,
+      media: fresh.media,
+      playback: fresh.playback,
+    };
+  } catch (error) {
+    if (pollDisposal.signal.aborted) return;
+    const code = (error as { statusCode?: number }).statusCode;
+    if (code === NOT_FOUND) {
+      stopMediaPoll();
+      return;
+    }
+    if (code === UNAUTHORIZED) {
+      stopMediaPoll();
+      try {
+        await navigateTo('/login');
+      } catch (redirectError) {
+        console.error('[entry] sign-in redirect failed', redirectError);
+      }
+      return;
+    }
+    console.error('[entry] media status check failed', error);
+  } finally {
+    clearTimeout(timeout);
+    pollDisposal.signal.removeEventListener('abort', forwardDisposal);
+    isCheckingMedia = false;
+  }
+};
+
+const startMediaPoll = () => {
+  pollAttempts = 0;
+  pollTimer = setInterval(() => {
+    if (pollAttempts >= MEDIA_POLL_MAX_ATTEMPTS) {
+      stopMediaPoll();
+      return;
+    }
+    void checkMedia();
+  }, MEDIA_POLL_INTERVAL_MS);
+};
+
+// Keyed by the media id, so a new clip on the same word earns a fresh budget.
+watch(
+  processingMediaId,
+  (id) => {
+    stopMediaPoll();
+    if (id !== null && import.meta.client) startMediaPoll();
+  },
+  { immediate: true },
+);
+
+onUnmounted(() => {
+  stopMediaPoll();
+  pollDisposal.abort();
+});
+
 const { formatAgeLabel, formatSpeakerLead, formatSpeakerTail } =
   useSpeakerLine();
 const speakerLead = computed(() =>
@@ -228,6 +334,7 @@ const sendSaidAt = async (saidAt: string) => {
     // rather than mutated — assigning `.entry` renders nothing. Media and
     // playback are carried over by identity: a date cannot touch them, and
     // swapping them would churn the player's props for nothing.
+    payloadVersion += 1;
     data.value = { ...data.value, entry: updated.entry };
     return true;
   } catch (error) {
@@ -389,6 +496,7 @@ const editThisWord = () => {
 // rather than navigated back to: re-read in place and the scroll stays put.
 watch(savedVersion, async () => {
   if (savedEntryId.value !== entryId) return;
+  payloadVersion += 1;
   await refresh();
 });
 
