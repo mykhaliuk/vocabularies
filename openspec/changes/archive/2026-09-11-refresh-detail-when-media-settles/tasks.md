@@ -19,4 +19,4 @@
 - [x] 3.1 Run the full CI check set: `ds:check`, `proto:check`, `i18n:check`, `layering:check`, `graph:check`, `spec:check`, `commits:check`, `lint`, `fmt:check`, `typecheck`, `typecheck:e2e`, `test:unit`, `fonts:check`, `test:e2e`, `test:e2e:authed`
 - [x] 3.2 Rendered check of the processing → ready switch on the detail screen, in both themes
 - [x] 3.3 Adversarial `/code-review` on the diff; fix confirmed findings and re-review the delta
-- [ ] 3.4 Archive the change inside the PR (`openspec archive`)
+- [x] 3.4 Archive the change inside the PR (`openspec archive`)
