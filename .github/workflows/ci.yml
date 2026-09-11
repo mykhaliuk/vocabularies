@@ -153,8 +153,8 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Install Playwright browser
-        run: bunx playwright install --with-deps chromium
+      - name: Install Playwright browsers
+        run: bunx playwright install --with-deps chromium webkit
 
       # drizzle-kit directly, NOT scripts/migrate-deploy.js: that wrapper exits
       # 0 when DATABASE_URL_UNPOOLED is unset, which would hand us a green build

@@ -13,8 +13,8 @@ import { expect, settleHydration, test } from './fixtures';
 // the unfixed players. WebKit delivers it after, and the same code runs
 // unbounded: 61 refreshes in 5s, measured, one API call and one bucket
 // request each. Vocabu is an iOS-first PWA, so WebKit is the engine that
-// matters and the one no project in this config uses. Run it with
-// E2E_WEBKIT=1 to see this spec fail before the fix.
+// matters, and the webkit-media project is where this spec fails before the
+// fix.
 //
 // The failure is injected by rewriting the API's own answer rather than by
 // intercepting the media element's request: the players react to whatever URL
