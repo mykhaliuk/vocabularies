@@ -171,6 +171,16 @@ export const settleHydration = async (page: Page) => {
   await expect(sheet).toBeHidden();
 };
 
+// The detail screen has no compose FAB, so its probe is the actions menu.
+export const settleDetailHydration = async (page: Page) => {
+  const menu = page.locator('.actions__menu');
+  await clickUntil(page.getByRole('button', { name: /more actions/i }), () =>
+    expect(menu).toBeVisible({ timeout: 1000 }),
+  );
+  await page.keyboard.press('Escape');
+  await expect(menu).toBeHidden();
+};
+
 interface AuthedFixtures {
   authedPage: Page;
 }

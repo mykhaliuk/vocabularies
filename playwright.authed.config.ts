@@ -15,6 +15,12 @@ import { SERVER_LOG_PATH } from './e2e/authed/server-log';
 // into the same `.output`, so they must still be run one at a time locally.
 // In CI they are separate jobs on separate runners.
 const PORT = 3100;
+
+// Linux Chromium builds cannot decode H.264, the only video derivative.
+const VIDEO_SPEC = /video-playback\.spec\.ts/;
+// Media behaviour is engine-dependent (VKB-182); the rest of the suite is not.
+const WEBKIT_SPECS =
+  /(media-ready|playback-cache|playback-retry|video-playback)\.spec\.ts/;
 const baseURL = `http://localhost:${PORT}`;
 
 // Presigning (server/utils/storage.ts) is a local HMAC signature over these
@@ -108,42 +114,28 @@ export default defineConfig({
     // Hermeticity (VKB-123): external hostnames do not resolve at all.
     launchOptions: { args: HERMETIC_LAUNCH_ARGS },
   },
-  // browserName is pinned because the iPhone preset defaults to webkit,
-  // which CI does not install — this is chromium emulating the iPhone form
-  // factor, not a real WebKit engine.
   projects: [
-    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
     {
-      name: 'phone',
+      name: 'chromium',
+      testIgnore: VIDEO_SPEC,
+      use: { ...devices['Desktop Chrome'] },
+    },
+    {
+      name: 'phone-chromium',
+      testIgnore: VIDEO_SPEC,
+      // The iPhone preset defaults to webkit; this is its form factor only.
       use: { ...devices['iPhone 13'], browserName: 'chromium' },
     },
-    // Opt-in, and only for the specs whose behaviour is engine-dependent.
-    // VKB-182 is one: the players' retry loop is bounded in Chromium purely
-    // by the order it delivers `error` against the play() rejection, and
-    // unbounded in WebKit — 61 retries in 5s against 1, measured. Every
-    // project above is Chromium, so nothing in CI can see that difference.
-    // Turning this on in CI needs webkit added to the install step, which is
-    // a workflow edit and its own ticket; until then it runs locally with
-    // E2E_WEBKIT=1.
-    ...(process.env.E2E_WEBKIT
-      ? [
-          {
-            name: 'webkit-media',
-            testMatch: /playback-retry\.spec\.ts/,
-            use: {
-              ...devices['iPhone 13'],
-              // Stated, not inherited from the preset's default: every other
-              // project above pins `browserName` away from webkit, so the one
-              // that must BE webkit is the one that has to say so.
-              browserName: 'webkit' as const,
-              // The hermetic resolver rule is a Chromium flag; WebKit keeps
-              // the passive listener half of e2e/hermetic.ts, which is what
-              // fails a test that reaches out.
-              launchOptions: { args: [] },
-            },
-          },
-        ]
-      : []),
+    {
+      name: 'webkit-media',
+      testMatch: WEBKIT_SPECS,
+      use: {
+        ...devices['iPhone 13'],
+        browserName: 'webkit',
+        // The hermetic resolver rule is a Chromium-only flag.
+        launchOptions: { args: [] },
+      },
+    },
   ],
   webServer: {
     command: 'node node_modules/.bin/nuxt build && node scripts/e2e-server.js',
