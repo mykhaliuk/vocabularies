@@ -1,5 +1,11 @@
 <script setup lang="ts">
-import { Bookmark, Calendar, ChevronDown, CircleAlert } from 'lucide-vue-next';
+import {
+  Bookmark,
+  Calendar,
+  ChevronDown,
+  CircleAlert,
+  Loader2,
+} from 'lucide-vue-next';
 import type { EntryDetailResponse } from '~/server/utils/entry-view';
 
 definePageMeta({ layout: false, middleware: 'auth' });
@@ -16,18 +22,26 @@ const entryId = String(route.params.id);
 // $fetch to an internal route does not), so the first render is
 // authenticated instead of 401ing into the error state.
 const requestFetch = useRequestFetch();
+// lazy: an awaited fetch here suspends the client route transition (VKB-149).
 const {
   data,
+  status,
   error: fetchError,
   refresh,
-} = await useAsyncData(`entry:${entryId}`, () =>
-  requestFetch<EntryDetailResponse>(
-    `/api/entries/${encodeURIComponent(entryId)}`,
-  ),
+} = await useAsyncData(
+  `entry:${entryId}`,
+  () =>
+    requestFetch<EntryDetailResponse>(
+      `/api/entries/${encodeURIComponent(entryId)}`,
+    ),
+  { lazy: true },
 );
 
 const entry = computed(() => data.value?.entry ?? null);
 const media = computed(() => data.value?.media ?? null);
+const isLoading = computed(
+  () => status.value === 'pending' && entry.value === null,
+);
 
 // A 4xx is an answer, not a hiccup: the word is gone, was never there, or
 // was never askable — an id that is not a uuid fails the route's own
@@ -81,26 +95,17 @@ const stateCopy = computed(() => {
   return '';
 });
 
-// No try/catch around refresh(): it cannot reject. Nuxt catches inside its
-// own promise chain, parks the failure on the error ref above and resolves —
-// so a failed retry surfaces as a re-render, never as a throw. A retry that
-// comes back 401 (the session died while the state block was on screen) is
-// the same answer as a first load that does, and gets the same redirect.
-const retry = async () => {
-  await refresh();
+// A client-side load and every retry settle after setup, so the redirect
+// follows the error ref. navigateTo can reject (stale precache, failed chunk).
+watch(fetchError, async () => {
   try {
     await redirectWhenSignedOut();
   } catch (error) {
-    // navigateTo CAN reject — a stale precache or a failed chunk after a
-    // deploy (pages/login.vue hits the same). By this point refresh()'s own
-    // catch has already set error.value and reset data.value to null, so
-    // entry is null, failure is 'signed-out' and stateCopy is '' for that
-    // case — v-else-if="stateCopy" (line 292) then renders neither branch,
-    // leaving the reader looking at the bare top bar over an empty column.
-    // There is no state left to fall back to; logging is all that is left.
     console.error('[entry] sign-in redirect failed', error);
   }
-};
+});
+
+const retry = () => refresh();
 
 // Seed the playback cache from the payload this page already holds, so the
 // player mounted below does not re-request the same entry on first play.
@@ -527,6 +532,16 @@ useHead(() => ({
       </div>
     </article>
 
+    <div v-else-if="isLoading" class="detail__state" role="status">
+      <span
+        class="detail__state-icon detail__state-icon--loading"
+        aria-hidden="true"
+      >
+        <Loader2 :size="30" />
+      </span>
+      <p class="detail__state-msg">{{ t('app.entry.loading') }}</p>
+    </div>
+
     <div v-else-if="stateCopy" class="detail__state">
       <span class="detail__state-icon" aria-hidden="true">
         <CircleAlert :size="30" />
@@ -797,6 +812,18 @@ useHead(() => ({
   color: var(--danger);
 }
 
+/* Same specificity as the base rule: source order is what drops the red. */
+.detail__state-icon--loading {
+  color: var(--ink-3);
+  animation: detail-spin 700ms linear infinite;
+}
+
+@keyframes detail-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* A heading by markup, a sentence by weight — it is the page's only line of
    copy, and shouting it would be the wrong voice for bad news. */
 .detail__state-msg {
@@ -812,6 +839,11 @@ useHead(() => ({
 @media (prefers-reduced-motion: reduce) {
   .detail__chev {
     transition: none;
+  }
+
+  /* The global rule shortens an infinite spin to a flicker; hold it still. */
+  .detail__state-icon--loading {
+    animation: none;
   }
 }
 </style>

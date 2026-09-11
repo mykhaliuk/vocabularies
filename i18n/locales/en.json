@@ -111,6 +111,7 @@
       "saidOnAged": "said {date} · {age}",
       "notFound": "this word isn't here any more.",
       "loadError": "we couldn't load this word just now.",
+      "loading": "loading this word…",
       "actions": {
         "menu": "More actions",
         "edit": "edit word",
@@ -242,6 +243,7 @@
   },
   "me": {
     "pageTitle": "My profile · Vocabu",
+    "loading": "loading your profile…",
     "backToFeed": "Back to the feed",
     "greeting": "Hello, {name}",
     "emailLabel": "email: {email}",
