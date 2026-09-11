@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { expect, test } from './fixtures';
+import { expect, settleDetailHydration, test } from './fixtures';
 
 // The playback cache contract (VKB-118): the detail page hands its own
 // payload to the module-level cache (primePlayback, client-side only), so
@@ -76,6 +76,7 @@ test('priming plus the first play add no entry fetches of their own', async ({
   await expect(player).toBeVisible();
   expect(entryFetches, 'hydration must reuse the SSR payload').toBe(0);
 
+  await settleDetailHydration(authedPage);
   await player.locator('.audio__row').click();
   await expect(player.locator('.audio__btn--playing')).toBeVisible();
   expect(entryFetches, 'first play must be served from the primed cache').toBe(
