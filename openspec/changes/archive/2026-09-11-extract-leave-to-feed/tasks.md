@@ -14,4 +14,4 @@
 - [x] 3.1 The four characterization specs are green unchanged after the move
 - [x] 3.2 Run the full CI check set: `ds:check`, `proto:check`, `i18n:check`, `layering:check`, `graph:check`, `spec:check`, `commits:check`, `lint`, `fmt:check`, `typecheck`, `typecheck:e2e`, `test:unit`, `fonts:check`, `test:e2e`, `test:e2e:authed`
 - [x] 3.3 Adversarial `/code-review` on the diff ("did behaviour stay identical?"); fix confirmed findings and re-review the delta
-- [ ] 3.4 Archive the change inside the PR (`openspec archive`)
+- [x] 3.4 Archive the change inside the PR (`openspec archive`)
