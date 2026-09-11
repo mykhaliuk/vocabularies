@@ -41,6 +41,10 @@ const BROKEN_AUDIO_URL = '/__vkb182-missing-object.m4a';
 // derived.
 const EXPECTED_RESOLVES = 2;
 
+// Waiting on the play() rejection and the refresh it triggers, on a runner
+// shared with a parallel transcode — expect's own default is 5s.
+const REFRESH_TIMEOUT_MS = 15_000;
+
 // Long enough that an unbounded player would issue many more resolves: each
 // cycle is one API call plus one media request, with no backoff.
 const SETTLE_MS = 3000;
@@ -129,7 +133,9 @@ test('a playback URL that never loads stops after one refresh', async ({
   // Polled, not asserted outright: `failed` is set by the play() rejection,
   // which can land before the refresh it triggered has been issued, so the
   // visible state settles ahead of the count.
-  await expect.poll(() => resolves).toBe(EXPECTED_RESOLVES);
+  await expect
+    .poll(() => resolves, { timeout: REFRESH_TIMEOUT_MS })
+    .toBe(EXPECTED_RESOLVES);
 
   // The failed state is not the assertion on its own: an unbounded player
   // could show it and still be resolving. Nothing may arrive after it.

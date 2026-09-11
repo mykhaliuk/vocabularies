@@ -15,6 +15,10 @@ const CLIP_TYPE = 'video/mp4';
 // Resolves, then fails to load: the app server answers it with a 404 page.
 const BROKEN_VIDEO_URL = '/__vkb183-missing-object.mp4';
 
+// Waiting on a real H.264 decode to advance currentTime, which shares the
+// runner with a parallel transcode — expect's own default is 5s.
+const DECODE_TIMEOUT_MS = 15_000;
+
 // Video upload is a premium right, and every sign-in here is a new free user.
 const grantPremium = async (email: string) => {
   const client = new pg.Client({
@@ -103,7 +107,9 @@ test('a ready video expands, plays and collapses', async ({ premiumPage }) => {
   await player.locator('.video__row').click();
   const video = player.locator('.video__el');
   await expect(video).toBeVisible();
-  await expect.poll(() => playedSec(video)).toBeGreaterThan(0);
+  await expect
+    .poll(() => playedSec(video), { timeout: DECODE_TIMEOUT_MS })
+    .toBeGreaterThan(0);
 
   await player.locator('.video__chev').click();
   await expect(video).toHaveCount(0);
@@ -136,7 +142,9 @@ test('a stale signature recovers on the one refresh', async ({
 
   await player.locator('.video__row').click();
   const video = player.locator('.video__el');
-  await expect.poll(() => playedSec(video)).toBeGreaterThan(0);
+  await expect
+    .poll(() => playedSec(video), { timeout: DECODE_TIMEOUT_MS })
+    .toBeGreaterThan(0);
   expect(resolves).toBe(2);
   await expect(player.locator('.video__row')).toHaveCount(0);
 });
