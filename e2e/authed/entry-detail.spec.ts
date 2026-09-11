@@ -65,6 +65,15 @@ const failEntryRequest = (page: Page, entryId: string, status: number) =>
     route.fulfill({ status, contentType: 'application/json', body: '{}' }),
   );
 
+const holdEntryRequest = async (page: Page, entryId: string) => {
+  const gate = Promise.withResolvers<void>();
+  await page.route(`**/api/entries/${entryId}`, async (route) => {
+    await gate.promise;
+    await route.continue();
+  });
+  return gate;
+};
+
 const dateEntry = async (page: Page, entryId: string, saidAt: string) => {
   const patched = await page.request.patch(`/api/entries/${entryId}`, {
     data: { saidAt },
@@ -494,6 +503,74 @@ test.describe('word detail (authed)', () => {
       await expect(authedPage).toHaveURL(/\/login/);
       await expect(authedPage.locator('.detail__state')).toHaveCount(0);
     });
+  });
+});
+
+// VKB-149: opening a word must not wait on its request. Each spec holds that
+// request open. A blocking build changes the address but keeps the feed on
+// screen while it is held, so only the loading assertion tells them apart.
+test.describe('while the word is still loading', () => {
+  test.use({ serviceWorkers: 'block' });
+
+  test('a tapped word opens at once and fills in when it answers', async ({
+    authedPage,
+  }) => {
+    const entryId = await createEntry(authedPage, {
+      word: 'appo',
+      gloss: 'held back',
+    });
+    await authedPage.reload();
+    await settleHydration(authedPage);
+    const gate = await holdEntryRequest(authedPage, entryId);
+
+    await authedPage.getByRole('link', { name: /appo/ }).click();
+
+    await expect(authedPage).toHaveURL(new RegExp(`/entries/${entryId}$`));
+    const loading = authedPage.locator('.detail__state[role="status"]');
+    await expect(loading).toContainText(/loading this word/);
+    await expect(authedPage.locator('.detail')).toHaveCount(0);
+
+    gate.resolve();
+    await expect(authedPage.locator('.detail__gloss')).toHaveText('held back');
+    await expect(loading).toHaveCount(0);
+  });
+
+  test('a word deleted before it loaded says so, without a retry', async ({
+    authedPage,
+  }) => {
+    const entryId = await createEntry(authedPage, { word: 'appo' });
+    await authedPage.reload();
+    await settleHydration(authedPage);
+    await failEntryRequest(authedPage, entryId, 404);
+
+    await authedPage.getByRole('link', { name: /appo/ }).click();
+
+    await expect(authedPage).toHaveURL(/\/entries\//);
+    await expect(
+      authedPage.locator('.detail__state').getByRole('heading'),
+    ).toContainText(/isn't here any more/);
+    await expect(authedPage.locator('.detail__state button')).toHaveCount(0);
+  });
+
+  test('a direct load arrives with the word already rendered', async ({
+    authedPage,
+  }) => {
+    const entryId = await createEntry(authedPage, {
+      word: 'appo',
+      gloss: 'held back',
+    });
+
+    // The server's HTML is the first paint: it must carry the word, never
+    // the loading state a client-side navigation shows.
+    const page = await authedPage.request.get(`/entries/${entryId}`);
+    expect(page.status()).toBe(200);
+    const html = await page.text();
+    // Rendered elements, not bare strings: the payload also carries the
+    // gloss, and inlined styles can carry the class names.
+    expect(html).toMatch(/class="detail__gloss"[^>]*>held back</);
+    expect(html).not.toMatch(
+      /<div[^>]*class="detail__state"[^>]*role="status"/,
+    );
   });
 });
 

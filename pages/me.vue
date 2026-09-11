@@ -25,21 +25,52 @@ const { t, locale, locales, setLocale } = useI18n();
 
 useHead(() => ({ title: t('me.pageTitle') }));
 
-const { data: me, error } = await useFetch<MeResponse>('/api/me', {
+// lazy: an awaited fetch here suspends the client route transition (VKB-149).
+const {
+  data: me,
+  error,
+  status,
+} = await useFetch<MeResponse>('/api/me', {
   credentials: 'include',
+  lazy: true,
 });
 
-if (error.value) {
-  if (error.value.statusCode === 401) {
+const answerLoadFailure = async (failure: FetchError) => {
+  if (failure.statusCode === 401) {
     await navigateTo('/login');
-  } else {
-    throw createError({
-      statusCode: error.value.statusCode ?? 500,
-      statusMessage: 'Failed to load profile',
-      fatal: true,
-    });
+    return;
   }
-}
+  const fatal = createError({
+    statusCode: failure.statusCode ?? 500,
+    statusMessage: 'Failed to load profile',
+    fatal: true,
+  });
+  // Thrown on the server so SSR renders the error page; a client-side load
+  // settles after setup, where only showError can still reach the page.
+  if (import.meta.server) throw fatal;
+  showError(fatal);
+};
+
+if (error.value) await answerLoadFailure(error.value);
+watch(error, async (failure) => {
+  if (!failure) return;
+  try {
+    await answerLoadFailure(failure);
+  } catch (redirectError) {
+    // navigateTo can reject (stale precache, failed chunk); without the error
+    // page the screen would sit empty, with no data and no way back.
+    console.error('[me] sign-in redirect failed', redirectError);
+    showError(
+      createError({
+        statusCode: 500,
+        statusMessage: 'Failed to load profile',
+        fatal: true,
+      }),
+    );
+  }
+});
+
+const isLoading = computed(() => status.value === 'pending' && !me.value);
 
 const avatarUrl = ref<string | undefined>();
 const avatarLoadFailure = ref<unknown>(null);
@@ -385,6 +416,9 @@ async function logout() {
       {{ loggingOut ? $t('me.signingOut') : $t('me.signOut') }}
     </button>
   </main>
+  <p v-else-if="isLoading" class="me-loading" role="status">
+    {{ $t('me.loading') }}
+  </p>
 </template>
 
 <style scoped>

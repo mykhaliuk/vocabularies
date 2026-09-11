@@ -111,6 +111,7 @@
       "saidOnAged": "dit le {date} · {age}",
       "notFound": "ce mot n'est plus là.",
       "loadError": "impossible de charger ce mot pour l'instant.",
+      "loading": "chargement de ce mot…",
       "actions": {
         "menu": "Plus d'actions",
         "edit": "modifier le mot",
@@ -242,6 +243,7 @@
   },
   "me": {
     "pageTitle": "Mon profil · Vocabu",
+    "loading": "chargement de votre profil…",
     "backToFeed": "Retour au fil",
     "greeting": "Bonjour, {name}",
     "emailLabel": "e-mail : {email}",
