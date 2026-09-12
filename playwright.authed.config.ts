@@ -103,7 +103,10 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  // Two, because at APP_ENV=local media processing runs inline in the server
+  // process and shells out to ffmpeg, competing with the browsers for the
+  // runner's four cores.
+  workers: process.env.CI ? 2 : undefined,
   reporter: process.env.CI ? 'github' : 'list',
   use: {
     baseURL,
