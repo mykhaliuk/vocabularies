@@ -27,18 +27,11 @@ const styleVars = computed(() => audioStyleVars(props.variant));
 // row still reads as an audio waveform rather than an empty strip.
 const SYNTH_BAR_COUNT = 40;
 
-// Deterministic 0..1 amplitudes per bar. Real peaks are integers 0..100 on
-// an absolute scale, so a quiet recording would render as a near-flat strip;
-// normalizing to the clip's own loudest bucket keeps the wave shapely at any
-// recording level. When peaks are absent we derive a stable pseudo-wave from
-// the entry id so the same entry always renders the same shape.
+// Without peaks, a stable pseudo-wave derived from the entry id, so the same
+// entry always renders the same shape.
 const bars = computed<number[]>(() => {
   const { peaks } = props;
-  if (peaks && peaks.length > 0) {
-    const loudest = Math.max(...peaks);
-    if (loudest <= 0) return peaks.map(() => 0);
-    return peaks.map((peak) => Math.min(1, Math.max(0, peak / loudest)));
-  }
+  if (peaks && peaks.length > 0) return waveformBars(peaks);
   let seed = 0;
   for (let index = 0; index < props.entryId.length; index++) {
     seed += props.entryId.charCodeAt(index);
@@ -257,7 +250,7 @@ onBeforeUnmount(discardElement);
         <Play v-else :size="glyphSize" :fill="'currentColor'" />
       </span>
 
-      <span class="audio__wave">
+      <span class="audio__wave" :style="{ '--audio-bar-count': bars.length }">
         <span class="audio__bars" aria-hidden="true">
           <span
             v-for="(amplitude, index) in bars"
@@ -349,7 +342,7 @@ onBeforeUnmount(discardElement);
   inset: 0;
   display: flex;
   align-items: center;
-  gap: 3px;
+  gap: calc(55% / var(--audio-bar-count));
 }
 
 /* Overlay shares the base layer's exact box + bar geometry, so clipping it
@@ -364,7 +357,7 @@ onBeforeUnmount(discardElement);
    make the unplayed bars outshine the played ones on a dark canvas. */
 .audio__bar {
   flex: 1;
-  min-width: 2px;
+  min-width: 0;
   border-radius: 3px;
   background: var(--blue-100);
 }
