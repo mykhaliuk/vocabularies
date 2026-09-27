@@ -80,3 +80,6 @@ Format: `NNNN-short-slug.md`, template in [0000-template.md](0000-template.md).
   committed OpenSpec artifacts, and `openspec/specs/` answers the one question
   no existing artifact does — what the system must do; specs accrete as changes
   touch capabilities rather than being backfilled in a documentation sprint
+- [ADR-0021](0021-self-built-minio-images.md) — the MinIO and mc images the
+  local stack and CI run are built by us from the pinned upstream source and
+  hosted on GHCR, because upstream stopped publishing community builds

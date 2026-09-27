@@ -21,8 +21,9 @@ services:
     # Pinned (VKB-170): minio-init's set -e relies on mc's idempotency, which
     # is a property of a specific release, not a contract — a floating tag
     # would let a Monday pull break every second `docker compose up`. Bumps
-    # are deliberate diffs; keep both pins moving together.
-    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
+    # are deliberate diffs; keep both pins moving together. Built by us from
+    # source (infra/minio/, ADR-0021): upstream no longer publishes images.
+    image: ghcr.io/mykhaliuk/minio:RELEASE.2025-09-07T16-13-09Z@sha256:018b0521618d853b23366f43e8aec514c726fe8a95fe7db1904ce9491c229e03
     container_name: vocabu-minio
     restart: unless-stopped
     command: server /data --console-address ':9001'
@@ -42,7 +43,7 @@ services:
       retries: 10
 
   minio-init:
-    image: quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z
+    image: ghcr.io/mykhaliuk/mc:RELEASE.2025-08-13T08-35-41Z@sha256:5c8dcd968d324a677e6557586e183acb3d51c118941244ecc76f6d127b143faa
     container_name: vocabu-minio-init
     depends_on:
       minio:
